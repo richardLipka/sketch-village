@@ -32,7 +32,10 @@ export function emptyAsset(categoryId) {
 export default function AssetEditor({ asset, isNew, heroRules, onSave, onDelete, onCancel }) {
   const { t } = useTranslation();
   const cat = getCategory(asset.category);
-  const [draft, setDraft] = useState(asset);
+  // older records may have fewer drawings than the category has slots now
+  const [draft, setDraft] = useState(() => ({
+    ...asset, images: Array.from({ length: Math.max(cat.levels, asset.images.length) }, (_, i) => asset.images[i] ?? null),
+  }));
 
   const set = (patch) => setDraft((d) => ({ ...d, ...patch }));
   const setImage = (i, img) => setDraft((d) => {
@@ -58,13 +61,16 @@ export default function AssetEditor({ asset, isNew, heroRules, onSave, onDelete,
 
       <div className="slots">
         {draft.images.map((img, i) => {
-          // a missing level shows the previous drawing, faded (SPEC §3.2)
+          // a missing level shows the previous drawing, faded (SPEC §3.2); a missing
+          // named slot (hero with a weapon) shows the default drawing
           let fallback = null;
-          for (let j = i - 1; j >= 0 && !fallback; j--) fallback = draft.images[j];
+          if (cat.slots) fallback = i > 0 ? draft.images[0] : null;
+          else for (let j = i - 1; j >= 0 && !fallback; j--) fallback = draft.images[j];
+          const label = cat.slots ? t(`editor.slot_${cat.slots[i]}`) : cat.levels > 1 ? t('editor.level', { n: i + 1 }) : null;
           return (
             <ImageSlot
               key={i}
-              label={cat.levels > 1 ? t('editor.level', { n: i + 1 }) : null}
+              label={label}
               image={img}
               fallback={fallback}
               category={cat}
@@ -73,7 +79,7 @@ export default function AssetEditor({ asset, isNew, heroRules, onSave, onDelete,
           );
         })}
       </div>
-      {cat.levels > 1 && <p className="small muted">{t('editor.levels_hint')}</p>}
+      {cat.levels > 1 && <p className="small muted">{t(cat.slots ? 'editor.slots_hint' : 'editor.levels_hint')}</p>}
 
       {cat.stats === 'hero' && (
         <div style={{ marginTop: 16 }}>

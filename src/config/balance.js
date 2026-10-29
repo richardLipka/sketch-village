@@ -6,12 +6,17 @@ export const BALANCE = {
   prep: 20,
   rewardBase: 10, // round reward = rewardBase + round number (1-based)
   earlyBonusPerSecond: 0.5,
-  hpScalePerRound: 0.04, // enemy HP × (1 + k × (round − 1))
+  hpScalePerRound: 0.05, // enemy HP × (1 + k × (round − 1))
   coinPickupRadius: 24,
   coinLifetime: 30,
   coinBlink: 5,
   heroLives: 5,
-  heroRespawnDelay: 30,
+  heroRespawnDelay: 10, // s; the hero always comes back at the Town Hall
+  heroHealPerSecond: 8, // HP/s while the hero stands at the Town Hall
+  heroHealRadius: 40, // px around the Town Hall edge
+  chestChance: 0.02, // chance an enemy drops a weapon chest (bosses always do)
+  chestLifetime: 60, // s before an unpicked chest disappears
+  chestCoins: 15, // what a chest gives when the hero already owns every weapon
   hitInvulnerability: 1.5,
   heroRadius: 14,
   townHallRadius: 40,

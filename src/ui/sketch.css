@@ -195,6 +195,9 @@ label { display: inline-flex; gap: 8px; align-items: center; }
   overflow: hidden; touch-action: none; background: var(--paper);
 }
 
+.inventory-panel { left: auto; right: 10px; bottom: auto; top: 10px; }
+.weapon-row { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; margin: 4px 0; padding: 3px 8px; font-size: 18px; }
+
 .coach {
   position: absolute; right: 10px; bottom: 10px; max-width: min(400px, 60%);
   display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 12px;

@@ -134,7 +134,7 @@ describe('World – enemies', () => {
     w.round = 10;
     w.phase = 'prep';
     w.callReady(); w.update(0.01);
-    expect(w.enemies[0].maxHp).toBe(Math.round(25 * 1.4));
+    expect(w.enemies[0].maxHp).toBe(Math.round(25 * (1 + 10 * w.b.hpScalePerRound)));
   });
 });
 
@@ -166,7 +166,7 @@ describe('World – hero', () => {
     expect(w.coinsOnGround).toHaveLength(0);
   });
 
-  it('loses lives, stays in place, then after the last life respawns 30 s later', () => {
+  it('loses lives, stays in place, then after the last life respawns at the Town Hall 10 s later', () => {
     const w = makeWorld({ rounds: [{ groups: [] }] });
     const h = w.hero;
     h.x = 300; h.y = 360;
@@ -176,12 +176,24 @@ describe('World – hero', () => {
     expect([h.x, h.y]).toEqual([300, 360]);
     h.invuln = 0; w.damage(h, 1000);
     expect(h.dead).toBe(true);
-    run(w, 29);
+    run(w, 9);
     expect(h.dead).toBe(true);
     run(w, 1.5);
     expect(h.dead).toBe(false);
     expect(h.lives).toBe(5);
     expect([h.x, h.y]).toEqual([w.respawnPoint.x, w.respawnPoint.y]);
+    expect(Math.hypot(h.x - w.townHall.x, h.y - w.townHall.y)).toBeLessThan(w.townHall.radius + 30);
+  });
+
+  it('the Town Hall heals the hero standing next to it', () => {
+    const w = makeWorld({ rounds: [{ groups: [] }] });
+    const h = w.hero;
+    h.hp = 20;
+    run(w, 2);
+    expect(h.hp).toBeCloseTo(20 + 2 * w.b.heroHealPerSecond, 0);
+    h.x = 200; h.hp = 20; // far away: no healing
+    run(w, 2);
+    expect(h.hp).toBe(20);
   });
 
   it('armor reduces damage', () => {

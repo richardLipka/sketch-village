@@ -1,14 +1,14 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { mapCanvas, gridFromCanvas } from './mapRuntime.js';
-import { validateMap, SPOT_COUNT, CENTRE_RADIUS, EDGE_MARGIN } from '../logic/mapModel.js';
+import { validateMap, MAX_SPOTS, CENTRE_RADIUS, EDGE_MARGIN } from '../logic/mapModel.js';
 import { floodFill, hexToRgba } from '../assets/pixelOps.js';
 import { loadImage } from '../assets/imageEncoding.js';
 import { newId } from '../data/saveFile.js';
 
 // Map Painter & Map Editor (SPEC §5.1).
 //   Paint – yellow road brush, grass brush (erases road), decoration pencil, bucket fill.
-//   Place – village centre, 10 building spots, caves on the edge, hero respawn, decorations.
+//   Place – town hall (village centre), any number of building spots, caves on the edge, decorations.
 // Everything is point-and-click; markers can also be dragged.
 
 const DECOR_COLORS = ['#1f2937', '#78350f', '#166534', '#2563eb', '#dc2626', '#ffffff'];
@@ -142,14 +142,6 @@ export default function MapPainter({ map: initial, assets, onSave, onCancel }) {
         ctx.restore();
       }
     }
-
-    const r = map.heroRespawn ?? map.centre;
-    if (r) {
-      ctx.save();
-      ctx.font = '34px sans-serif';
-      ctx.fillText('⚑', r.x + (map.heroRespawn ? 0 : 30), r.y + (map.heroRespawn ? 0 : 30));
-      ctx.restore();
-    }
   }, [map, grid, showGrid, W, H, t]);
 
   // ---------- helpers ----------
@@ -188,14 +180,12 @@ export default function MapPainter({ map: initial, assets, onSave, onCancel }) {
     }
     for (let i = 0; i < map.spots.length; i++) if (near(map.spots[i])) return { kind: 'spots', i };
     for (let i = 0; i < map.caves.length; i++) if (near(map.caves[i])) return { kind: 'caves', i };
-    if (near(map.heroRespawn)) return { kind: 'heroRespawn' };
     if (near(map.centre, 40)) return { kind: 'centre' };
     return null;
   };
 
   const moveMarker = (hit, p) => {
     if (hit.kind === 'centre') update({ centre: { ...map.centre, x: p.x, y: p.y } });
-    else if (hit.kind === 'heroRespawn') update({ heroRespawn: p });
     else {
       const list = [...map[hit.kind]];
       const pos = hit.kind === 'caves' ? snapToEdge(p) : p;
@@ -206,7 +196,6 @@ export default function MapPainter({ map: initial, assets, onSave, onCancel }) {
 
   const removeMarker = (hit) => {
     if (hit.kind === 'centre') update({ centre: null });
-    else if (hit.kind === 'heroRespawn') update({ heroRespawn: null });
     else update({ [hit.kind]: map[hit.kind].filter((_, i) => i !== hit.i) });
   };
 
@@ -251,9 +240,8 @@ export default function MapPainter({ map: initial, assets, onSave, onCancel }) {
     if (hit) { pushUndo(); drag.current = hit; return; }
     pushUndo();
     if (placeTool === 'centre') update({ centre: { x: p.x, y: p.y, radius: CENTRE_RADIUS } });
-    else if (placeTool === 'spot' && map.spots.length < SPOT_COUNT) update({ spots: [...map.spots, { id: newId(), ...p }] });
+    else if (placeTool === 'spot' && map.spots.length < MAX_SPOTS) update({ spots: [...map.spots, { id: newId(), ...p }] });
     else if (placeTool === 'cave') update({ caves: [...map.caves, { id: newId(), ...snapToEdge(p) }] });
-    else if (placeTool === 'respawn') update({ heroRespawn: p });
     else if (placeTool === 'decoration' && decorAsset) {
       update({ decorations: [...map.decorations, { id: newId(), asset: decorAsset, x: p.x, y: p.y, scale: decorScale }] });
     }
@@ -278,7 +266,7 @@ export default function MapPainter({ map: initial, assets, onSave, onCancel }) {
   };
 
   const PAINT_TOOLS = [['road', '🟨'], ['grass', '🟩'], ['pencil', '✏️'], ['fill', '🪣']];
-  const PLACE_TOOLS = [['centre', '🏛️'], ['spot', '⬚'], ['cave', '🕳️'], ['respawn', '⚑'], ['decoration', '🌳'], ['erase', '✕']];
+  const PLACE_TOOLS = [['centre', '🏛️'], ['spot', '⬚'], ['cave', '🕳️'], ['decoration', '🌳'], ['erase', '✕']];
 
   return (
     <section>
@@ -327,7 +315,7 @@ export default function MapPainter({ map: initial, assets, onSave, onCancel }) {
           <>
             {PLACE_TOOLS.map(([id, icon]) => (
               <button key={id} className={`btn icon ${placeTool === id ? 'active' : ''}`} onClick={() => setPlaceTool(id)}>
-                {icon} {t(`maps.place_${id}`)}{id === 'spot' ? ` ${map.spots.length}/${SPOT_COUNT}` : ''}
+                {icon} {t(`maps.place_${id}`)}{id === 'spot' ? ` (${map.spots.length})` : ''}
               </button>
             ))}
           </>

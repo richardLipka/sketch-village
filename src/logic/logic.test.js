@@ -123,9 +123,10 @@ describe('validateMap', () => {
     m.spots[0].y = 50; // far from road
     m.caves.push({ id: 'c3', x: 640, y: 365 }); // not on edge
     const keys = validateMap(m, grid).problems.map((p) => p.key);
-    expect(keys).toContain('spot_count');
+    expect(keys).not.toContain('spot_count'); // any number of spots is fine…
     expect(keys).toContain('spot_far');
     expect(keys).toContain('cave_not_edge');
+    expect(validateMap({ ...good(), spots: [] }, grid).problems.map((p) => p.key)).toContain('spot_count'); // …but at least one
   });
 
   it('detects a cave not connected to the centre', () => {

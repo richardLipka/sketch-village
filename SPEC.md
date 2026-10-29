@@ -149,6 +149,17 @@ export const HERO_STAT_TABLE = {
 - Upgrades last for the current game only; **nothing carries over** to the next game or map.
 - HP is the same for every hero (base HP, not a distributed stat); the whole hero table (points, per-point values, HP, caps) is editable in the Rules editor (`rules.hero`).
 
+### 6.3 Weapons & inventory
+- Three **weapon classes**, each a separate attack the player switches between (keys 1 / 2 / 3, HUD buttons ⚔️ 🏹 ✨):
+  - **melee** – hits one enemy next to the hero, can't reach flying enemies;
+  - **ranged** – shoots an arrow at one enemy;
+  - **magic** – shoots a spell that damages **every enemy around the target** (splash radius from the weapon), flying ones too. Only usable with a magic weapon.
+- A weapon **adds** its damage / reach / cooldown (and splash for magic) to the hero's attack of that class. The **backpack** (🎒, key I) lists all weapons; one click equips one per class. A newly found weapon is equipped automatically when that class has none.
+- Getting weapons: enemies sometimes drop a **chest** (2 %, bosses always; picked up by walking over it, vanishes after 60 s; holds a weapon the hero doesn't have yet, or coins when it has all), or buy them in the **Town Hall shop** (price, available from a round).
+- **Weapon editor** (🗡️ menu): name, class, drawing (studio category *Weapons*), numbers, price, shop yes/no, from which round, chest chance; add / delete / defaults. Stored in the `weapons` collection (exported). Six defaults: sword, axe, long bow, crossbow, magic wand, fire staff.
+- **Hero drawings per class**: a hero has a default drawing plus optional drawings holding a sword / bow / magic; the game shows the one for the current attack class (missing → default). Ready for animated sprites later.
+- Weapons are lost at the end of a game, like hero upgrades.
+
 ## 7. Buildings
 
 - The **Town Hall** stands in the village centre from the start. **If the Town Hall is destroyed → game over.**
@@ -303,6 +314,7 @@ public/default-data.json   class pack (empty by default)
 5. **M5 Polish** ✅ – synthesized sound effects (WebAudio, no files; 🔊/🔇 toggle, throttled hits), first-game tips (7 steps advanced by the player's actions: walk, build, Ready, fight, coins, town hall, bow; 💡 hides / shows again; progress saved), a ready-to-play sample map added on the very first start (geometric shapes until drawings exist), balance pass with the bot. Next: playtest with kids and tune the numbers in the Rules editor.
 5b. **Gaps closed** ✅ – class pack (`public/default-data.json`), kids can add/delete their own enemy types, hero table in the Rules editor (stored heroes are squeezed into new limits), per-round reward and prep time in the wave editor, next-wave preview shows the caves, Czech/English key-parity test, workflow on Node 22.
 5c. **Pacing & progression** ✅ – waves retimed to 40–60 s (bot-measured over 8 seeds: averages 40–57 s, all games won, ~6 buildings lost per 8 games, all late), unlock schedule with something new after every wave, dragon speed 25 → 32, bot hunts enemies attacking buildings before collecting coins (like a kid would).
+5d. **v1.1** ✅ – one click builds / upgrades / sells (fixed a bug where the panel's buttons were remounted on every HUD refresh and swallowed the first click; no confirmations); hero respawns after **10 s** at the **Town Hall**, which **heals** a hero standing next to it (8 HP/s) and **shoots arrows** like a weak tower (5 / 8 / 12 dmg by level, editable); maps take **any number of building spots** (1–30), the separate hero-start marker is gone; **weapons** (§6.3); waves re-tuned for the stronger defence (spawn spread ×1.2, enemy HP +5 %/round): bot averages 42–54 s per wave, all games won.
 6. **Later** – rotating decorations, a "+" mark on reused level drawings, a round-summary card, per-map export, playtests on a real tablet and with kids, animated sprites (frame sheets photographed from a printed template), longbowmen soldiers that can hit flying enemies, walls.
 
 ## 15. Open questions

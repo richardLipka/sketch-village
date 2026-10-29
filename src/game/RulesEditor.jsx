@@ -25,7 +25,12 @@ const GENERAL = [
   ['balance', 'hpScalePerRound', 0, 50, 1, true],
   ['balance', 'coinLifetime', 5, 300, 5],
   ['balance', 'heroLives', 1, 20, 1],
-  ['balance', 'heroRespawnDelay', 0, 120, 5],
+  ['balance', 'heroRespawnDelay', 0, 120, 1],
+  ['balance', 'heroHealPerSecond', 0, 100, 1],
+  ['balance', 'heroHealRadius', 0, 300, 10],
+  ['balance', 'chestChance', 0, 100, 1, true],
+  ['balance', 'chestLifetime', 5, 300, 5],
+  ['balance', 'chestCoins', 0, 200, 5],
   ['build', 'sellRefund', 0, 100, 5, true],
   ['build', 'workerSpeedup', 0, 100, 1, true],
   ['build', 'regenPerSecond', 0, 20, 0.5, true],
@@ -55,6 +60,9 @@ const HERO = [
   ['hero', 'armorMax', 0, 95, 5, true],
   ['hero', 'speed', 20, 400, 5],
   ['hero', 'speedPerPoint', 0, 60, 1],
+  ['hero', 'magicDamage', 0, 200, 1],
+  ['hero', 'magicRange', 50, 600, 10],
+  ['hero', 'magicCooldown', 0.3, 10, 0.1],
 ];
 
 const ICON = { house: '🏠', tower: '🗼', castle: '🏰' };
@@ -152,11 +160,11 @@ export default function RulesEditor({ buildingTypes, rules, onSave }) {
         <table className="rules-table">
           <thead><tr><th />{levelHead(r.townHallLevels.length)}</tr></thead>
           <tbody>
-            {[['hp', 1, 99999, 50], ['cost', 0, 999, 5], ['time', 1, 300, 1]].map(([key, min, max, step]) => (
+            {[['hp', 1, 99999, 50], ['cost', 0, 999, 5], ['time', 1, 300, 1], ['damage', 0, 500, 1], ['range', 0, 600, 10], ['cooldown', 0.1, 10, 0.05]].map(([key, min, max, step]) => (
               <tr key={key}>
                 <td>{t(`rules.f_${key}`)}</td>
                 {r.townHallLevels.map((l, li) => (
-                  <td key={li}>{li === 0 && key !== 'hp' ? '—' : <Num value={l[key]} min={min} max={max} step={step} onChange={(v) => setTh(li, key, v)} />}</td>
+                  <td key={li}>{li === 0 && (key === 'cost' || key === 'time') ? '—' : <Num value={l[key]} min={min} max={max} step={step} onChange={(v) => setTh(li, key, v)} />}</td>
                 ))}
               </tr>
             ))}

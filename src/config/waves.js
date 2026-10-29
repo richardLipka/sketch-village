@@ -30,13 +30,19 @@ const PLAN = [
   [['troll', 1, 1, 0], ['dragon', 1, 1, 3], ['orc', 8, 2.4], ['goblin', 16, 1.4], ['bat', 10, 2.1]],
 ];
 
+// stretches every spawn timeline; tuned with the bot so waves last 40–60 s now
+// that the Town Hall shoots too
+const SPREAD = 1.2;
+
 export function defaultWaves(balance = BALANCE) {
   return {
     startCoins: balance.startCoins,
     firstPrep: balance.firstPrep,
     prep: balance.prep,
     rounds: PLAN.map((groups) => ({
-      groups: groups.map(([enemy, count, interval, delay = 0]) => ({ enemy, count, interval, delay, spawn: 'all' })),
+      groups: groups.map(([enemy, count, interval, delay = 0]) => ({
+        enemy, count, interval: +(interval * SPREAD).toFixed(2), delay: +(delay * SPREAD).toFixed(2), spawn: 'all',
+      })),
     })),
   };
 }

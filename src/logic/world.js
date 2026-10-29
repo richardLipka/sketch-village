@@ -6,8 +6,12 @@
 //   enemies:   ground ones follow the flow field to the Town Hall, flying ones fly
 //              straight; on the way they attack anything in range (hero, soldiers,
 //              buildings, Town Hall)
-//   hero:      walks on roads, melee or ranged (player's choice), 5 lives,
-//              30 s absence after the last one, auto-attacks what is in range
+//   hero:      walks on roads, melee / ranged / magic (player's choice; magic needs
+//              a magic weapon), 5 lives, 10 s absence after the last one, then back
+//              at the Town Hall, which also heals it; auto-attacks what is in range
+//   weapons:   inventory + one equipped weapon per class (adds to that attack);
+//              from chests dropped by enemies or bought in the Town Hall shop
+//   town hall: shoots arrows like a weak tower (stronger with each level)
 //   coins:     drop on roads, must be picked up, vanish after 30 s
 //   buildings: built/upgraded on the 10 spots when the hero is near; houses give
 //              workers (faster building), towers shoot the enemy nearest to the
@@ -18,6 +22,7 @@
 
 import { DEFAULT_BUILDING_TYPES } from '../config/buildings.js';
 import { DEFAULT_RULES } from '../config/rules.js';
+import { DEFAULT_WEAPONS, WEAPON_CLASSES, withWeapon } from '../config/weapons.js';
 import { heroNumbers, clampPoints, HERO_STATS, DEFAULT_HERO_POINTS } from '../config/heroStats.js';
 import { worldToCell, cellCenter, nearestWalkable, isWalkable } from './pathGrid.js';
 import { findPath, smoothPath, flowField } from './pathfinding.js';
@@ -53,7 +58,7 @@ export class World {
    * @param {object} [o.balance]      overrides rules.balance
    * @param {number} [o.seed]
    */
-  constructor({ map, grid, enemyTypes, waves, heroPoints = DEFAULT_HERO_POINTS, buildingTypes = DEFAULT_BUILDING_TYPES, rules = DEFAULT_RULES, balance = rules.balance, seed = Date.now() }) {
+  constructor({ map, grid, enemyTypes, waves, heroPoints = DEFAULT_HERO_POINTS, buildingTypes = DEFAULT_BUILDING_TYPES, rules = DEFAULT_RULES, balance = rules.balance, weapons = DEFAULT_WEAPONS, seed = Date.now() }) {
     this.b = balance;
     this.cfg = rules.build;
     this.thLevels = rules.townHallLevels;
@@ -77,6 +82,7 @@ export class World {
     this.townHall = {
       kind: 'townhall', x: map.centre.x, y: map.centre.y, level: 1, hp: thHp, maxHp: thHp,
       radius: balance.townHallRadius, lastHit: -Infinity, upgrade: null, // { progress, time }
+      cooldown: 0, // its arrows
     };
 
     this.caves = map.caves.map((cv) => ({ id: cv.id, x: cv.x, y: cv.y }));
@@ -86,8 +92,14 @@ export class World {
     this.heroRules = rules.hero;
     this.heroPoints = clampPoints(heroPoints, this.heroRules);
     this.heroUpgrades = Object.fromEntries(HERO_STATS.map((k) => [k, 0]));
-    this.heroStats = heroNumbers(this.heroPoints, {}, this.heroRules);
-    this.respawnPoint = this.snapToRoad(map.heroRespawn ?? { x: map.centre.x, y: map.centre.y + (map.centre.radius ?? 60) });
+    // weapons: the hero owns `inventory`, one weapon per class can be equipped
+    this.weaponTypes = Object.fromEntries(weapons.map((w) => [w.id, w]));
+    this.inventory = [];
+    this.equipped = { melee: null, ranged: null, magic: null };
+    this.chests = [];
+    this.recalcHero();
+    // the hero starts and always comes back at the Town Hall (next to it, on the road)
+    this.respawnPoint = this.snapToRoad({ x: map.centre.x, y: map.centre.y + (map.centre.radius ?? 60) });
     this.hero = {
       kind: 'hero', ...this.respawnPoint, hp: this.heroStats.hp, maxHp: this.heroStats.hp, lives: balance.heroLives,
       mode: 'melee', path: [], target: null, cooldown: 0, invuln: 0, dead: false, respawnAt: 0, repath: 0, facing: 1,
@@ -137,7 +149,74 @@ export class World {
     return bonus;
   }
 
-  setMode(mode) { this.hero.mode = mode; }
+  /** Switch attack class; magic needs a magic weapon. Returns false when not possible. */
+  setMode(mode) {
+    if (mode === 'magic' && !this.equipped.magic) return false;
+    this.hero.mode = mode;
+    return true;
+  }
+
+  // ---------------- weapons ----------------
+
+  /** Hero numbers = skill points + Town Hall upgrades + equipped weapons. */
+  recalcHero() {
+    const base = heroNumbers(this.heroPoints, this.heroUpgrades, this.heroRules);
+    for (const k of WEAPON_CLASSES) base[k] = withWeapon(base[k], this.weaponTypes[this.equipped[k]] ?? null);
+    this.heroStats = base;
+  }
+
+  /** Put a weapon into the inventory; it is equipped when that class has nothing yet. */
+  addWeapon(id) {
+    const w = this.weaponTypes[id];
+    if (!w || this.inventory.includes(id)) return false;
+    this.inventory.push(id);
+    if (!this.equipped[w.kind]) this.equipped[w.kind] = id;
+    this.recalcHero();
+    return true;
+  }
+
+  equip(id) {
+    const w = this.weaponTypes[id];
+    if (!w || !this.inventory.includes(id)) return { ok: false, reason: 'unknown' };
+    this.equipped[w.kind] = id;
+    this.recalcHero();
+    this.emit('equipped', { weapon: id });
+    return { ok: true };
+  }
+
+  shopCheck(id) {
+    const w = this.weaponTypes[id];
+    if (!w || !w.shop) return 'unknown';
+    if (this.inventory.includes(id)) return 'owned';
+    if ((w.round ?? 1) > this.round + 1) return 'locked';
+    if (this.hero.dead) return 'dead';
+    if (!this.heroNear(this.townHall, this.townHall.radius)) return 'far';
+    if (this.coins < (w.price ?? 0)) return 'coins';
+    return null;
+  }
+
+  buyWeapon(id) {
+    const reason = this.shopCheck(id);
+    if (reason) return { ok: false, reason };
+    this.coins -= this.weaponTypes[id].price ?? 0;
+    this.addWeapon(id);
+    this.emit('weaponBought', { weapon: id });
+    return { ok: true };
+  }
+
+  /** A chest gives a weapon the hero doesn't own yet (weighted by `drop`), or coins. */
+  openChest() {
+    const pool = Object.values(this.weaponTypes).filter((w) => (w.drop ?? 0) > 0 && !this.inventory.includes(w.id));
+    const total = pool.reduce((s, w) => s + w.drop, 0);
+    if (!total) {
+      this.coins += this.b.chestCoins;
+      return { coins: this.b.chestCoins };
+    }
+    let r = this.rng() * total;
+    const w = pool.find((x) => (r -= x.drop) < 0) ?? pool.at(-1);
+    this.addWeapon(w.id);
+    return { weapon: w.id };
+  }
 
   moveHeroTo(x, y) {
     if (this.hero.dead) return null;
@@ -337,6 +416,10 @@ export class World {
       near: this.heroNear(th, th.radius),
       progress: th.upgrade ? th.upgrade.progress / th.upgrade.time : null,
       upgrade: next ? { toLevel: th.level + 1, cost: next.cost, hp: next.hp, reason: this.townHallUpgradeCheck(), round: this.unlockRound(`townhall:${th.level + 1}`) } : null,
+      arrows: this.thLevels[th.level - 1],
+      shop: Object.values(this.weaponTypes).filter((w) => w.shop).map((w) => ({
+        id: w.id, kind: w.kind, price: w.price ?? 0, round: w.round ?? 1, reason: this.shopCheck(w.id),
+      })),
       heroUpgrades: HERO_STATS.map((stat) => ({
         stat, level: this.heroUpgrades[stat], maxLevel: this.heroCosts.length,
         cost: this.heroCosts[this.heroUpgrades[stat]] ?? null, reason: this.heroUpgradeCheck(stat),
@@ -409,7 +492,7 @@ export class World {
     if (reason) return { ok: false, reason };
     this.coins -= this.heroCosts[this.heroUpgrades[stat]];
     this.heroUpgrades[stat]++;
-    this.heroStats = heroNumbers(this.heroPoints, this.heroUpgrades, this.heroRules);
+    this.recalcHero();
     this.emit('heroUpgraded', { stat, level: this.heroUpgrades[stat] });
     return { ok: true };
   }
@@ -425,6 +508,13 @@ export class World {
   updateTownHall(dt) {
     const th = this.townHall;
     this.regen(th, dt);
+    const arrows = this.thLevels[th.level - 1];
+    if (th.hp > 0 && arrows?.damage > 0 && arrows.range > 0) this.towerShoot(th, arrows, dt);
+    // the hero heals while standing at the Town Hall
+    const h = this.hero;
+    if (!h.dead && h.hp < h.maxHp && dist(h, th) <= th.radius + this.b.heroHealRadius) {
+      h.hp = Math.min(h.maxHp, h.hp + this.b.heroHealPerSecond * dt);
+    }
     if (th.upgrade) {
       th.upgrade.progress += dt * this.buildSpeed;
       if (th.upgrade.progress >= th.upgrade.time) {
@@ -704,6 +794,12 @@ export class World {
       const a = this.rng() * Math.PI * 2, r = this.rng() * 8;
       this.coinsOnGround.push({ id: this.nextId++, x: spot.x + Math.cos(a) * r, y: spot.y + Math.sin(a) * r, born: this.time });
     }
+    // sometimes a weapon chest (bosses always drop one)
+    const type = this.types[e.type];
+    if (Object.keys(this.weaponTypes).length && (type.boss || this.rng() < this.b.chestChance)) {
+      this.chests.push({ id: this.nextId++, x: spot.x, y: spot.y, born: this.time });
+      this.emit('chestDropped', { x: spot.x, y: spot.y });
+    }
     if (this.hero.target === e.id) this.hero.target = null;
     this.emit('enemyDied', { id: e.id, x: e.x, y: e.y, coins: n });
   }
@@ -726,10 +822,11 @@ export class World {
 
   // ---------------- projectiles ----------------
 
-  shoot(from, target, damage, owner) {
+  // owner: 'tower' (also the Town Hall), 'hero', 'magic' (hero spell), 'enemy'
+  shoot(from, target, damage, owner, splash = 0) {
     this.projectiles.push({
       id: this.nextId++, owner, x: from.x, y: from.y - (owner === 'tower' ? 30 : 0),
-      target, damage, speed: this.b.projectileSpeed,
+      target, damage, splash, speed: this.b.projectileSpeed * (owner === 'magic' ? 0.7 : 1),
     });
   }
 
@@ -750,7 +847,13 @@ export class World {
       const step = p.speed * dt;
       if (dist(p, t) <= step) {
         p.done = true;
-        this.damage(t, p.damage);
+        if (p.splash > 0) {
+          // a spell hurts every enemy around the target, flying ones too
+          for (const e of [...this.enemies]) if (dist(e, t) <= p.splash + e.radius) this.damageEnemy(e, p.damage);
+          this.emit('splash', { x: t.x, y: t.y, radius: p.splash });
+        } else {
+          this.damage(t, p.damage);
+        }
       } else {
         const a = Math.atan2(t.y - p.y, t.x - p.x);
         p.x += Math.cos(a) * step;
@@ -811,7 +914,7 @@ export class World {
     const h = this.hero;
     if (h.dead) {
       if (this.time >= h.respawnAt) {
-        Object.assign(h, { ...this.respawnPoint, dead: false, hp: h.maxHp, lives: this.b.heroLives, invuln: this.b.hitInvulnerability });
+        Object.assign(h, { ...this.respawnPoint, dead: false, hp: h.maxHp, lives: this.b.heroLives, invuln: this.b.hitInvulnerability, path: [], guard: null, target: null });
         this.emit('heroRespawn');
       }
       return;
@@ -861,7 +964,8 @@ export class World {
         if (target.x !== h.x) h.facing = target.x < h.x ? -1 : 1;
         if (h.cooldown === 0) {
           h.cooldown = stats.cooldown;
-          if (h.mode === 'ranged') this.shoot(h, target, stats.damage, 'hero');
+          if (h.mode === 'magic') this.shoot(h, target, stats.damage, 'magic', stats.splash);
+          else if (h.mode === 'ranged') this.shoot(h, target, stats.damage, 'hero');
           else this.damageEnemy(target, stats.damage);
           this.emit('heroAttack', { mode: h.mode });
         }
@@ -895,6 +999,14 @@ export class World {
       keep.push(c);
     }
     this.coinsOnGround = keep;
+
+    // weapon chests: picked up like coins, opened at once
+    this.chests = this.chests.filter((c) => {
+      if (this.time - c.born >= this.b.chestLifetime) return false;
+      if (h.dead || dist(h, c) > this.b.coinPickupRadius + 6) return true;
+      this.emit('chestOpened', { ...this.openChest(), x: c.x, y: c.y });
+      return false;
+    });
   }
 
   /** Small snapshot for the HUD. */
@@ -910,6 +1022,8 @@ export class World {
       workers: this.workers,
       townHall: { hp: Math.ceil(this.townHall.hp), maxHp: this.townHall.maxHp, level: this.townHall.level },
       hero: { hp: Math.max(0, this.hero.hp), maxHp: this.hero.maxHp, lives: this.hero.lives, dead: this.hero.dead, respawnIn: this.hero.dead ? Math.max(0, this.hero.respawnAt - this.time) : 0, mode: this.hero.mode },
+      inventory: [...this.inventory],
+      equipped: { ...this.equipped },
       enemiesLeft: this.enemies.length + this.queue.length,
       nextRound: this.phase === 'prep' && next ? next : null,
       nextCaves: this.phase === 'prep' && next ? roundCaves(next, this.caveIds) : null,

@@ -134,9 +134,10 @@ export function playGame({ rules = DEFAULT_RULES, buildingTypes = DEFAULT_BUILDI
         continue;
       }
     }
-    // 3) pick up coins when it is safe
-    if (!danger && w.coinsOnGround.length && !h.path.length) {
-      const c = w.coinsOnGround.reduce((a, b) => (dist(b, h) < dist(a, h) ? b : a));
+    // 3) pick up coins and weapon chests when it is safe
+    const loot = [...w.chests, ...w.coinsOnGround];
+    if (!danger && loot.length && !h.path.length) {
+      const c = loot.reduce((a, b) => (dist(b, h) < dist(a, h) ? b : a));
       w.moveHeroTo(c.x, c.y);
       continue;
     }

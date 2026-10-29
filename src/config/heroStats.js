@@ -11,6 +11,8 @@ export const HERO_RULES = {
   rangedDamage: 5, rangedPerPoint: 2, rangedRange: 200, rangedCooldown: 1.6, rangedCooldownPerPoint: 0.1, rangedMinCooldown: 0.6,
   armorPerPoint: 0.05, armorMax: 0.6,
   speed: 90, speedPerPoint: 12,
+  // magic attack – only usable with a magic weapon equipped (its splash comes from the weapon)
+  magicDamage: 8, magicRange: 160, magicCooldown: 1.8,
 };
 
 export const HERO_POINTS = HERO_RULES.points;
@@ -30,6 +32,7 @@ export function heroNumbers(points, upgrades = {}, r = HERO_RULES) {
       range: r.rangedRange,
       cooldown: Math.max(r.rangedMinCooldown, +(r.rangedCooldown - r.rangedCooldownPerPoint * p('ranged')).toFixed(2)),
     },
+    magic: { damage: r.magicDamage ?? 8, range: r.magicRange ?? 160, cooldown: r.magicCooldown ?? 1.8 },
     armor: Math.min(r.armorMax, +(r.armorPerPoint * p('armor')).toFixed(3)),
     speed: r.speed + r.speedPerPoint * p('speed'),
   };

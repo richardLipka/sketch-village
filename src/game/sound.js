@@ -7,7 +7,7 @@ let master = null;
 let muted = false;
 const lastPlayed = new Map();
 
-const MIN_GAP = { hit: 0.07, shoot: 0.08, enemyHit: 0.06, coin: 0.05 }; // s between two of the same kind
+const MIN_GAP = { hit: 0.07, shoot: 0.08, magic: 0.1, enemyHit: 0.06, coin: 0.05 }; // s between two of the same kind
 
 function audio() {
   if (!ctx) {
@@ -72,6 +72,8 @@ const SOUNDS = {
   heroDown: (c) => [392, 330, 262].forEach((f, i) => tone(c, { type: 'triangle', f0: f, dur: 0.25, vol: 0.3, delay: i * 0.18 })),
   won: (c) => [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(c, { type: 'triangle', f0: f, dur: 0.2, vol: 0.3, delay: i * 0.13 })),
   lost: (c) => [392, 370, 349, 262].forEach((f, i) => tone(c, { type: 'sawtooth', f0: f, dur: 0.35, vol: 0.15, delay: i * 0.3 })),
+  magic: (c) => { tone(c, { f0: 500, f1: 1400, dur: 0.18, vol: 0.2 }); tone(c, { type: 'triangle', f0: 750, f1: 2100, dur: 0.18, vol: 0.12 }); },
+  chest: (c) => [659, 784, 988, 1319].forEach((f, i) => tone(c, { type: 'triangle', f0: f, dur: 0.14, vol: 0.28, delay: i * 0.07 })),
   click: (c) => tone(c, { f0: 900, dur: 0.04, vol: 0.15 }),
   nope: (c) => tone(c, { type: 'square', f0: 160, dur: 0.12, vol: 0.12 }),
 };
@@ -79,7 +81,9 @@ const SOUNDS = {
 /** Which sound a World event makes (or null). Pure – unit-tested. */
 export function soundFor(e) {
   switch (e.type) {
-    case 'heroAttack': return e.mode === 'ranged' ? 'shoot' : 'hit';
+    case 'heroAttack': return e.mode === 'magic' ? 'magic' : e.mode === 'ranged' ? 'shoot' : 'hit';
+    case 'chestOpened': return 'chest';
+    case 'weaponBought': return 'sold';
     case 'hit': return e.kind === 'enemy' ? 'enemyHit' : e.kind === 'hero' ? 'ouch' : null;
     case 'enemyDied': return 'enemyDied';
     case 'coinPicked': return 'coin';

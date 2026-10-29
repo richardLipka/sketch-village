@@ -11,6 +11,8 @@ import MapList from './maps/MapList.jsx';
 import PlaySetup from './game/PlaySetup.jsx';
 import EnemyEditor from './game/EnemyEditor.jsx';
 import RulesEditor from './game/RulesEditor.jsx';
+import WeaponEditor from './game/WeaponEditor.jsx';
+import { weaponsOf } from './config/weapons.js';
 import { enemyTypesOf } from './config/enemies.js';
 import { buildingTypesOf } from './config/buildings.js';
 import { rulesOf } from './config/rules.js';
@@ -82,6 +84,7 @@ export default function App() {
             <button className="btn big" onClick={() => setScreen('studio')}>✏️ {t('menu.studio')}</button>
             <button className="btn big" onClick={() => setScreen('maps')}>🗺️ {t('menu.maps')}</button>
             <button className="btn big" onClick={() => setScreen('enemies')}>👾 {t('menu.enemies')}</button>
+            <button className="btn big" onClick={() => setScreen('weapons')}>🗡️ {t('menu.weapons')}</button>
             <button className="btn big" onClick={() => setScreen('rules')}>⚙️ {t('menu.rules')}</button>
             <button className="btn big" onClick={() => setScreen('data')}>💾 {t('menu.data')}</button>
           </div>
@@ -100,6 +103,10 @@ export default function App() {
         <EnemyEditor enemyTypes={enemyTypesOf(db)} assets={db.assets} onChange={(list) => updateCollection('enemyTypes', list)} />
       )}
 
+      {screen === 'weapons' && (
+        <WeaponEditor weapons={weaponsOf(db)} assets={db.assets} onChange={(list) => updateCollection('weapons', list)} />
+      )}
+
       {screen === 'rules' && (
         <RulesEditor
           buildingTypes={buildingTypesOf(db)}
@@ -110,7 +117,7 @@ export default function App() {
 
       {screen === 'play' && (
         <PlaySetup
-          maps={db.maps} assets={db.assets} enemyTypes={enemyTypesOf(db)} buildingTypes={buildingTypesOf(db)} rules={rules}
+          maps={db.maps} assets={db.assets} enemyTypes={enemyTypesOf(db)} buildingTypes={buildingTypesOf(db)} rules={rules} weapons={weaponsOf(db)}
           settings={db.settings} onSettings={updateSettings} onExit={() => setScreen('menu')}
         />
       )}

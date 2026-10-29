@@ -157,6 +157,18 @@ export default class GameScene extends Phaser.Scene {
       g.fillStyle(0xfacc15).fillCircle(16, 16, 11);
       g.lineStyle(2, 0x854d0e).strokeCircle(16, 16, 11).strokeCircle(16, 16, 6);
     });
+    tex('chest', 48, (g) => {
+      g.fillStyle(0xb45309).fillRect(6, 16, 36, 24);
+      g.lineStyle(3, 0x451a03).strokeRect(6, 16, 36, 24);
+      g.fillStyle(0xd97706).fillRect(6, 10, 36, 9);
+      g.lineStyle(3, 0x451a03).strokeRect(6, 10, 36, 9);
+      g.fillStyle(0xfacc15).fillRect(21, 18, 6, 8);
+    });
+    tex('magic', 32, (g) => {
+      g.fillStyle(0xc084fc, 0.5).fillCircle(16, 16, 13);
+      g.fillStyle(0xa855f7).fillCircle(16, 16, 8);
+      g.fillStyle(0xffffff).fillCircle(13, 13, 3);
+    });
     tex('projectile', 32, (g) => {
       g.lineStyle(3, 0x78350f).lineBetween(4, 16, 26, 16);
       g.fillStyle(0x374151).fillTriangle(26, 11, 31, 16, 26, 21);
@@ -313,13 +325,23 @@ export default class GameScene extends Phaser.Scene {
     if (e.type === 'coinPicked') this.floatText(e.x, e.y - 16, '+1', '#a16207');
     if (e.type === 'cantHit') this.cfg.onEvent?.(e);
     if (e.type === 'buildingDestroyed') { const s = this.world.spots.find((p) => p.id === e.spotId); if (s) this.puff(s.x, s.y); }
+    if (e.type === 'splash') this.splash(e.x, e.y, e.radius);
+    if (e.type === 'chestOpened') this.floatText(e.x, e.y - 24, e.weapon ? '🎁' : `+${e.coins}`, '#7c3aed');
     if (e.type === 'sold') { this.puff(e.x, e.y); if (e.refund) this.floatText(e.x, e.y - 30, `+${e.refund}`, '#a16207'); }
-    if (['waveStart', 'roundEnd', 'won', 'lost', 'heroDown', 'heroRespawn', 'bonus', 'heroLostLife', 'built', 'upgraded', 'buildingDestroyed', 'sold', 'heroUpgraded', 'unlocked'].includes(e.type)) this.cfg.onEvent?.(e);
+    if (['waveStart', 'roundEnd', 'won', 'lost', 'heroDown', 'heroRespawn', 'bonus', 'heroLostLife', 'built', 'upgraded', 'buildingDestroyed', 'sold', 'heroUpgraded', 'unlocked', 'chestOpened', 'weaponBought'].includes(e.type)) this.cfg.onEvent?.(e);
   }
 
   floatText(x, y, text, color) {
     const t = this.add.text(x, y, text, { fontFamily: 'Patrick Hand', fontSize: '20px', color, stroke: '#fffdf7', strokeThickness: 3 }).setOrigin(0.5).setDepth(9500);
     this.tweens.add({ targets: t, y: y - 26, alpha: 0, duration: 700, onComplete: () => t.destroy() });
+  }
+
+  // purple ring where a spell lands
+  splash(x, y, r) {
+    const g = this.add.graphics().setDepth(9300);
+    g.fillStyle(0xa855f7, 0.25).fillCircle(x, y, r);
+    g.lineStyle(3, 0x7e22ce, 0.8).strokeCircle(x, y, r);
+    this.tweens.add({ targets: g, alpha: 0, duration: 400, onComplete: () => g.destroy() });
   }
 
   // pencil scribble where an enemy dies
@@ -396,8 +418,15 @@ export default class GameScene extends Phaser.Scene {
     }
 
     for (const p of w.projectiles) {
-      const s = this.sprite(`p${p.id}`, () => ({ img: this.add.image(p.x, p.y, 'projectile').setDisplaySize(26, 26).setDepth(9100) }));
-      s.img.setPosition(p.x, p.y).setRotation(p.angle ?? 0);
+      const key = p.owner === 'magic' ? 'magic' : 'projectile';
+      const s = this.sprite(`p${p.id}`, () => ({ img: this.add.image(p.x, p.y, key).setDisplaySize(26, 26).setDepth(9100) }));
+      s.img.setPosition(p.x, p.y).setRotation(key === 'magic' ? this.time.now / 100 : p.angle ?? 0);
+    }
+
+    for (const c of w.chests) {
+      const s = this.sprite(`k${c.id}`, () => ({ img: this.add.image(c.x, c.y, 'chest').setDisplaySize(34, 34).setDepth(c.y) }));
+      const left = w.b.chestLifetime - (w.time - c.born);
+      s.img.setAlpha(left < 5 ? (Math.floor(this.time.now / 150) % 2 ? 0.25 : 1) : 1).setAngle(Math.sin(this.time.now / 200 + c.id) * 5);
     }
 
     const now = w.time;
@@ -416,6 +445,9 @@ export default class GameScene extends Phaser.Scene {
 
     // hero
     const h = w.hero;
+    // a drawing for the current weapon class when the kids made one
+    const heroKey = this.textures.exists(`hero:${h.mode}`) ? `hero:${h.mode}` : 'hero';
+    if (this.hero.texture.key !== heroKey) this.hero.setTexture(heroKey).setDisplaySize(56, 56);
     this.hero.setVisible(!h.dead).setPosition(h.x, h.y).setDepth(h.y).setFlipX(h.facing < 0).setAngle(this.jitter(0.7) * 3);
     this.hero.setAlpha(h.invuln > 0 ? (Math.floor(this.time.now / 100) % 2 ? 0.35 : 1) : 1);
     this.heroBar.clear();
@@ -445,6 +477,8 @@ export default class GameScene extends Phaser.Scene {
         const r = sel.kind === 'townhall' ? 54 : 34;
         this.selectRing.lineStyle(3, 0xca8a04, 0.9).strokeCircle(p.x, p.y, r);
         this.selectRing.lineStyle(1.5, INK, 0.3).strokeCircle(p.x, p.y, 90 + (sel.kind === 'townhall' ? th.radius : 0));
+        const arrows = sel.kind === 'townhall' && w.thLevels[th.level - 1];
+        if (arrows?.range) this.selectRing.lineStyle(2, 0xdc2626, 0.5).strokeCircle(th.x, th.y, arrows.range);
         const b = sel.kind === 'spot' && w.buildingOn(sel.id);
         if (b && b.type === 'tower' && b.level > 0) {
           this.selectRing.lineStyle(2, 0xdc2626, 0.5).strokeCircle(b.x, b.y, w.buildingTypes.tower.levels[b.level - 1].range);

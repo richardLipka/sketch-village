@@ -4,7 +4,7 @@ import { roundSummary } from '../logic/waves.js';
 import { unlockLabel } from '../config/unlocks.js';
 
 // Top bar: round, countdown + Ready, coins, Town Hall HP, hero lives, melee/ranged.
-export default function Hud({ hud, onReady, onMode, enemyName, enemyTypes, maxLives = 5 }) {
+export default function Hud({ hud, onReady, onMode, onInventory, enemyName, enemyTypes, maxLives = 5 }) {
   const { t } = useTranslation();
   const { hero, townHall } = hud;
   const thPct = Math.round((townHall.hp / townHall.maxHp) * 100);
@@ -36,6 +36,9 @@ export default function Hud({ hud, onReady, onMode, enemyName, enemyTypes, maxLi
         <span className="row" style={{ gap: 4 }}>
           <button className={`btn icon ${hero.mode === 'melee' ? 'active' : ''}`} onClick={() => onMode('melee')} title={`${t('hero.stat_melee')} (1)`}>⚔️</button>
           <button className={`btn icon ${hero.mode === 'ranged' ? 'active' : ''}`} onClick={() => onMode('ranged')} title={`${t('hero.stat_ranged')} (2)`}>🏹</button>
+          <button className={`btn icon ${hero.mode === 'magic' ? 'active' : ''}`} onClick={() => onMode('magic')} disabled={!hud.equipped?.magic}
+            title={hud.equipped?.magic ? `${t('weapons.class_magic')} (3)` : t('weapons.need_magic')}>✨</button>
+          <button className="btn icon" onClick={onInventory} title={`${t('weapons.inventory')} (I)`}>🎒{hud.inventory?.length ? ` ${hud.inventory.length}` : ''}</button>
         </span>
       </div>
       {hud.newThings?.length > 0 && (

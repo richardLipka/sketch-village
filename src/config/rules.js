@@ -29,7 +29,8 @@ export function mergeRules(rec) {
     updatedAt: rec.updatedAt,
     balance: { ...d.balance, ...rec.balance },
     build: { ...d.build, ...rec.build, soldier: { ...d.build.soldier, ...rec.build?.soldier } },
-    townHallLevels: rec.townHallLevels?.length ? rec.townHallLevels : d.townHallLevels,
+    // per level, so a record saved before a field existed (e.g. Town Hall arrows) gets the default
+    townHallLevels: rec.townHallLevels?.length ? rec.townHallLevels.map((l, i) => ({ ...d.townHallLevels[i], ...l })) : d.townHallLevels,
     heroUpgradeCosts: rec.heroUpgradeCosts?.length ? rec.heroUpgradeCosts : d.heroUpgradeCosts,
     hero: { ...d.hero, ...rec.hero },
     unlocks: Array.isArray(rec.unlocks) ? rec.unlocks : d.unlocks,

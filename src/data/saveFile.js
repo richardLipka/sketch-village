@@ -6,7 +6,7 @@ export const SAVE_VERSION = 1;
 
 // Collections of id-keyed records. Later milestones add their data here and
 // export/import/merge picks them up automatically.
-export const COLLECTIONS = ['assets', 'maps', 'enemyTypes', 'buildingTypes', 'rules'];
+export const COLLECTIONS = ['assets', 'maps', 'enemyTypes', 'buildingTypes', 'rules', 'weapons'];
 
 export function newId() {
   if (globalThis.crypto?.randomUUID) return crypto.randomUUID();

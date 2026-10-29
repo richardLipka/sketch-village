@@ -14,10 +14,11 @@ export const BUILD = {
 
 // HP tuned with the balance bot (balance.test.js): buildings beside the roads
 // must survive enemies walking past while the towers shoot them.
+// The Town Hall also shoots arrows like a weak tower (damage/range/cooldown per level).
 export const TOWN_HALL_LEVELS = [
-  { hp: 600 },
-  { cost: 60, time: 20, hp: 900 },
-  { cost: 100, time: 30, hp: 1200 },
+  { hp: 600, damage: 5, range: 170, cooldown: 1.2 },
+  { cost: 60, time: 20, hp: 900, damage: 8, range: 190, cooldown: 1.1 },
+  { cost: 100, time: 30, hp: 1200, damage: 12, range: 210, cooldown: 1.0 },
 ];
 
 export const HERO_UPGRADE_COSTS = [15, 30, 50]; // level n needs Town Hall level n
