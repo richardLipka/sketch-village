@@ -12,8 +12,8 @@ import FullscreenButton from '../ui/FullscreenButton.jsx';
 // Every piece is memoized and gets only primitive props (or stable callbacks /
 // lists), so a HUD change re-renders just the pieces that show it.
 
-function Bar({ frac, color, width = 70 }) {
-  return <span className="hud-bar" style={{ width }}><span style={{ width: `${Math.round(frac * 100)}%`, background: color }} /></span>;
+function Bar({ frac, color, width }) {
+  return <span className="hud-bar" style={width ? { width } : undefined}><span style={{ width: `${Math.round(frac * 100)}%`, background: color }} /></span>;
 }
 
 export const Resources = memo(function Resources({ coins, workers, thHp, thMax, thLevel }) {
@@ -34,7 +34,7 @@ export const Lives = memo(function Lives({ lives, maxLives, hp, maxHp, dead, res
       {dead ? <b>⏳ {t('game.respawn_in', { s: respawnIn })}</b> : (
         <>
           <span className="hearts">{'♥'.repeat(lives)}{'♡'.repeat(Math.max(0, maxLives - lives))}</span>
-          <Bar frac={hp / maxHp} color="#16a34a" width={90} />
+          <Bar frac={hp / maxHp} color="#16a34a" width="4.5em" />
         </>
       )}
     </div>
@@ -102,7 +102,7 @@ export const Equipment = memo(function Equipment({ inventoryKey, right, left, ar
 
   const slot = (key, id, icon, label) => (
     <button key={key} className={`btn eq-slot ${open === key ? 'active' : ''}`} onClick={() => setOpen(open === key ? null : key)} title={label}>
-      {id ? <WeaponIcon weapon={byId(id)} assets={assets} size={30} /> : <span className="muted">{icon}</span>}
+      {id ? <WeaponIcon weapon={byId(id)} assets={assets} size="1.5em" /> : <span className="muted">{icon}</span>}
     </button>
   );
 
@@ -115,7 +115,7 @@ export const Equipment = memo(function Equipment({ inventoryKey, right, left, ar
           {shown.map((w) => (
             <button key={w.id} className={`btn weapon-row ${worn(w) ? 'active' : ''}`} onClick={() => onEquip(w.id)}
               disabled={w.slot === 'shield' && twoHanded}>
-              <WeaponIcon weapon={w} assets={assets} size={26} />
+              <WeaponIcon weapon={w} assets={assets} size="1.3em" />
               <span>{w.name?.[lang] ?? w.id}</span>
               <span className="small muted">{itemLine(w, t)}</span>
               {worn(w) && <span className="small">✓</span>}
@@ -155,12 +155,12 @@ export const Toolbar = memo(function Toolbar({ paused, speed, wobble, muted, tip
       <button className="btn icon" onClick={onExit} title={t('game.exit')}>✕</button>
       <button className={`btn icon ${paused ? 'active' : ''}`} onClick={onPause} title={t('game.pause')}>{paused ? '▶' : '⏸'}</button>
       <button className={`btn icon ${speed === 2 ? 'active' : ''}`} onClick={onSpeed} title={t('game.speed')}>{speed}×</button>
-      <button className="btn icon" onClick={() => onZoom(1 / 1.25)} title={t('game.zoom_out')}>−</button>
-      <button className="btn icon" onClick={() => onZoom(1.25)} title={t('game.zoom_in')}>+</button>
+      <button className="btn icon narrow-hide" onClick={() => onZoom(1 / 1.25)} title={t('game.zoom_out')}>−</button>
+      <button className="btn icon narrow-hide" onClick={() => onZoom(1.25)} title={t('game.zoom_in')}>+</button>
       <button className={`btn icon ${tipsOn ? 'active' : ''}`} onClick={onTips} title={t(tipsOn ? 'tips.skip' : 'tips.restart')}>💡</button>
       <button className="btn icon" onClick={onMute} title={t(muted ? 'game.sound_on' : 'game.sound_off')}>{muted ? '🔇' : '🔊'}</button>
       <button className={`btn icon ${wobble ? 'active' : ''}`} onClick={onWobble} title={t('game.wobble')}>〰️</button>
-      <button className="btn icon" title={t('game.hint')}>?</button>
+      <button className="btn icon narrow-hide" title={t('game.hint')}>?</button>
       <FullscreenButton />
     </div>
   );

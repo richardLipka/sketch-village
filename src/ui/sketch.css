@@ -73,9 +73,15 @@ h2 { font-size: 1.8rem; }
 .btn.primary { background: var(--hl-yellow); }
 .btn.good { background: var(--hl-green); }
 .btn.danger { background: var(--hl-red); color: var(--danger); border-color: var(--danger); }
-.btn.big { font-size: 28px; padding: 10px 28px; }
-.btn.icon { padding: 4px 10px; }
+.btn.big { font-size: 28px; padding: 10px 28px; min-height: 64px; }
+.btn.icon { padding: 4px 10px; justify-content: center; }
 .btn.active { background: var(--hl-blue); transform: rotate(1deg); }
+/* everything a finger taps is at least 48 px (≈ 1 cm) */
+.btn, .tab { min-height: 48px; }
+.btn.icon { min-width: 48px; }
+input[type=checkbox] { width: 24px; height: 24px; accent-color: var(--ink); }
+input[type=range] { min-height: 32px; }
+select { min-height: 40px; }
 
 /* ---- inputs ---- */
 input[type=text], input[type=number], select {
@@ -144,14 +150,14 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 /* ---- stats editor ---- */
 .stat-row { display: grid; grid-template-columns: 130px auto 1fr; gap: 10px; align-items: center; margin: 6px 0; }
 .dots { display: flex; gap: 6px; }
-.dot { width: 22px; height: 22px; border: 2px solid var(--ink); border-radius: 50% 45% 55% 50%; background: transparent; cursor: pointer; padding: 0; }
+.dot { width: 36px; height: 36px; border: 2px solid var(--ink); border-radius: 50% 45% 55% 50%; background: transparent; cursor: pointer; padding: 0; }
 .dot.on { background: var(--ink); }
 
 /* ---- sketch pad ---- */
 .pad-wrap { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start; }
 .pad-canvas { width: min(512px, 90vw); aspect-ratio: 1; border: 2.5px solid var(--ink); border-radius: 6px; touch-action: none; cursor: crosshair; image-rendering: auto; }
 .palette { display: flex; flex-wrap: wrap; gap: 6px; max-width: 200px; }
-.swatch { width: 28px; height: 28px; border: 2px solid var(--ink); border-radius: 50% 40% 55% 45%; cursor: pointer; padding: 0; }
+.swatch { width: 40px; height: 40px; border: 2px solid var(--ink); border-radius: 50% 40% 55% 45%; cursor: pointer; padding: 0; }
 .swatch.on { outline: 3px solid var(--hl-yellow); outline-offset: 2px; }
 .tools { display: flex; flex-direction: column; gap: 8px; }
 
@@ -195,29 +201,56 @@ label { display: inline-flex; gap: 8px; align-items: center; }
   overflow: hidden; touch-action: none; background: var(--paper);
 }
 
-/* ---- controls laid over the map, in its corners ---- */
-.game-screen { padding: 0; }
+/* ---- controls laid over the map, in its corners ----
+   All sizes are in em of a font that grows with the window, so the controls keep
+   the same share of the screen in a small window and on a big monitor; buttons
+   never get smaller than 48 px (finger size). */
+.game-screen { padding: 0; --u: clamp(18px, calc(0.75vw + 0.75vh + 8px), 34px); font-size: var(--u); }
 .game-screen .game-host { border: none; border-radius: 0; }
+.game-screen .btn { font-size: 1em; min-height: max(48px, calc(2.3 * var(--u))); }
+.game-screen .btn.icon { min-width: max(48px, calc(2.3 * var(--u))); padding: 0.15em 0.4em; }
+.game-screen .small { font-size: 0.8em; }
+.game-screen .hud-num { font-size: 1.1em; }
+.game-screen .hud-bar { width: 3.5em; height: 0.5em; }
 .ov { position: absolute; z-index: 5; }
-.ov-tl { top: 8px; left: 8px; display: flex; gap: 14px; align-items: center; padding: 4px 12px; }
-.ov-tc { top: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; padding: 4px 14px; }
-.ov-tr { top: 8px; right: 8px; max-width: min(430px, 44%); padding: 6px 10px; text-align: right; }
-.ov-br { right: 8px; bottom: 8px; display: flex; gap: 6px; }
-.ov-br-eq { right: 8px; bottom: 74px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-.ov-bc { bottom: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px; padding: 4px 8px; }
-.hearts { color: #dc2626; font-size: 24px; letter-spacing: 1px; }
-.btn.attack { position: relative; width: 58px; height: 58px; padding: 0; font-size: 28px; overflow: hidden; }
+.ov-tl { top: 8px; left: 8px; display: flex; gap: 0.7em; align-items: center; padding: 0.2em 0.6em; }
+.ov-tc { top: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 0.5em; align-items: center; padding: 0.2em 0.7em; }
+.ov-tr { top: 8px; right: 8px; max-width: min(22em, 44%); padding: 0.3em 0.5em; text-align: right; }
+.ov-br { right: 8px; bottom: 8px; display: flex; gap: 0.3em; }
+.ov-br-eq { right: 8px; bottom: calc(16px + max(56px, calc(2.9 * var(--u)))); display: flex; flex-direction: column; align-items: flex-end; gap: 0.3em; }
+.ov-bc { bottom: 8px; left: 50%; transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; gap: 0.2em; padding: 0.2em 0.4em; max-width: calc(100% - 2 * (max(56px, calc(2.9 * var(--u))) * 3 + 40px)); }
+.hearts { color: #dc2626; font-size: 1.2em; letter-spacing: 1px; }
+.game-screen .btn.attack { position: relative; width: max(56px, calc(2.9 * var(--u))); height: max(56px, calc(2.9 * var(--u))); padding: 0; font-size: 1.4em; overflow: hidden; justify-content: center; }
 .btn.attack .switching { position: absolute; left: 0; bottom: 0; height: 6px; background: var(--danger); }
-.eq-row { gap: 6px; }
-.btn.eq-slot { width: 48px; height: 48px; padding: 0; display: grid; place-items: center; font-size: 22px; background: #fffdf7; }
-.backpack { width: min(380px, 80vw); max-height: 50vh; overflow: auto; padding: 8px 10px; }
-.weapon-row { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; margin: 4px 0; padding: 3px 8px; font-size: 18px; }
-.game-screen .game-msg { top: 60px; }
-.game-screen .coach { right: auto; left: 50%; bottom: 66px; transform: translateX(-50%) rotate(0.6deg); max-width: min(520px, 60%); }
-.game-screen .build-panel { left: 8px; bottom: 8px; max-height: calc(100% - 70px); }
+.eq-row { gap: 0.3em; }
+.game-screen .btn.eq-slot { width: max(48px, calc(2.4 * var(--u))); height: max(48px, calc(2.4 * var(--u))); padding: 0; display: grid; place-items: center; font-size: 1.1em; background: #fffdf7; }
+.backpack { width: min(19em, 80vw); max-height: 50vh; overflow: auto; padding: 0.4em 0.5em; }
+.weapon-row { display: flex; align-items: center; gap: 0.4em; width: 100%; text-align: left; margin: 0.2em 0; padding: 0.15em 0.4em; font-size: 0.9em; }
+.game-screen .game-msg { top: calc(16px + 2.4em); }
+.game-screen .coach { right: auto; left: 50%; bottom: calc(16px + max(56px, calc(2.9 * var(--u)))); transform: translateX(-50%) rotate(0.6deg); max-width: min(26em, 60%); font-size: 0.95em; }
+.game-screen .build-panel { left: 8px; bottom: 8px; width: min(17em, 60%); max-height: calc(100% - 3.6em); font-size: 0.9em; }
+.game-screen .build-panel h3 { font-size: 1.1em; }
+.game-screen .build-option .btn { font-size: 1em; }
+.game-screen .game-over .btn { font-size: 1.1em; }
+
+/* narrow / portrait screens (tablets held upright, phones): the map leaves empty
+   bands above and below, so the controls stack there instead of overlapping */
+@media (max-width: 900px) {
+  .game-screen { --btn: max(48px, calc(2.3 * var(--u))); }
+  .ov-tc { left: 8px; transform: none; top: calc(16px + var(--btn)); }
+  .ov-tr { max-width: calc(100% - 16px); top: calc(24px + 2 * var(--btn)); }
+  .ov-tl { max-width: calc(100% - 16px); }
+  .ov-bc { max-width: calc(100% - 16px); flex-wrap: nowrap; }
+  .ov-bc .narrow-hide { display: none; } /* zoom ± and help: pinch-zoom works on touch screens */
+  .ov-br { bottom: calc(28px + var(--btn)); }
+  .ov-br-eq { bottom: calc(36px + var(--btn) + max(56px, calc(2.9 * var(--u)))); }
+  .game-screen .coach { bottom: calc(28px + var(--btn)); left: 8px; transform: none; max-width: calc(100% - 4 * var(--btn) - 60px); }
+  .game-screen .game-msg { top: calc(32px + 4 * var(--btn)); white-space: normal; max-width: 90%; text-align: center; }
+  .game-screen .build-panel { width: calc(100% - 16px); max-height: 55%; }
+}
 
 .decor-picker { padding: 8px 10px; display: grid; gap: 6px; }
-.decor-tile { display: flex; flex-direction: column; align-items: center; width: 84px; padding: 4px; border: 2px solid transparent; border-radius: 8px; background: #fffdf7; cursor: pointer; font: inherit; font-size: 14px; color: var(--ink); }
+.decor-tile { display: flex; flex-direction: column; align-items: center; width: 84px; min-height: 48px; padding: 4px; border: 2px solid transparent; border-radius: 8px; background: #fffdf7; cursor: pointer; font: inherit; font-size: 14px; color: var(--ink); }
 .decor-tile img { width: 64px; height: 64px; object-fit: contain; }
 .decor-tile span { max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .decor-tile.on { border-color: var(--ink); background: var(--hl-yellow); }
