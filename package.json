@@ -1,0 +1,27 @@
+{
+  "name": "sketch-village",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pen-and-pencil village defense game with kid-drawn assets",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "i18next": "^24.2.0",
+    "idb-keyval": "^6.2.1",
+    "phaser": "^3.90.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-easy-crop": "^5.2.0",
+    "react-i18next": "^15.4.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^6.0.7",
+    "vitest": "^2.1.8"
+  }
+}
