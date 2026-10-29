@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { roundSummary } from '../logic/waves.js';
+import { unlockLabel } from '../config/unlocks.js';
 
 // Top bar: round, countdown + Ready, coins, Town Hall HP, hero lives, melee/ranged.
 export default function Hud({ hud, onReady, onMode, enemyName, enemyTypes, maxLives = 5 }) {
@@ -37,6 +38,11 @@ export default function Hud({ hud, onReady, onMode, enemyName, enemyTypes, maxLi
           <button className={`btn icon ${hero.mode === 'ranged' ? 'active' : ''}`} onClick={() => onMode('ranged')} title={`${t('hero.stat_ranged')} (2)`}>🏹</button>
         </span>
       </div>
+      {hud.newThings?.length > 0 && (
+        <div className="small" style={{ marginTop: 4 }}>
+          🎁 <b>{t('unlock.new')}</b> {hud.newThings.map((k) => unlockLabel(k, t)).join(', ')}
+        </div>
+      )}
       {preview.length > 0 && (
         <div className="small" style={{ marginTop: 4 }}>
           {t('game.coming')}: {preview.map(([id, n]) => `${n}× ${enemyName(id)}`).join(', ')}

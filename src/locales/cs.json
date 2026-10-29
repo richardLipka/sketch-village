@@ -280,6 +280,7 @@
     "reason_occupied": "Místo je obsazené",
     "reason_ruin": "Je to zničené",
     "reason_unknown": "To nejde",
+    "reason_locked": "Dostupné od {{n}}. kola",
     "msg_built": "{{name}} je postaven!",
     "msg_upgraded": "{{name}} má úroveň {{n}}!",
     "msg_th_upgraded": "Radnice má úroveň {{n}}!",
@@ -332,6 +333,13 @@
     "round_prep": "Příprava před (s)",
     "empty_auto": "prázdné = automaticky"
   },
+  "unlock": {
+    "new": "Nové v tomto kole:",
+    "msg": "🎁 Nové: {{list}}!",
+    "level": "{{name}} – úroveň {{n}}",
+    "townhall": "Radnice – úroveň {{n}}",
+    "hero": "Hrdina: {{stat}} +{{n}}"
+  },
   "tips": {
     "walk": "Klikni na žlutou cestu – hrdina tam dojde.",
     "build": "Klikni na čárkovaný čtverec u cesty a postav budovu. Začni věží – střílí šípy!",
@@ -354,6 +362,9 @@
     "townhall_hint": "Úroveň radnice určuje, jak vysoko jde vylepšit budovy a hrdinu.",
     "hero_costs": "Vylepšení hrdiny (cena)",
     "hero_costs_hint": "Kupuje se na radnici. Úroveň N potřebuje radnici úrovně N.",
+    "unlocks": "Co se kdy odemkne",
+    "from_round": "od kola",
+    "unlocks_hint": "Po každé vlně je k dispozici něco nového. Kolo 1 = hned od začátku. Úroveň radnice a mince platí dál.",
     "hero": "Hrdina",
     "hero_hint": "Každý hrdina si body rozdělí v Ateliéru obrázků. Každé vylepšení na radnici přidá do vlastnosti jeden bod navíc.",
     "h_points": "Body na hrdinu",

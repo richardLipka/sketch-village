@@ -54,14 +54,25 @@ const PLAN = [
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
 /** Play one game; returns per-round stats and the result. */
-export function playGame({ rules = DEFAULT_RULES, buildingTypes = DEFAULT_BUILDING_TYPES, seed = 1, plan = PLAN } = {}) {
+export function playGame({ rules = DEFAULT_RULES, buildingTypes = DEFAULT_BUILDING_TYPES, seed = 1, plan = PLAN, onTick } = {}) {
   const { map, grid } = testMap();
   const w = new World({ map, grid, enemyTypes: DEFAULT_ENEMY_TYPES, buildingTypes, rules, waves: defaultWaves(rules.balance), seed });
   w.setMode('ranged');
   const home = { x: w.townHall.x, y: w.townHall.y + 50 };
   const stats = [];
   let cur = { destroyed: 0, minTownHall: w.townHall.hp, livesLost: 0 };
-  let step = 0, think = 0, rebuilds = [];
+  let think = 0, rebuilds = [];
+  const done = plan.map(() => false);
+  // the first plan step that isn't done and isn't locked / waiting (it may still cost too much)
+  const nextStep = () => {
+    for (const [i, s] of plan.entries()) {
+      if (done[i]) continue;
+      const c = costOf(w, s);
+      if (c === null) { done[i] = true; continue; }
+      if (c !== Infinity) return i;
+    }
+    return -1;
+  };
 
   const target = (s) => (s[0] === 'th' || s[0] === 'hero' ? w.townHall : w.spots.find((p) => p.id === s[1]));
   const doStep = (s) => {
@@ -75,13 +86,16 @@ export function playGame({ rules = DEFAULT_RULES, buildingTypes = DEFAULT_BUILDI
   const dt = 1 / 30;
   for (let t = 0; t < 4000 && w.phase !== 'won' && w.phase !== 'lost'; t += dt) {
     w.update(dt);
+    onTick?.(w);
     for (const e of w.drainEvents()) {
       if (e.type === 'buildingDestroyed') { cur.destroyed++; rebuilds.push(['build', e.spotId, e.building]); }
       if (e.type === 'heroLostLife') cur.livesLost++;
       if (e.type === 'coinPicked') cur.picked = (cur.picked ?? 0) + 1;
       if (e.type === 'coinExpired') cur.expired = (cur.expired ?? 0) + 1;
+      if (e.type === 'waveStart') cur.waveStart = w.time;
+      if (e.type === 'unlocked') cur.unlocked = e.keys;
       if (e.type === 'roundEnd') {
-        stats.push({ round: e.round, ...cur, coins: w.coins, buildings: w.buildings.filter((b) => b.state !== 'ruin').length });
+        stats.push({ round: e.round, ...cur, waveLength: w.time - cur.waveStart, coins: w.coins, buildings: w.buildings.filter((b) => b.state !== 'ruin').length });
         cur = { destroyed: 0, minTownHall: w.townHall.hp, livesLost: 0, picked: 0, expired: 0 };
       }
     }
@@ -93,63 +107,68 @@ export function playGame({ rules = DEFAULT_RULES, buildingTypes = DEFAULT_BUILDI
     const h = w.hero;
     const danger = w.enemies.some((e) => dist(e, h) < 160);
     // 1) rebuild ruins first, then follow the plan
-    const next = rebuilds[0] ?? plan[step];
-    if (next) {
-      const s = next;
+    const idx = rebuilds.length ? -1 : nextStep();
+    const s = rebuilds[0] ?? plan[idx];
+    if (s) {
       const cost = costOf(w, s);
-      if (cost !== null && w.coins >= cost && (!danger || w.phase === 'prep')) {
+      const finish = () => { if (idx < 0) rebuilds.shift(); else done[idx] = true; };
+      if (cost !== null && cost !== Infinity && w.coins >= cost && (!danger || w.phase === 'prep')) {
         if (near(s)) {
           const r = doStep(s);
-          if (r.ok || ['max', 'occupied'].includes(r.reason)) { if (rebuilds[0] === s) rebuilds.shift(); else step++; }
+          if (r.ok || ['max', 'occupied'].includes(r.reason)) finish();
         } else if (!h.path.length) {
           const p = target(s);
           w.moveHeroTo(p.x, p.y);
         }
         continue;
       }
-      if (cost === null) { if (rebuilds[0] === s) rebuilds.shift(); else step++; }
+      if (cost === null) finish();
     }
-    // 2) pick up coins when it is safe
-    if (!danger && w.coinsOnGround.length && !h.path.length) {
-      const c = w.coinsOnGround.reduce((a, b) => (dist(b, h) < dist(a, h) ? b : a));
-      w.moveHeroTo(c.x, c.y);
-      continue;
-    }
-    // 3) go after an enemy that is attacking something and nobody deals with
-    if (!danger && !h.target && !h.path.length) {
-      const busy = w.enemies.filter((e) => e.attacking && dist(e, w.townHall) > 160);
+    // 2) go after an enemy that attacks a building or soldiers away from the
+    //    Town Hall (a kid clicks it), flying ones only with the bow
+    if (!danger && !h.target) {
+      const busy = w.enemies.filter((e) => e.attacking && e.victim?.kind !== 'hero' && dist(e, w.townHall) > 160);
       if (busy.length) {
         const e = busy.reduce((a, b) => (dist(b, h) < dist(a, h) ? b : a));
         w.attack(e.id);
         continue;
       }
     }
+    // 3) pick up coins when it is safe
+    if (!danger && w.coinsOnGround.length && !h.path.length) {
+      const c = w.coinsOnGround.reduce((a, b) => (dist(b, h) < dist(a, h) ? b : a));
+      w.moveHeroTo(c.x, c.y);
+      continue;
+    }
     // 4) otherwise guard the Town Hall
     if (!danger && !w.coinsOnGround.length && !h.path.length && dist(h, home) > 20) w.moveHeroTo(home.x, home.y);
   }
-  return { result: w.phase, round: w.round, stats, coins: w.coins, planDone: step, world: w, rebuilds };
+  return { result: w.phase, round: w.round, stats, coins: w.coins, planDone: done.filter(Boolean).length, world: w, rebuilds };
 }
 
-// Coins the step needs now, or null when the step can't be done any more.
+// Coins the step needs now; Infinity = not possible yet (locked, busy, needs a
+// higher Town Hall, not built yet); null = never needed any more.
 function costOf(w, s) {
   if (s[0] === 'build') {
     const b = w.buildingOn(s[1]);
     if (b && b.state !== 'ruin') return null;
+    if (!w.unlocked(`${s[2]}:1`)) return Infinity;
     return w.buildingTypes[s[2]].levels[0].cost;
   }
   if (s[0] === 'up') {
     const b = w.buildingOn(s[1]);
-    if (!b) return null;
+    if (!b) return Infinity;
     const t = w.buildingTypes[b.type];
     if (b.level >= t.levels.length) return null;
-    if (b.state !== 'ready' || b.level >= w.townHall.level) return Infinity; // wait
+    if (b.state !== 'ready' || b.level >= w.townHall.level || !w.unlocked(`${b.type}:${b.level + 1}`)) return Infinity;
     return t.levels[b.level].cost;
   }
   if (s[0] === 'th') {
-    if (w.townHall.level >= w.thLevels.length) return null;
-    return w.townHall.upgrade ? Infinity : w.thLevels[w.townHall.level].cost;
+    const lvl = w.townHall.level;
+    if (lvl >= w.thLevels.length) return null;
+    return w.townHall.upgrade || !w.unlocked(`townhall:${lvl + 1}`) ? Infinity : w.thLevels[lvl].cost;
   }
   const lvl = w.heroUpgrades[s[1]];
   if (lvl >= w.heroCosts.length) return null;
-  return lvl + 1 > w.townHall.level ? Infinity : w.heroCosts[lvl];
+  return lvl + 1 > w.townHall.level || !w.unlocked(`hero:${s[1]}:${lvl + 1}`) ? Infinity : w.heroCosts[lvl];
 }

@@ -4,28 +4,30 @@
 
 import { BALANCE } from './balance.js';
 
-// [enemy, count, interval, delay]
+// [enemy, count, interval, delay] – spawns spread over ~25–32 s so that a wave
+// (spawning + walking + fighting) lasts about 40–60 s; checked by balance.test.js.
+// Bosses come early in their wave so they don't drag it out.
 const PLAN = [
-  [['goblin', 6, 2.0]],
-  [['goblin', 8, 1.8]],
-  [['goblin', 8, 1.6], ['wolf', 4, 2.0, 6]],
-  [['goblin', 10, 1.5], ['archer', 3, 3.0]],
-  [['goblin', 6, 1.4], ['wolf', 6, 1.4], ['archer', 4, 2.5]],
-  [['goblin', 12, 1.2], ['orc', 2, 5.0, 8]],
-  [['wolf', 8, 1.0], ['archer', 6, 2.0], ['orc', 2, 5.0]],
-  [['goblin', 10, 1.2], ['bat', 6, 1.5, 5]],
-  [['bat', 8, 1.2], ['archer', 6, 2.0], ['orc', 3, 4.0]],
-  [['goblin', 10, 1.0], ['troll', 1, 1, 10]],
-  [['goblin', 14, 0.9], ['wolf', 8, 1.0], ['archer', 4, 2.0]],
-  [['bat', 10, 1.0], ['archer', 6, 1.8], ['orc', 4, 3.5]],
-  [['wolf', 12, 0.8], ['archer', 8, 1.6], ['orc', 4, 3.0]],
-  [['goblin', 10, 0.8], ['bat', 14, 0.9], ['orc', 5, 3.0]],
-  [['bat', 8, 1.0], ['archer', 8, 1.5], ['dragon', 1, 1, 12]],
-  [['goblin', 20, 0.6], ['wolf', 10, 0.8], ['orc', 6, 2.5]],
-  [['bat', 12, 0.8], ['archer', 10, 1.2], ['orc', 6, 2.5]],
-  [['wolf', 16, 0.6], ['archer', 12, 1.0], ['orc', 8, 2.0], ['bat', 8, 1.0]],
-  [['bat', 20, 0.6], ['archer', 10, 1.0], ['orc', 10, 2.0]],
-  [['goblin', 15, 0.6], ['bat', 10, 0.8], ['orc', 8, 2.0], ['troll', 1, 1, 15], ['dragon', 1, 1, 15]],
+  [['goblin', 8, 4.0]],
+  [['goblin', 10, 3.5]],
+  [['goblin', 10, 3.0], ['wolf', 5, 4.0, 10]],
+  [['goblin', 12, 2.5], ['archer', 3, 7.0, 8]],
+  [['goblin', 10, 3.3], ['wolf', 7, 3.5, 5], ['archer', 4, 6.0, 8]],
+  [['orc', 3, 6.0], ['goblin', 14, 2.2, 2]],
+  [['orc', 3, 6.0], ['wolf', 10, 2.4, 4], ['archer', 6, 4.0, 2]],
+  [['goblin', 13, 2.5], ['bat', 8, 3.0, 8]],
+  [['orc', 4, 5.0], ['bat', 10, 2.8], ['archer', 7, 3.8, 3]],
+  [['troll', 1, 1, 2], ['goblin', 12, 2.4]],
+  [['goblin', 16, 2.0], ['wolf', 10, 2.9, 4], ['archer', 5, 5.0, 8]],
+  [['orc', 5, 4.0], ['bat', 12, 2.4, 3], ['archer', 8, 3.2, 2]],
+  [['orc', 5, 4.0], ['wolf', 14, 1.9, 4], ['archer', 9, 3.0]],
+  [['orc', 6, 3.5], ['goblin', 12, 2.2], ['bat', 16, 1.6, 2]],
+  [['dragon', 1, 1, 0], ['bat', 9, 2.4], ['archer', 6, 2.8]],
+  [['orc', 6, 3.0], ['goblin', 20, 1.2], ['wolf', 12, 2.2, 2]],
+  [['orc', 7, 3.0], ['bat', 14, 1.8], ['archer', 12, 2.2]],
+  [['orc', 8, 2.5], ['wolf', 18, 1.4, 3], ['archer', 11, 2.3], ['bat', 10, 2.4, 3]],
+  [['orc', 10, 2.0], ['bat', 20, 1.3], ['archer', 10, 2.4]],
+  [['troll', 1, 1, 0], ['dragon', 1, 1, 3], ['orc', 8, 2.4], ['goblin', 16, 1.4], ['bat', 10, 2.1]],
 ];
 
 export function defaultWaves(balance = BALANCE) {

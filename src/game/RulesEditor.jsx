@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DEFAULT_BUILDING_TYPES } from '../config/buildings.js';
 import { DEFAULT_RULES } from '../config/rules.js';
+import { unlockLabel } from '../config/unlocks.js';
 
 // Edit the game rules: building levels, Town Hall levels, hero upgrade prices and
 // general numbers. Saved into the `buildingTypes` and `rules` collections, so
@@ -90,7 +91,8 @@ export default function RulesEditor({ buildingTypes, rules, onSave }) {
   };
   const setTh = (li, key, v) => { setR((x) => ({ ...x, townHallLevels: x.townHallLevels.map((l, j) => (j === li ? { ...l, [key]: v } : l)) })); touch(); };
   const setHeroCost = (li, v) => { setR((x) => ({ ...x, heroUpgradeCosts: x.heroUpgradeCosts.map((c, j) => (j === li ? v : c)) })); touch(); };
-  const getGeneral = (g, k) => (g === 'soldier' ? r.build.soldier[k] : r[g][k]);
+  const setUnlock = (key, round) => { setR((x) => ({ ...x, unlocks: x.unlocks.map((u) => (u.key === key ? { ...u, round } : u)) })); touch(); };
+  const getGeneral =(g, k) => (g === 'soldier' ? r.build.soldier[k] : r[g][k]);
   const setGeneral = (g, k, v) => {
     setR((x) => (g === 'soldier'
       ? { ...x, build: { ...x.build, soldier: { ...x.build.soldier, [k]: v } } }
@@ -184,6 +186,19 @@ export default function RulesEditor({ buildingTypes, rules, onSave }) {
           ))}
         </div>
         <p className="small muted">{t('rules.hero_costs_hint')}</p>
+      </div>
+
+      <h2>🎁 {t('rules.unlocks')}</h2>
+      <div className="sketch-card" style={{ padding: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '6px 18px' }}>
+          {r.unlocks.map((u) => (
+            <label key={u.key} className="row small" style={{ justifyContent: 'space-between', gap: 8 }}>
+              <span>{unlockLabel(u.key, t)}</span>
+              <span>{t('rules.from_round')} <Num value={u.round} min={1} max={99} step={1} onChange={(v) => setUnlock(u.key, v)} /></span>
+            </label>
+          ))}
+        </div>
+        <p className="small muted">{t('rules.unlocks_hint')}</p>
       </div>
 
       <h2>🎲 {t('rules.general')}</h2>

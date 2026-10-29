@@ -13,7 +13,7 @@ function Bar({ frac, color }) {
 
 export default function BuildPanel({ info, soldierMax = 3, onClose, onBuild, onUpgrade, onSell, onUpgradeTownHall, onUpgradeHero }) {
   const { t } = useTranslation();
-  const why = (reason) => (reason ? t(`build.reason_${reason}`) : null);
+  const why = (reason, round) => (reason ? t(`build.reason_${reason}`, { n: round }) : null);
   // selling needs a second tap, so a misclick doesn't demolish anything
   const [confirmSell, setConfirmSell] = useState(false);
   const spotKey = info.kind === 'spot' ? info.id : 'th';
@@ -27,13 +27,13 @@ export default function BuildPanel({ info, soldierMax = 3, onClose, onBuild, onU
     return '';
   };
 
-  const Action = ({ label, cost, reason, onClick, sub }) => (
+  const Action = ({ label, cost, reason, round, onClick, sub }) => (
     <div className="build-option">
       <button className="btn primary" disabled={!!reason} onClick={onClick}>
-        {label} <span className="small">· {cost} 🪙</span>
+        {reason === 'locked' && '🔒 '}{label} <span className="small">· {cost} 🪙</span>
       </button>
       {sub && <div className="small muted">{sub}</div>}
-      {reason && <div className="small error-text">{why(reason)}</div>}
+      {reason && <div className={`small ${reason === 'locked' ? 'muted' : 'error-text'}`}>{why(reason, round)}</div>}
     </div>
   );
 
@@ -45,7 +45,7 @@ export default function BuildPanel({ info, soldierMax = 3, onClose, onBuild, onU
         <div className="row small"><Bar frac={info.hp / info.maxHp} color="#2563eb" /> {info.hp}/{info.maxHp}</div>
         {info.progress !== null && <div className="row small">🔨 <Bar frac={info.progress} color="#ca8a04" /></div>}
         {info.upgrade ? (
-          <Action label={`⬆ ${t('build.upgrade_to', { n: info.upgrade.toLevel })}`} cost={info.upgrade.cost} reason={info.upgrade.reason}
+          <Action label={`⬆ ${t('build.upgrade_to', { n: info.upgrade.toLevel })}`} cost={info.upgrade.cost} reason={info.upgrade.reason} round={info.upgrade.round}
             sub={t('build.th_sub', { hp: info.upgrade.hp, n: info.upgrade.toLevel })} onClick={onUpgradeTownHall} />
         ) : <p className="small muted">{t('build.max_level')}</p>}
         <h3 style={{ marginTop: 10 }}>{t('build.hero_upgrades')}</h3>
@@ -54,9 +54,9 @@ export default function BuildPanel({ info, soldierMax = 3, onClose, onBuild, onU
             <span style={{ minWidth: 92 }}>{t(`hero.stat_${u.stat}`)}</span>
             <span>{'●'.repeat(u.level)}{'○'.repeat(u.maxLevel - u.level)}</span>
             {u.cost !== null ? (
-              <button className="btn icon" disabled={!!u.reason} onClick={() => onUpgradeHero(u.stat)} title={why(u.reason) ?? ''}>+1 · {u.cost} 🪙</button>
+              <button className="btn icon" disabled={!!u.reason} onClick={() => onUpgradeHero(u.stat)} title={why(u.reason, u.round) ?? ''}>{u.reason === 'locked' ? '🔒 ' : ''}+1 · {u.cost} 🪙</button>
             ) : <span className="muted">{t('build.max_level')}</span>}
-            {u.reason && u.reason !== 'max' && <span className="error-text">{why(u.reason)}</span>}
+            {u.reason && u.reason !== 'max' && <span className={u.reason === 'locked' ? 'muted' : 'error-text'}>{why(u.reason, u.round)}</span>}
           </div>
         ))}
       </>
@@ -75,10 +75,10 @@ export default function BuildPanel({ info, soldierMax = 3, onClose, onBuild, onU
         {info.options.map((o) => (
           <Action key={o.type}
             label={`${ICON[o.type]} ${o.rebuild ? t('build.rebuild') : t(`build.type_${o.type}`)}`}
-            cost={o.cost} reason={o.reason} sub={statLine(o.type, o.stats)} onClick={() => onBuild(o.type)} />
+            cost={o.cost} reason={o.reason} round={o.round} sub={statLine(o.type, o.stats)} onClick={() => onBuild(o.type)} />
         ))}
         {info.upgrade && (
-          <Action label={`⬆ ${t('build.upgrade_to', { n: info.upgrade.toLevel })}`} cost={info.upgrade.cost} reason={info.upgrade.reason}
+          <Action label={`⬆ ${t('build.upgrade_to', { n: info.upgrade.toLevel })}`} cost={info.upgrade.cost} reason={info.upgrade.reason} round={info.upgrade.round}
             sub={statLine(b.type, info.upgrade.stats)} onClick={onUpgrade} />
         )}
         {b && !info.upgrade && b.state !== 'ruin' && b.level === b.maxLevel && <p className="small muted">{t('build.max_level')}</p>}

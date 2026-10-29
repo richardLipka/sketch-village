@@ -280,6 +280,7 @@
     "reason_occupied": "The spot is taken",
     "reason_ruin": "It is destroyed",
     "reason_unknown": "Not possible",
+    "reason_locked": "Available from round {{n}}",
     "msg_built": "{{name}} is built!",
     "msg_upgraded": "{{name}} reached level {{n}}!",
     "msg_th_upgraded": "Town hall reached level {{n}}!",
@@ -332,6 +333,13 @@
     "round_prep": "Prep before (s)",
     "empty_auto": "empty = automatic"
   },
+  "unlock": {
+    "new": "New this round:",
+    "msg": "🎁 New: {{list}}!",
+    "level": "{{name}} level {{n}}",
+    "townhall": "Town hall level {{n}}",
+    "hero": "Hero: {{stat}} +{{n}}"
+  },
   "tips": {
     "walk": "Click the yellow road – your hero walks there.",
     "build": "Click a dashed square next to the road to build. Start with a tower – it shoots arrows!",
@@ -354,6 +362,9 @@
     "townhall_hint": "The town hall level limits how far buildings and the hero can be upgraded.",
     "hero_costs": "Hero upgrades (price)",
     "hero_costs_hint": "Bought at the town hall. Level N needs town hall level N.",
+    "unlocks": "What unlocks when",
+    "from_round": "from round",
+    "unlocks_hint": "Something new after every wave. Round 1 = available from the start. The town hall level and coins still apply.",
     "hero": "Hero",
     "hero_hint": "Each hero spreads the skill points in the Drawing studio. Every Town Hall upgrade adds one more point to that stat.",
     "h_points": "Skill points per hero",

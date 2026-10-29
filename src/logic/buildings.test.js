@@ -4,9 +4,13 @@ import { DEFAULT_ENEMY_TYPES } from '../config/enemies.js';
 import { TOWN_HALL_LEVELS, HERO_UPGRADE_COSTS, DEFAULT_BUILDING_TYPES } from '../config/buildings.js';
 import { DEFAULT_RULES, mergeRules, rulesOf } from '../config/rules.js';
 import { COLLECTIONS } from '../data/saveFile.js';
+import { DEFAULT_UNLOCKS } from '../config/unlocks.js';
 
 // Plus-shaped roads (3 cells wide) crossing at the centre; spots next to the roads.
-function makeWorld({ coins = 500, rounds = [{ groups: [] }, { groups: [] }], rules = DEFAULT_RULES } = {}) {
+// these tests check buildings, not the unlock schedule → everything unlocked
+const OPEN = { ...DEFAULT_RULES, unlocks: [] };
+
+function makeWorld({ coins = 500, rounds = [{ groups: [] }, { groups: [] }], rules = OPEN } = {}) {
   const cols = 80, rows = 45, cell = 16;
   const walk = new Uint8Array(cols * rows);
   for (let x = 0; x < cols; x++) for (const y of [21, 22, 23]) walk[y * cols + x] = 1;
@@ -269,6 +273,7 @@ describe('selling', () => {
 describe('editable rules', () => {
   it('the World uses the given rules instead of the defaults', () => {
     const rules = mergeRules({
+      unlocks: [],
       build: { sellRefund: 0.5, soldier: { max: 1 } },
       townHallLevels: [{ hp: 999 }, { cost: 1, time: 1, hp: 1500 }],
       heroUpgradeCosts: [3],
@@ -311,6 +316,31 @@ describe('editable rules', () => {
   it('rules are a save-file collection', () => {
     expect(COLLECTIONS).toContain('rules');
     expect(rulesOf({ rules: [] })).toBe(DEFAULT_RULES);
+  });
+});
+
+describe('unlock schedule', () => {
+  it('opens something new after every wave of the default 20', () => {
+    const rounds = new Set(DEFAULT_UNLOCKS.map((u) => u.round));
+    for (let r = 1; r <= 20; r++) expect(rounds.has(r)).toBe(true);
+  });
+
+  it('locks items until their round and announces them', () => {
+    const empty = Array.from({ length: 4 }, () => ({ groups: [] }));
+    const w = makeWorld({ rules: DEFAULT_RULES, rounds: empty });
+    goTo(w, spot(w, 's1'));
+    expect(w.build('s1', 'castle').reason).toBe('locked');
+    expect(w.describeSpot('s1').options.find((o) => o.type === 'castle')).toMatchObject({ reason: 'locked', round: 2 });
+    expect(w.build('s1', 'tower').ok).toBe(true);
+    w.callReady();
+    w.update(0.1); // empty round ends → round 2
+    expect(w.drainEvents().find((e) => e.type === 'unlocked').keys).toEqual(['castle:1']);
+    expect(w.hud().newThings).toEqual(['castle:1']);
+    expect(w.build('s4', 'castle').reason).not.toBe('locked');
+    goTo(w, w.townHall);
+    expect(w.upgradeTownHall().reason).toBe('locked'); // Town Hall 2 from round 3
+    w.callReady(); w.update(0.1);
+    expect(w.upgradeTownHall().ok).toBe(true);
   });
 });
 

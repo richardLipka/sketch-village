@@ -314,7 +314,7 @@ export default class GameScene extends Phaser.Scene {
     if (e.type === 'cantHit') this.cfg.onEvent?.(e);
     if (e.type === 'buildingDestroyed') { const s = this.world.spots.find((p) => p.id === e.spotId); if (s) this.puff(s.x, s.y); }
     if (e.type === 'sold') { this.puff(e.x, e.y); if (e.refund) this.floatText(e.x, e.y - 30, `+${e.refund}`, '#a16207'); }
-    if (['waveStart', 'roundEnd', 'won', 'lost', 'heroDown', 'heroRespawn', 'bonus', 'heroLostLife', 'built', 'upgraded', 'buildingDestroyed', 'sold', 'heroUpgraded'].includes(e.type)) this.cfg.onEvent?.(e);
+    if (['waveStart', 'roundEnd', 'won', 'lost', 'heroDown', 'heroRespawn', 'bonus', 'heroLostLife', 'built', 'upgraded', 'buildingDestroyed', 'sold', 'heroUpgraded', 'unlocked'].includes(e.type)) this.cfg.onEvent?.(e);
   }
 
   floatText(x, y, text, color) {

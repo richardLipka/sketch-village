@@ -10,6 +10,7 @@ import FullscreenButton from '../ui/FullscreenButton.jsx';
 import { DEFAULT_HERO_POINTS } from '../config/heroStats.js';
 import { DEFAULT_RULES } from '../config/rules.js';
 import { wavesOf } from '../config/waves.js';
+import { unlockLabel } from '../config/unlocks.js';
 import { World } from '../logic/world.js';
 import { play, setMuted, soundFor } from './sound.js';
 import { TUTORIAL_STEPS, TUTORIAL_DONE, advanceTutorial } from './tutorial.js';
@@ -45,8 +46,9 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
     if (next !== tip) onSettings?.({ tutorialStep: next });
   };
 
+  // messages arriving together (round end + new unlocks) are joined, not replaced
   const say = useCallback((text) => {
-    setMessage({ text, at: Date.now() });
+    setMessage((m) => (m && Date.now() - m.at < 300 ? { ...m, text: `${m.text} · ${text}` } : { text, at: Date.now() }));
   }, []);
 
   useEffect(() => {
@@ -69,6 +71,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
       upgraded: () => (e.townHall ? t('build.msg_th_upgraded', { n: e.level }) : t('build.msg_upgraded', { name: name(), n: e.level })),
       buildingDestroyed: () => t('build.msg_destroyed', { name: name() }),
       sold: () => t('build.msg_sold', { name: name(), coins: e.refund }),
+      unlocked: () => t('unlock.msg', { list: e.keys.map((k) => unlockLabel(k, t)).join(', ') }),
       heroUpgraded: () => t('build.msg_hero_upgraded', { stat: t(`hero.stat_${e.stat}`), n: e.level }),
     }[e.type];
     const text = msg?.();

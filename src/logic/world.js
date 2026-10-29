@@ -58,6 +58,7 @@ export class World {
     this.cfg = rules.build;
     this.thLevels = rules.townHallLevels;
     this.heroCosts = rules.heroUpgradeCosts;
+    this.unlockAt = Object.fromEntries((rules.unlocks ?? []).map((u) => [u.key, u.round]));
     this.map = map;
     this.grid = grid;
     this.types = Object.fromEntries(enemyTypes.map((t) => [t.id, t]));
@@ -106,6 +107,14 @@ export class World {
   }
 
   get totalRounds() { return this.waves.rounds.length; }
+
+  // ---------------- progression (config/unlocks.js) ----------------
+
+  /** Round number (1-based) from which `key` can be bought; 1 when not scheduled. */
+  unlockRound(key) { return this.unlockAt[key] ?? 1; }
+
+  /** True once the current round (the one being prepared or fought) reaches the unlock. */
+  unlocked(key) { return this.unlockRound(key) <= this.round + 1; }
 
   emit(type, data = {}) { this.events.push({ ...data, type }); }
   drainEvents() { const e = this.events; this.events = []; return e; }
@@ -210,6 +219,8 @@ export class World {
       this.phase = 'prep';
       // a round may set its own prep time (wave editor), otherwise the map's / rules'
       this.prepLeft = this.waves.rounds[this.round].prep ?? this.waves.prep ?? this.b.prep;
+      const keys = Object.keys(this.unlockAt).filter((k) => this.unlockAt[k] === this.round + 1);
+      if (keys.length) this.emit('unlocked', { keys });
     }
   }
 
@@ -249,6 +260,7 @@ export class World {
     if (!t) return 'unknown';
     if (b && b.state !== 'ruin') return 'occupied';
     if (b && b.type !== typeId) return 'occupied'; // a ruin is rebuilt as what it was
+    if (!this.unlocked(`${typeId}:1`)) return 'locked';
     if (this.hero.dead) return 'dead';
     if (!this.heroNear(spot)) return 'far';
     if (this.coins < t.levels[0].cost) return 'coins';
@@ -260,6 +272,7 @@ export class World {
     if (b.state === 'ruin') return 'ruin';
     if (b.state !== 'ready') return 'busy';
     if (b.level >= t.levels.length) return 'max';
+    if (!this.unlocked(`${b.type}:${b.level + 1}`)) return 'locked';
     if (b.level >= this.townHall.level) return 'townhall';
     if (this.hero.dead) return 'dead';
     if (!this.heroNear(b)) return 'far';
@@ -271,6 +284,7 @@ export class World {
     const th = this.townHall;
     if (th.upgrade) return 'busy';
     if (th.level >= this.thLevels.length) return 'max';
+    if (!this.unlocked(`townhall:${th.level + 1}`)) return 'locked';
     if (this.hero.dead) return 'dead';
     if (!this.heroNear(th, th.radius)) return 'far';
     if (this.coins < this.thLevels[th.level].cost) return 'coins';
@@ -280,6 +294,7 @@ export class World {
   heroUpgradeCheck(stat) {
     const lvl = this.heroUpgrades[stat];
     if (lvl >= this.heroCosts.length) return 'max';
+    if (!this.unlocked(`hero:${stat}:${lvl + 1}`)) return 'locked';
     if (lvl + 1 > this.townHall.level) return 'townhall';
     if (this.hero.dead) return 'dead';
     if (!this.heroNear(this.townHall, this.townHall.radius)) return 'far';
@@ -302,13 +317,13 @@ export class World {
       };
       out.sell = { refund: this.refundOf(b), reason: this.sellCheck(b) };
       if (b.state === 'ruin') {
-        out.options.push({ type: b.type, cost: t.levels[0].cost, rebuild: true, reason: this.buildCheck(spot, b.type) });
+        out.options.push({ type: b.type, cost: t.levels[0].cost, rebuild: true, reason: this.buildCheck(spot, b.type), round: this.unlockRound(`${b.type}:1`) });
       } else if (b.level < t.levels.length) {
-        out.upgrade = { toLevel: b.level + 1, cost: t.levels[b.level].cost, reason: this.upgradeCheck(b), stats: t.levels[b.level] };
+        out.upgrade = { toLevel: b.level + 1, cost: t.levels[b.level].cost, reason: this.upgradeCheck(b), stats: t.levels[b.level], round: this.unlockRound(`${b.type}:${b.level + 1}`) };
       }
     } else {
       for (const t of Object.values(this.buildingTypes)) {
-        out.options.push({ type: t.id, cost: t.levels[0].cost, stats: t.levels[0], reason: this.buildCheck(spot, t.id) });
+        out.options.push({ type: t.id, cost: t.levels[0].cost, stats: t.levels[0], reason: this.buildCheck(spot, t.id), round: this.unlockRound(`${t.id}:1`) });
       }
     }
     return out;
@@ -321,10 +336,11 @@ export class World {
       kind: 'townhall', level: th.level, maxLevel: this.thLevels.length, hp: Math.ceil(th.hp), maxHp: th.maxHp,
       near: this.heroNear(th, th.radius),
       progress: th.upgrade ? th.upgrade.progress / th.upgrade.time : null,
-      upgrade: next ? { toLevel: th.level + 1, cost: next.cost, hp: next.hp, reason: this.townHallUpgradeCheck() } : null,
+      upgrade: next ? { toLevel: th.level + 1, cost: next.cost, hp: next.hp, reason: this.townHallUpgradeCheck(), round: this.unlockRound(`townhall:${th.level + 1}`) } : null,
       heroUpgrades: HERO_STATS.map((stat) => ({
         stat, level: this.heroUpgrades[stat], maxLevel: this.heroCosts.length,
         cost: this.heroCosts[this.heroUpgrades[stat]] ?? null, reason: this.heroUpgradeCheck(stat),
+        round: this.unlockRound(`hero:${stat}:${this.heroUpgrades[stat] + 1}`),
       })),
     };
   }
@@ -898,6 +914,8 @@ export class World {
       nextRound: this.phase === 'prep' && next ? next : null,
       nextCaves: this.phase === 'prep' && next ? roundCaves(next, this.caveIds) : null,
       caveCount: this.caveIds.length,
+      // what became available for this round (shown while preparing it)
+      newThings: this.phase === 'prep' ? Object.keys(this.unlockAt).filter((k) => this.unlockAt[k] === this.round + 1) : [],
     };
   }
 }
