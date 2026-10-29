@@ -12,7 +12,7 @@ import PlaySetup from './game/PlaySetup.jsx';
 import EnemyEditor from './game/EnemyEditor.jsx';
 import RulesEditor from './game/RulesEditor.jsx';
 import WeaponEditor from './game/WeaponEditor.jsx';
-import { weaponsOf } from './config/weapons.js';
+import { weaponsOf, allItemsOf } from './config/weapons.js';
 import { enemyTypesOf } from './config/enemies.js';
 import { buildingTypesOf } from './config/buildings.js';
 import { rulesOf } from './config/rules.js';
@@ -46,6 +46,8 @@ export default function App() {
   // stable object, so a running game isn't restarted by unrelated re-renders
   const storedRules = db?.rules;
   const rules = useMemo(() => rulesOf({ rules: storedRules }), [storedRules]);
+  const storedWeapons = db?.weapons, storedAssets = db?.assets;
+  const items = useMemo(() => allItemsOf({ weapons: storedWeapons, assets: storedAssets }), [storedWeapons, storedAssets]);
 
   // Replace one collection in memory and persist it.
   const updateCollection = useCallback(async (name, records) => {
@@ -117,7 +119,7 @@ export default function App() {
 
       {screen === 'play' && (
         <PlaySetup
-          maps={db.maps} assets={db.assets} enemyTypes={enemyTypesOf(db)} buildingTypes={buildingTypesOf(db)} rules={rules} weapons={weaponsOf(db)}
+          maps={db.maps} assets={db.assets} enemyTypes={enemyTypesOf(db)} buildingTypes={buildingTypesOf(db)} rules={rules} weapons={items}
           settings={db.settings} onSettings={updateSettings} onExit={() => setScreen('menu')}
         />
       )}

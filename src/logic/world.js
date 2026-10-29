@@ -9,8 +9,9 @@
 //   hero:      walks on roads, melee / ranged / magic (player's choice; magic needs
 //              a magic weapon), 5 lives, 10 s absence after the last one, then back
 //              at the Town Hall, which also heals it; auto-attacks what is in range
-//   weapons:   inventory + one equipped weapon per class (adds to that attack);
-//              from chests dropped by enemies or bought in the Town Hall shop
+//   equipment: backpack + right hand (weapon → attack class), left hand (shield)
+//              and body armor; two-handed weapons take both hands; changing
+//              weapons takes 2 s; items from chests or the Town Hall shop
 //   town hall: shoots arrows like a weak tower (stronger with each level)
 //   coins:     drop on roads, must be picked up, vanish after 30 s
 //   buildings: built/upgraded on the 10 spots when the hero is near; houses give
@@ -22,7 +23,7 @@
 
 import { DEFAULT_BUILDING_TYPES } from '../config/buildings.js';
 import { DEFAULT_RULES } from '../config/rules.js';
-import { DEFAULT_WEAPONS, WEAPON_CLASSES, withWeapon } from '../config/weapons.js';
+import { DEFAULT_WEAPONS, WEAPON_CLASSES, withWeapon, normalizeItem, isWeapon } from '../config/weapons.js';
 import { heroNumbers, clampPoints, HERO_STATS, DEFAULT_HERO_POINTS } from '../config/heroStats.js';
 import { worldToCell, cellCenter, nearestWalkable, isWalkable } from './pathGrid.js';
 import { findPath, smoothPath, flowField } from './pathfinding.js';
@@ -58,7 +59,10 @@ export class World {
    * @param {object} [o.balance]      overrides rules.balance
    * @param {number} [o.seed]
    */
-  constructor({ map, grid, enemyTypes, waves, heroPoints = DEFAULT_HERO_POINTS, buildingTypes = DEFAULT_BUILDING_TYPES, rules = DEFAULT_RULES, balance = rules.balance, weapons = DEFAULT_WEAPONS, seed = Date.now() }) {
+  constructor({ map, grid, enemyTypes, waves, heroPoints = DEFAULT_HERO_POINTS, buildingTypes = DEFAULT_BUILDING_TYPES, rules = DEFAULT_RULES, balance = rules.balance, weapons = DEFAULT_WEAPONS, coinTypes = [{ value: 1, key: 'coin' }], seed = Date.now() }) {
+    // coin denominations ({ value, key = texture }), biggest first; drops are split into them
+    this.coinTypes = [...coinTypes].filter((c) => c.value > 0).sort((a, b) => b.value - a.value);
+    if (!this.coinTypes.length) this.coinTypes = [{ value: 1, key: 'coin' }];
     this.b = balance;
     this.cfg = rules.build;
     this.thLevels = rules.townHallLevels;
@@ -92,18 +96,25 @@ export class World {
     this.heroRules = rules.hero;
     this.heroPoints = clampPoints(heroPoints, this.heroRules);
     this.heroUpgrades = Object.fromEntries(HERO_STATS.map((k) => [k, 0]));
-    // weapons: the hero owns `inventory`, one weapon per class can be equipped
-    this.weaponTypes = Object.fromEntries(weapons.map((w) => [w.id, w]));
-    this.inventory = [];
-    this.equipped = { melee: null, ranged: null, magic: null };
+    // equipment: backpack (`inventory`) + right hand, left hand (shield) and body armor
+    this.weaponTypes = Object.fromEntries(weapons.map((w) => [w.id, normalizeItem(w)]));
+    const starters = weapons.filter((w) => w.starter).map((w) => w.id);
+    this.inventory = [...starters];
+    this.equipped = { right: null, left: null, armor: null };
+    this.preferred = {}; // last weapon used per class – what the attack buttons switch to
     this.chests = [];
-    this.recalcHero();
     // the hero starts and always comes back at the Town Hall (next to it, on the road)
     this.respawnPoint = this.snapToRoad({ x: map.centre.x, y: map.centre.y + (map.centre.radius ?? 60) });
     this.hero = {
-      kind: 'hero', ...this.respawnPoint, hp: this.heroStats.hp, maxHp: this.heroStats.hp, lives: balance.heroLives,
+      kind: 'hero', ...this.respawnPoint, hp: 0, maxHp: 0, lives: balance.heroLives,
       mode: 'melee', path: [], target: null, cooldown: 0, invuln: 0, dead: false, respawnAt: 0, repath: 0, facing: 1,
+      switching: 0, // s left while changing weapons (no attacks, no other change)
     };
+    // start with the first starter weapon in hand (melee first)
+    const first = starters.map((id) => this.weaponTypes[id]).filter(isWeapon).sort((a, b) => WEAPON_CLASSES.indexOf(a.kind) - WEAPON_CLASSES.indexOf(b.kind))[0];
+    if (first) this.equipped.right = first.id;
+    this.recalcHero();
+    this.hero.hp = this.hero.maxHp = this.heroStats.hp;
 
     this.enemies = [];
     this.buildings = []; // one per used spot (incl. ruins)
@@ -139,46 +150,93 @@ export class World {
 
   // ---------------- player commands ----------------
 
-  /** Start the next wave now; returns the early bonus paid. */
+  /**
+   * Start the next wave now; returns the early bonus paid. The skipped prep time
+   * still counts for construction: buildings and upgrades in progress advance by it.
+   */
   callReady() {
     if (this.phase !== 'prep') return 0;
-    const bonus = Math.floor(this.prepLeft * this.b.earlyBonusPerSecond);
+    const skipped = Math.max(0, this.prepLeft);
+    const bonus = Math.floor(skipped * this.b.earlyBonusPerSecond);
     this.coins += bonus;
     if (bonus) this.emit('bonus', { amount: bonus });
+    if (skipped > 0) {
+      const work = skipped * this.buildSpeed;
+      for (const b of this.buildings) if (b.state === 'building' || b.state === 'upgrading') b.progress += work;
+      if (this.townHall.upgrade) this.townHall.upgrade.progress += work;
+    }
     this.startWave();
     return bonus;
   }
 
-  /** Switch attack class; magic needs a magic weapon. Returns false when not possible. */
-  setMode(mode) {
-    if (mode === 'magic' && !this.equipped.magic) return false;
-    this.hero.mode = mode;
-    return true;
+  // ---------------- equipment ----------------
+
+  get mode() { return this.weaponTypes[this.equipped.right]?.kind ?? 'melee'; }
+
+  /**
+   * Attack buttons: take the last used (or first owned) weapon of that class into
+   * the right hand. Returns null on success or a reason: 'none', 'switching'.
+   */
+  setMode(kind) {
+    if (this.mode === kind && this.equipped.right) return null;
+    const owned = this.inventory.map((id) => this.weaponTypes[id]).filter((w) => isWeapon(w) && w.kind === kind);
+    if (!owned.length) return 'none';
+    const pick = owned.find((w) => w.id === this.preferred[kind]) ?? owned[0];
+    const r = this.equip(pick.id);
+    return r.ok ? null : r.reason;
   }
 
-  // ---------------- weapons ----------------
-
-  /** Hero numbers = skill points + Town Hall upgrades + equipped weapons. */
+  /** Hero numbers = skill points + Town Hall upgrades + the weapon in hand + shield and armor. */
   recalcHero() {
     const base = heroNumbers(this.heroPoints, this.heroUpgrades, this.heroRules);
-    for (const k of WEAPON_CLASSES) base[k] = withWeapon(base[k], this.weaponTypes[this.equipped[k]] ?? null);
+    const weapon = this.weaponTypes[this.equipped.right] ?? null;
+    if (weapon) base[weapon.kind] = withWeapon(base[weapon.kind], weapon);
+    for (const k of WEAPON_CLASSES) if (!base[k].splash) base[k].splash = 0;
+    const extra = (this.weaponTypes[this.equipped.left]?.armor ?? 0) + (this.weaponTypes[this.equipped.armor]?.armor ?? 0);
+    base.armor = Math.min(this.heroRules.armorMax, +(base.armor + extra).toFixed(3));
     this.heroStats = base;
+    if (this.hero) this.hero.mode = weapon?.kind ?? 'melee';
   }
 
-  /** Put a weapon into the inventory; it is equipped when that class has nothing yet. */
+  /** Put an item into the backpack; a shield or armor goes on at once when that slot is free. */
   addWeapon(id) {
     const w = this.weaponTypes[id];
     if (!w || this.inventory.includes(id)) return false;
     this.inventory.push(id);
-    if (!this.equipped[w.kind]) this.equipped[w.kind] = id;
+    const twoHanded = this.weaponTypes[this.equipped.right]?.slot === 'twohand';
+    if (w.slot === 'shield' && !this.equipped.left && !twoHanded) this.equipped.left = id;
+    if (w.slot === 'armor' && !this.equipped.armor) this.equipped.armor = id;
     this.recalcHero();
     return true;
   }
 
+  /**
+   * Put on an item from the backpack. Weapons go to the right hand (two-handed
+   * ones also take the left hand, so a shield comes off) and take
+   * `weaponSwitchTime` seconds, during which the hero can't attack. Clicking an
+   * equipped shield or armor takes it off.
+   */
   equip(id) {
     const w = this.weaponTypes[id];
     if (!w || !this.inventory.includes(id)) return { ok: false, reason: 'unknown' };
-    this.equipped[w.kind] = id;
+    const e = this.equipped;
+    if (isWeapon(w)) {
+      if (e.right === id) return { ok: true };
+      if (this.hero.switching > 0) return { ok: false, reason: 'switching' };
+      e.right = id;
+      if (w.slot === 'twohand') e.left = null;
+      this.preferred[w.kind] = id;
+      this.hero.switching = this.b.weaponSwitchTime;
+      this.hero.target = null;
+    } else if (w.slot === 'shield') {
+      if (e.left === id) e.left = null;
+      else {
+        if (this.weaponTypes[e.right]?.slot === 'twohand') return { ok: false, reason: 'twohand' };
+        e.left = id;
+      }
+    } else if (w.slot === 'armor') {
+      e.armor = e.armor === id ? null : id;
+    }
     this.recalcHero();
     this.emit('equipped', { weapon: id });
     return { ok: true };
@@ -790,9 +848,13 @@ export class World {
     const [lo, hi] = this.types[e.type].coins ?? [1, 1];
     const n = lo + Math.floor(this.rng() * (hi - lo + 1));
     const spot = this.snapToRoad(e);
-    for (let i = 0; i < n; i++) {
+    // worth n in total, paid in the biggest coins that fit (smallest coin if none fits)
+    let left = n;
+    while (left > 0) {
+      const c = this.coinTypes.find((ct) => ct.value <= left) ?? this.coinTypes.at(-1);
+      left -= c.value;
       const a = this.rng() * Math.PI * 2, r = this.rng() * 8;
-      this.coinsOnGround.push({ id: this.nextId++, x: spot.x + Math.cos(a) * r, y: spot.y + Math.sin(a) * r, born: this.time });
+      this.coinsOnGround.push({ id: this.nextId++, x: spot.x + Math.cos(a) * r, y: spot.y + Math.sin(a) * r, born: this.time, value: c.value, key: c.key });
     }
     // sometimes a weapon chest (bosses always drop one)
     const type = this.types[e.type];
@@ -921,6 +983,7 @@ export class World {
     }
     h.invuln = Math.max(0, h.invuln - dt);
     h.cooldown = Math.max(0, h.cooldown - dt);
+    h.switching = Math.max(0, h.switching - dt);
     const stats = this.heroStats[h.mode];
 
     let target = h.target ? this.enemies.find((e) => e.id === h.target) : null;
@@ -962,7 +1025,7 @@ export class World {
       if (d <= stats.range) {
         if (h.target === target.id) h.path = [];
         if (target.x !== h.x) h.facing = target.x < h.x ? -1 : 1;
-        if (h.cooldown === 0) {
+        if (h.cooldown === 0 && h.switching === 0) {
           h.cooldown = stats.cooldown;
           if (h.mode === 'magic') this.shoot(h, target, stats.damage, 'magic', stats.splash);
           else if (h.mode === 'ranged') this.shoot(h, target, stats.damage, 'hero');
@@ -992,8 +1055,8 @@ export class World {
         continue;
       }
       if (!h.dead && dist(h, c) <= this.b.coinPickupRadius) {
-        this.coins++;
-        this.emit('coinPicked', { id: c.id, x: c.x, y: c.y });
+        this.coins += c.value ?? 1;
+        this.emit('coinPicked', { id: c.id, x: c.x, y: c.y, value: c.value ?? 1 });
         continue;
       }
       keep.push(c);
@@ -1009,19 +1072,27 @@ export class World {
     });
   }
 
-  /** Small snapshot for the HUD. */
+  /**
+   * Small snapshot for the HUD. Only values the player sees, already rounded,
+   * so two snapshots in a row are usually equal and React needn't re-render.
+   */
   hud() {
     const next = this.waves.rounds[this.round];
+    const h = this.hero;
     return {
       phase: this.phase,
       round: Math.min(this.round + 1, this.totalRounds),
       totalRounds: this.totalRounds,
-      prepLeft: Math.max(0, this.prepLeft),
+      prepLeft: Math.ceil(Math.max(0, this.prepLeft)),
       earlyBonus: this.phase === 'prep' ? Math.floor(this.prepLeft * this.b.earlyBonusPerSecond) : 0,
       coins: this.coins,
       workers: this.workers,
       townHall: { hp: Math.ceil(this.townHall.hp), maxHp: this.townHall.maxHp, level: this.townHall.level },
-      hero: { hp: Math.max(0, this.hero.hp), maxHp: this.hero.maxHp, lives: this.hero.lives, dead: this.hero.dead, respawnIn: this.hero.dead ? Math.max(0, this.hero.respawnAt - this.time) : 0, mode: this.hero.mode },
+      hero: {
+        hp: Math.max(0, Math.ceil(h.hp)), maxHp: h.maxHp, lives: h.lives, dead: h.dead,
+        respawnIn: h.dead ? Math.ceil(Math.max(0, h.respawnAt - this.time)) : 0, mode: h.mode,
+        switching: Math.ceil(h.switching * 10) / 10,
+      },
       inventory: [...this.inventory],
       equipped: { ...this.equipped },
       enemiesLeft: this.enemies.length + this.queue.length,

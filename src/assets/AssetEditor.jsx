@@ -5,6 +5,8 @@ import ImageSlot from './ImageSlot.jsx';
 import HeroStatsEditor from './HeroStatsEditor.jsx';
 import { getCategory } from './categories.js';
 import { DEFAULT_HERO_POINTS } from '../config/heroStats.js';
+import { defaultItemStats } from '../config/weapons.js';
+import ItemStatsEditor from './ItemStatsEditor.jsx';
 import { newId } from '../data/saveFile.js';
 
 const AUTHOR_KEY = 'sv:lastAuthor';
@@ -23,6 +25,8 @@ export function emptyAsset(categoryId) {
     author: lastAuthor(),
     images: Array(cat.levels).fill(null),
     ...(cat.stats === 'hero' ? { stats: { ...DEFAULT_HERO_POINTS } } : {}),
+    ...(cat.stats === 'item' ? { stats: defaultItemStats(categoryId) } : {}),
+    ...(cat.stats === 'coin' ? { stats: { value: 1 } } : {}),
     createdAt: now,
     updatedAt: now,
   };
@@ -33,8 +37,12 @@ export default function AssetEditor({ asset, isNew, heroRules, onSave, onDelete,
   const { t } = useTranslation();
   const cat = getCategory(asset.category);
   // older records may have fewer drawings than the category has slots now
+  // (and coins / equipment drawn before they had numbers get the defaults)
   const [draft, setDraft] = useState(() => ({
-    ...asset, images: Array.from({ length: Math.max(cat.levels, asset.images.length) }, (_, i) => asset.images[i] ?? null),
+    ...asset,
+    images: Array.from({ length: Math.max(cat.levels, asset.images.length) }, (_, i) => asset.images[i] ?? null),
+    ...(cat.stats === 'item' ? { stats: { ...defaultItemStats(asset.category), ...asset.stats } } : {}),
+    ...(cat.stats === 'coin' ? { stats: { value: 1, ...asset.stats } } : {}),
   }));
 
   const set = (patch) => setDraft((d) => ({ ...d, ...patch }));
@@ -85,6 +93,20 @@ export default function AssetEditor({ asset, isNew, heroRules, onSave, onDelete,
         <div style={{ marginTop: 16 }}>
           <HeroStatsEditor points={draft.stats} rules={heroRules} onChange={(stats) => set({ stats })} />
         </div>
+      )}
+
+      {cat.stats === 'item' && (
+        <div style={{ marginTop: 16 }}>
+          <ItemStatsEditor category={asset.category} stats={draft.stats} onChange={(stats) => set({ stats })} />
+        </div>
+      )}
+
+      {cat.stats === 'coin' && (
+        <label className="row" style={{ marginTop: 16, gap: 8 }}>
+          🪙 {t('editor.coin_value')}
+          <input type="number" min={1} max={999} value={draft.stats.value} style={{ width: 80 }}
+            onChange={(e) => { const v = Math.max(1, Math.min(999, Math.round(Number(e.target.value) || 1))); set({ stats: { value: v } }); }} />
+        </label>
       )}
 
       <div className="row" style={{ marginTop: 20 }}>

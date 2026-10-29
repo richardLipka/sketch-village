@@ -40,7 +40,17 @@ export default function MapPainter({ map: initial, assets, onSave, onCancel }) {
   const [, force] = useState(0);
   const { width: W, height: H } = map.world;
 
-  const decorations = assets.filter((a) => a.category === 'decoration');
+  // anything already drawn can stand on the grass: decorations (trees, rocks,
+  // mountains…) first, then all other drawings
+  const decorations = assets.filter((a) => a.category === 'decoration' && a.images?.[0]);
+  const otherDrawings = assets.filter((a) => a.category !== 'decoration' && a.images?.[0]);
+  const [placeMsg, setPlaceMsg] = useState(null);
+  // only on grass: a decoration must not stand on a road cell
+  const onRoad = (p) => {
+    if (!grid) return false;
+    const cx = Math.floor(p.x / grid.cell), cy = Math.floor(p.y / grid.cell);
+    return !!grid.walk[cy * grid.cols + cx];
+  };
   const firstImage = (cat) => assets.find((a) => a.category === cat)?.images.find(Boolean);
   const townhallImg = firstImage('townhall');
   const caveImg = firstImage('cave');
@@ -243,6 +253,8 @@ export default function MapPainter({ map: initial, assets, onSave, onCancel }) {
     else if (placeTool === 'spot' && map.spots.length < MAX_SPOTS) update({ spots: [...map.spots, { id: newId(), ...p }] });
     else if (placeTool === 'cave') update({ caves: [...map.caves, { id: newId(), ...snapToEdge(p) }] });
     else if (placeTool === 'decoration' && decorAsset) {
+      if (onRoad(p)) { setPlaceMsg(t('maps.decor_on_road')); return; }
+      setPlaceMsg(null);
       update({ decorations: [...map.decorations, { id: newId(), asset: decorAsset, x: p.x, y: p.y, scale: decorScale }] });
     }
   };
@@ -250,7 +262,7 @@ export default function MapPainter({ map: initial, assets, onSave, onCancel }) {
   const onMove = (e) => {
     const p = toWorld(e);
     if (stroke.current) { paintSeg(stroke.current, p); stroke.current = p; }
-    else if (drag.current) moveMarker(drag.current, p);
+    else if (drag.current && !(drag.current.kind === 'decorations' && onRoad(p))) moveMarker(drag.current, p);
   };
 
   const onUp = () => {
@@ -323,16 +335,23 @@ export default function MapPainter({ map: initial, assets, onSave, onCancel }) {
       </div>
 
       {mode === 'place' && placeTool === 'decoration' && (
-        <div className="row" style={{ marginBottom: 8 }}>
-          {decorations.length === 0 && <span className="muted small">{t('maps.no_decorations')}</span>}
-          {decorations.map((d) => (
-            <button key={d.id} className={`btn icon ${decorAsset === d.id ? 'active' : ''}`} onClick={() => setDecorAsset(d.id)} title={d.name}>
-              <img src={d.images[0]} alt={d.name} style={{ width: 36, height: 36, objectFit: 'contain' }} />
-            </button>
+        <div className="sketch-card decor-picker" style={{ marginBottom: 8 }}>
+          {decorations.length + otherDrawings.length === 0 && <span className="muted small">{t('maps.no_decorations')}</span>}
+          {[[decorations, 'maps.decor_nature'], [otherDrawings, 'maps.decor_other']].map(([list, label]) => list.length > 0 && (
+            <div key={label}>
+              <div className="small muted">{t(label)}</div>
+              <div className="row" style={{ gap: 6 }}>
+                {list.map((d) => (
+                  <button key={d.id} className={`decor-tile ${decorAsset === d.id ? 'on' : ''}`} onClick={() => setDecorAsset(d.id)} title={d.name}>
+                    <img src={d.images[0]} alt={d.name} />
+                    <span>{d.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           ))}
-          {decorations.length > 0 && (
-            <label className="small">{t('maps.decor_size')} <input type="range" min={0.5} max={2.5} step={0.1} value={decorScale} onChange={(e) => setDecorScale(+e.target.value)} /></label>
-          )}
+          <label className="small">{t('maps.decor_size')} <input type="range" min={0.5} max={3} step={0.1} value={decorScale} onChange={(e) => setDecorScale(+e.target.value)} /></label>
+          {placeMsg && <span className="small error-text"> {placeMsg}</span>}
         </div>
       )}
 

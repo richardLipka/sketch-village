@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import WeaponIcon from './WeaponIcon.jsx';
+import { itemLine } from './GameOverlay.jsx';
 
 // Panel for the selected building spot or the Town Hall (SPEC §7).
 // `info` comes from World.describeSpot / describeTownHall; every option carries a
 // `reason` (null = allowed) so kids see *why* a button is disabled.
-// One click does the action – no confirmations.
+// One click builds or upgrades; only selling asks "Really?" first.
 //
 // The panel re-renders several times a second (HUD updates), so buttons are
 // rendered by plain functions, never by components defined inside this one:
@@ -21,6 +22,9 @@ function Bar({ frac, color }) {
 export default function BuildPanel({ info, soldierMax = 3, weapons = [], assets = [], onClose, onBuild, onUpgrade, onSell, onUpgradeTownHall, onUpgradeHero, onBuyWeapon }) {
   const { t, i18n } = useTranslation();
   const why = (reason, round) => (reason ? t(`build.reason_${reason}`, { n: round }) : null);
+  const [confirmSell, setConfirmSell] = useState(false);
+  const spotKey = info.kind === 'spot' ? info.id : 'th';
+  useEffect(() => setConfirmSell(false), [spotKey]);
 
   const statLine = (type, s) => {
     if (!s) return '';
@@ -72,7 +76,7 @@ export default function BuildPanel({ info, soldierMax = 3, weapons = [], assets 
             {info.shop.map((s) => (
               <div key={s.id} className="row small" style={{ gap: 8, marginBottom: 4 }}>
                 <WeaponIcon weapon={weapons.find((w) => w.id === s.id)} assets={assets} size={28} />
-                <span style={{ minWidth: 110 }}>{weaponName(s.id)}</span>
+                <span style={{ minWidth: 110 }} title={itemLine(weapons.find((w) => w.id === s.id) ?? {}, t)}>{weaponName(s.id)}</span>
                 {s.reason === 'owned' ? <span className="muted">✓ {t('weapons.owned')}</span> : (
                   <button className="btn icon" disabled={!!s.reason} onClick={() => onBuyWeapon(s.id)} title={why(s.reason, s.round) ?? ''}>
                     {s.reason === 'locked' ? '🔒 ' : ''}{s.price} 🪙
@@ -107,9 +111,17 @@ export default function BuildPanel({ info, soldierMax = 3, weapons = [], assets 
         {b && !info.upgrade && b.state !== 'ruin' && b.level === b.maxLevel && <p className="small muted">{t('build.max_level')}</p>}
         {info.sell && (
           <div className="build-option" style={{ borderTop: '1.5px dashed var(--ink-soft)', paddingTop: 6 }}>
-            <button className="btn" disabled={!!info.sell.reason} onClick={onSell}>
-              {b.state === 'ruin' ? `🧹 ${t('build.clear')}` : `💰 ${t('build.sell')} · +${info.sell.refund} 🪙`}
-            </button>
+            {!confirmSell ? (
+              <button className="btn" disabled={!!info.sell.reason} onClick={() => setConfirmSell(true)}>
+                {b.state === 'ruin' ? `🧹 ${t('build.clear')}` : `💰 ${t('build.sell')} · +${info.sell.refund} 🪙`}
+              </button>
+            ) : (
+              <span className="row" style={{ gap: 6 }}>
+                <b className="small">{t('build.sell_sure')}</b>
+                <button className="btn danger" onClick={() => { setConfirmSell(false); onSell(); }}>✓ {t('build.sell_yes')}</button>
+                <button className="btn" onClick={() => setConfirmSell(false)}>✕</button>
+              </span>
+            )}
             {info.sell.reason && <div className="small error-text">{why(info.sell.reason)}</div>}
           </div>
         )}

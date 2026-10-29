@@ -195,8 +195,32 @@ label { display: inline-flex; gap: 8px; align-items: center; }
   overflow: hidden; touch-action: none; background: var(--paper);
 }
 
-.inventory-panel { left: auto; right: 10px; bottom: auto; top: 10px; }
+/* ---- controls laid over the map, in its corners ---- */
+.game-screen { padding: 0; }
+.game-screen .game-host { border: none; border-radius: 0; }
+.ov { position: absolute; z-index: 5; }
+.ov-tl { top: 8px; left: 8px; display: flex; gap: 14px; align-items: center; padding: 4px 12px; }
+.ov-tc { top: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; padding: 4px 14px; }
+.ov-tr { top: 8px; right: 8px; max-width: min(430px, 44%); padding: 6px 10px; text-align: right; }
+.ov-br { right: 8px; bottom: 8px; display: flex; gap: 6px; }
+.ov-br-eq { right: 8px; bottom: 74px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.ov-bc { bottom: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px; padding: 4px 8px; }
+.hearts { color: #dc2626; font-size: 24px; letter-spacing: 1px; }
+.btn.attack { position: relative; width: 58px; height: 58px; padding: 0; font-size: 28px; overflow: hidden; }
+.btn.attack .switching { position: absolute; left: 0; bottom: 0; height: 6px; background: var(--danger); }
+.eq-row { gap: 6px; }
+.btn.eq-slot { width: 48px; height: 48px; padding: 0; display: grid; place-items: center; font-size: 22px; background: #fffdf7; }
+.backpack { width: min(380px, 80vw); max-height: 50vh; overflow: auto; padding: 8px 10px; }
 .weapon-row { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; margin: 4px 0; padding: 3px 8px; font-size: 18px; }
+.game-screen .game-msg { top: 60px; }
+.game-screen .coach { right: auto; left: 50%; bottom: 66px; transform: translateX(-50%) rotate(0.6deg); max-width: min(520px, 60%); }
+.game-screen .build-panel { left: 8px; bottom: 8px; max-height: calc(100% - 70px); }
+
+.decor-picker { padding: 8px 10px; display: grid; gap: 6px; }
+.decor-tile { display: flex; flex-direction: column; align-items: center; width: 84px; padding: 4px; border: 2px solid transparent; border-radius: 8px; background: #fffdf7; cursor: pointer; font: inherit; font-size: 14px; color: var(--ink); }
+.decor-tile img { width: 64px; height: 64px; object-fit: contain; }
+.decor-tile span { max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.decor-tile.on { border-color: var(--ink); background: var(--hl-yellow); }
 
 .coach {
   position: absolute; right: 10px; bottom: 10px; max-width: min(400px, 60%);

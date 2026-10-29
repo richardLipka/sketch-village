@@ -20,9 +20,12 @@ export const CATEGORIES = {
   castle:     { size: 128, removeBg: true, levels: 3 },
   cave:       { size: 128, removeBg: true, levels: 1 },
   decoration: { size: 128, removeBg: true, levels: 1 },
-  coin:       { size: 64,  removeBg: true, levels: 1 },
+  coin:       { size: 64,  removeBg: true, levels: 1, stats: 'coin' }, // each coin drawing has its value
   projectile: { size: 64,  removeBg: true, levels: 1 },
-  weapon:     { size: 96,  removeBg: true, levels: 1 },
+  // equipment drawn by the kids is a playable item; its numbers are set next to the drawing
+  weapon:     { size: 96,  removeBg: true, levels: 1, stats: 'item' },
+  shield:     { size: 96,  removeBg: true, levels: 1, stats: 'item' },
+  armor:      { size: 96,  removeBg: true, levels: 1, stats: 'item' },
   chest:      { size: 64,  removeBg: true, levels: 1 },
 };
 

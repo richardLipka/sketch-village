@@ -30,6 +30,10 @@ export default class GameScene extends Phaser.Scene {
     this.wobble = !!data.wobble; // "pencil wobble": drawings jitter a little, like a flip-book
     this.townHallVariant = Math.random();
     this.hudTimer = 0;
+    this.lastHud = '';
+    this.textPool = [];
+    this.puffPool = [];
+    this.splashPool = [];
   }
 
   // Texture of a building: one of the kids' drawings of that kind (picked by the
@@ -156,6 +160,11 @@ export default class GameScene extends Phaser.Scene {
     tex('coin', 32, (g) => {
       g.fillStyle(0xfacc15).fillCircle(16, 16, 11);
       g.lineStyle(2, 0x854d0e).strokeCircle(16, 16, 11).strokeCircle(16, 16, 6);
+    });
+    tex('coin5', 32, (g) => {
+      g.fillStyle(0xf59e0b).fillCircle(16, 16, 13);
+      g.lineStyle(2, 0x92400e).strokeCircle(16, 16, 13).strokeCircle(16, 16, 8);
+      g.fillStyle(0xfef3c7).fillCircle(16, 16, 3);
     });
     tex('chest', 48, (g) => {
       g.fillStyle(0xb45309).fillRect(6, 16, 36, 24);
@@ -311,10 +320,16 @@ export default class GameScene extends Phaser.Scene {
     for (const e of w.drainEvents()) this.onEvent(e);
     this.syncEntities();
 
+    // the HUD snapshot goes to React only when something visible changed
     this.hudTimer -= dtMs;
     if (this.hudTimer <= 0) {
       this.hudTimer = HUD_EVERY;
-      this.cfg.onHud?.(w.hud());
+      const hud = w.hud();
+      const key = JSON.stringify(hud);
+      if (key !== this.lastHud) {
+        this.lastHud = key;
+        this.cfg.onHud?.(hud);
+      }
     }
   }
 
@@ -322,7 +337,7 @@ export default class GameScene extends Phaser.Scene {
     this.cfg.onAnyEvent?.(e); // sounds + tutorial
     if (e.type === 'hit' && e.amount) this.floatText(e.x, e.y - 24, `-${e.amount}`, e.kind === 'enemy' ? '#1e3a8a' : '#b91c1c');
     if (e.type === 'enemyDied') this.puff(e.x, e.y);
-    if (e.type === 'coinPicked') this.floatText(e.x, e.y - 16, '+1', '#a16207');
+    if (e.type === 'coinPicked') this.floatText(e.x, e.y - 16, `+${e.value ?? 1}`, '#a16207');
     if (e.type === 'cantHit') this.cfg.onEvent?.(e);
     if (e.type === 'buildingDestroyed') { const s = this.world.spots.find((p) => p.id === e.spotId); if (s) this.puff(s.x, s.y); }
     if (e.type === 'splash') this.splash(e.x, e.y, e.radius);
@@ -331,28 +346,61 @@ export default class GameScene extends Phaser.Scene {
     if (['waveStart', 'roundEnd', 'won', 'lost', 'heroDown', 'heroRespawn', 'bonus', 'heroLostLife', 'built', 'upgraded', 'buildingDestroyed', 'sold', 'heroUpgraded', 'unlocked', 'chestOpened', 'weaponBought'].includes(e.type)) this.cfg.onEvent?.(e);
   }
 
-  floatText(x, y, text, color) {
-    const t = this.add.text(x, y, text, { fontFamily: 'Patrick Hand', fontSize: '20px', color, stroke: '#fffdf7', strokeThickness: 3 }).setOrigin(0.5).setDepth(9500);
-    this.tweens.add({ targets: t, y: y - 26, alpha: 0, duration: 700, onComplete: () => t.destroy() });
+  // Short-lived effects come from pools: a Phaser Text renders its own canvas
+  // texture, so creating and destroying one per hit is wasteful in big fights.
+  pooled(pool, create) {
+    const o = pool.pop() ?? create();
+    return o.setVisible(true).setAlpha(1);
   }
 
-  // purple ring where a spell lands
+  floatText(x, y, text, color) {
+    const t = this.pooled(this.textPool, () => this.add.text(0, 0, '', { fontFamily: 'Patrick Hand', fontSize: '20px', stroke: '#fffdf7', strokeThickness: 3 }).setOrigin(0.5).setDepth(9500));
+    if (t.text !== text) t.setText(text);
+    if (t.style.color !== color) t.setColor(color);
+    t.setPosition(x, y);
+    this.tweens.add({ targets: t, y: y - 26, alpha: 0, duration: 700, onComplete: () => { t.setVisible(false); this.textPool.push(t); } });
+  }
+
+  // purple ring where a spell lands (drawn once at 0,0 with radius 1, then scaled)
   splash(x, y, r) {
-    const g = this.add.graphics().setDepth(9300);
-    g.fillStyle(0xa855f7, 0.25).fillCircle(x, y, r);
-    g.lineStyle(3, 0x7e22ce, 0.8).strokeCircle(x, y, r);
-    this.tweens.add({ targets: g, alpha: 0, duration: 400, onComplete: () => g.destroy() });
+    const g = this.pooled(this.splashPool, () => {
+      const n = this.add.graphics().setDepth(9300);
+      n.fillStyle(0xa855f7, 0.25).fillCircle(0, 0, 50);
+      n.lineStyle(3, 0x7e22ce, 0.8).strokeCircle(0, 0, 50);
+      return n;
+    });
+    g.setPosition(x, y).setScale(r / 50);
+    this.tweens.add({ targets: g, alpha: 0, duration: 400, onComplete: () => { g.setVisible(false); this.splashPool.push(g); } });
   }
 
   // pencil scribble where an enemy dies
   puff(x, y) {
-    const g = this.add.graphics().setDepth(9400);
-    g.lineStyle(2, 0x374151, 0.8);
-    for (let i = 0; i < 7; i++) {
-      const a = (i / 7) * Math.PI * 2;
-      g.lineBetween(x + Math.cos(a) * 6, y + Math.sin(a) * 6, x + Math.cos(a) * 20, y + Math.sin(a) * 20);
+    const g = this.pooled(this.puffPool, () => {
+      const n = this.add.graphics().setDepth(9400);
+      n.lineStyle(2, 0x374151, 0.8);
+      for (let i = 0; i < 7; i++) {
+        const a = (i / 7) * Math.PI * 2;
+        n.lineBetween(Math.cos(a) * 6, Math.sin(a) * 6, Math.cos(a) * 20, Math.sin(a) * 20);
+      }
+      return n;
+    });
+    g.setPosition(x, y);
+    this.tweens.add({ targets: g, alpha: 0, duration: 450, onComplete: () => { g.setVisible(false); this.puffPool.push(g); } });
+  }
+
+  /**
+   * A health/progress bar drawn in local coordinates; it is only redrawn when the
+   * shown fill changes (in whole pixels), otherwise just moved.
+   */
+  bar(g, x, y, width, frac, color) {
+    const fill = Math.max(0, Math.round(width * frac));
+    if (g.barFill !== fill || g.barColor !== color) {
+      g.barFill = fill;
+      g.barColor = color;
+      g.clear();
+      drawBar(g, 0, 0, width, fill / width, color);
     }
-    this.tweens.add({ targets: g, alpha: 0, duration: 450, onComplete: () => g.destroy() });
+    g.setPosition(x, y).setVisible(true);
   }
 
   sprite(id, create) {
@@ -377,7 +425,7 @@ export default class GameScene extends Phaser.Scene {
       s.img.setPosition(e.x, e.y + bob).setDepth(e.flying ? 8000 + e.y : e.y);
       if (e.facing) s.img.setFlipX(e.facing < 0);
       s.img.setAngle((e.attacking ? Math.sin(this.time.now / 60) * 6 : 0) + this.jitter(e.id) * 3);
-      drawBar(s.bar.clear(), e.x, e.y + bob - size * 0.75 - 6, 36, e.hp / e.maxHp, 0xdc2626);
+      this.bar(s.bar, e.x, e.y + bob - size * 0.75 - 6, 36, e.hp / e.maxHp, 0xdc2626);
     }
 
     for (const b of w.buildings) {
@@ -386,25 +434,29 @@ export default class GameScene extends Phaser.Scene {
       const key = this.buildingKey(b.type, b.variant ?? 0, shownLevel);
       const s = this.sprite(`b${b.id}`, () => ({
         img: this.add.image(b.x, b.y, key).setDisplaySize(64, 64).setOrigin(0.5, 0.6).setDepth(b.y),
-        bar: this.add.graphics().setDepth(9000),
+        bar: this.add.graphics().setDepth(9000).setPosition(b.x, b.y),
       }));
       if (s.img.texture.key !== key) s.img.setTexture(key).setDisplaySize(64, 64);
-      s.img.setAngle(this.jitter(b.id) * 2);
-      s.bar.clear();
+      if (this.wobble || s.img.angle) s.img.setAngle(this.jitter(b.id) * 2);
+      const busy = b.state === 'building' || b.state === 'upgrading';
+      if (b.state === 'ruin') { s.img.setAlpha(0.4).setTint(0x9ca3af); } else {
+        s.img.clearTint();
+        s.img.setAlpha(b.state === 'building' ? 0.35 + 0.5 * (b.progress / b.buildTime) : 1);
+      }
+      // bars, scaffolding and the ruin cross are redrawn only when what they show changes
+      const sig = `${b.state}|${busy ? Math.round((44 * b.progress) / b.buildTime) : ''}|${b.hp < b.maxHp ? Math.round((44 * b.hp) / b.maxHp) : ''}`;
+      if (s.sig === sig) continue;
+      s.sig = sig;
+      const g = s.bar.clear();
       if (b.state === 'ruin') {
-        s.img.setAlpha(0.4).setTint(0x9ca3af);
-        s.bar.lineStyle(3, 0x7f1d1d, 0.8).lineBetween(b.x - 22, b.y - 30, b.x + 22, b.y + 10).lineBetween(b.x + 22, b.y - 30, b.x - 22, b.y + 10);
+        g.lineStyle(3, 0x7f1d1d, 0.8).lineBetween(-22, -30, 22, 10).lineBetween(22, -30, -22, 10);
         continue;
       }
-      s.img.clearTint();
-      if (b.state === 'building') s.img.setAlpha(0.35 + 0.5 * (b.progress / b.buildTime));
-      else s.img.setAlpha(1);
-      if (b.state === 'building' || b.state === 'upgrading') {
-        drawBar(s.bar, b.x, b.y + 26, 44, b.progress / b.buildTime, 0xca8a04);
-        // scaffolding lines
-        s.bar.lineStyle(1.5, 0x78350f, 0.7).lineBetween(b.x - 24, b.y + 20, b.x - 24, b.y - 30).lineBetween(b.x + 24, b.y + 20, b.x + 24, b.y - 30).lineBetween(b.x - 24, b.y - 5, b.x + 24, b.y - 5);
+      if (busy) {
+        drawBar(g, 0, 26, 44, b.progress / b.buildTime, 0xca8a04);
+        g.lineStyle(1.5, 0x78350f, 0.7).lineBetween(-24, 20, -24, -30).lineBetween(24, 20, 24, -30).lineBetween(-24, -5, 24, -5);
       }
-      if (b.hp < b.maxHp) drawBar(s.bar, b.x, b.y - 44, 44, b.hp / b.maxHp, 0x16a34a);
+      if (b.hp < b.maxHp) drawBar(g, 0, -44, 44, b.hp / b.maxHp, 0x16a34a);
     }
 
     for (const so of w.soldiers) {
@@ -413,8 +465,8 @@ export default class GameScene extends Phaser.Scene {
         bar: this.add.graphics().setDepth(9000),
       }));
       s.img.setPosition(so.x, so.y).setDepth(so.y).setFlipX(so.facing < 0).setAngle(this.jitter(so.id) * 3);
-      s.bar.clear();
-      if (so.hp < so.maxHp) drawBar(s.bar, so.x, so.y - 38, 26, so.hp / so.maxHp, 0x2563eb);
+      if (so.hp < so.maxHp) this.bar(s.bar, so.x, so.y - 38, 26, so.hp / so.maxHp, 0x2563eb);
+      else s.bar.setVisible(false);
     }
 
     for (const p of w.projectiles) {
@@ -431,7 +483,11 @@ export default class GameScene extends Phaser.Scene {
 
     const now = w.time;
     for (const c of w.coinsOnGround) {
-      const s = this.sprite(`c${c.id}`, () => ({ img: this.add.image(c.x, c.y, 'coin').setDisplaySize(22, 22).setDepth(c.y - 1) }));
+      const s = this.sprite(`c${c.id}`, () => {
+        const key = this.textures.exists(c.key) ? c.key : 'coin';
+        const size = 18 + Math.min(14, Math.log2(c.value ?? 1) * 4); // bigger coins are worth more
+        return { img: this.add.image(c.x, c.y, key).setDisplaySize(size, size).setDepth(c.y - 1) };
+      });
       const left = w.b.coinLifetime - (now - c.born);
       s.img.setAlpha(left < w.b.coinBlink ? (Math.floor(this.time.now / 150) % 2 ? 0.25 : 1) : 1);
     }
@@ -450,39 +506,47 @@ export default class GameScene extends Phaser.Scene {
     if (this.hero.texture.key !== heroKey) this.hero.setTexture(heroKey).setDisplaySize(56, 56);
     this.hero.setVisible(!h.dead).setPosition(h.x, h.y).setDepth(h.y).setFlipX(h.facing < 0).setAngle(this.jitter(0.7) * 3);
     this.hero.setAlpha(h.invuln > 0 ? (Math.floor(this.time.now / 100) % 2 ? 0.35 : 1) : 1);
-    this.heroBar.clear();
-    this.rangeRing.clear();
-    if (!h.dead) {
-      drawBar(this.heroBar, h.x, h.y - 52, 40, h.hp / h.maxHp, 0x16a34a);
-      const r = w.heroStats[h.mode].range;
-      this.rangeRing.lineStyle(1.5, INK, 0.25).strokeCircle(h.x, h.y, r + w.b.enemyRadius);
+    if (h.dead) {
+      this.heroBar.setVisible(false);
+      this.rangeRing.setVisible(false);
+    } else {
+      this.bar(this.heroBar, h.x, h.y - 52, 40, h.hp / h.maxHp, h.switching > 0 ? 0x9ca3af : 0x16a34a);
+      const r = w.heroStats[h.mode].range + w.b.enemyRadius;
+      if (this.rangeRing.radius !== r) {
+        this.rangeRing.radius = r;
+        this.rangeRing.clear().lineStyle(1.5, INK, 0.25).strokeCircle(0, 0, r);
+      }
+      this.rangeRing.setPosition(h.x, h.y).setVisible(true);
     }
 
     // town hall
     const th = w.townHall;
     const thKey = this.buildingKey('townhall', this.townHallVariant, th.level);
     if (this.townHall.texture.key !== thKey) this.townHall.setTexture(thKey).setDisplaySize(96, 96);
-    this.townHall.setAngle(this.jitter(0.3) * 1.5);
-    this.townHallBar.clear();
-    drawBar(this.townHallBar, th.x, th.y - 60, 70, th.hp / th.maxHp, 0x2563eb);
-    if (th.upgrade) drawBar(this.townHallBar, th.x, th.y + 40, 60, th.upgrade.progress / th.upgrade.time, 0xca8a04);
-    this.townHall.setAlpha(th.hp > 0 ? 1 : 0.35);
+    if (this.wobble || this.townHall.angle) this.townHall.setAngle(this.jitter(0.3) * 1.5);
+    const thSig = `${Math.round((70 * th.hp) / th.maxHp)}|${th.upgrade ? Math.round((60 * th.upgrade.progress) / th.upgrade.time) : ''}`;
+    if (this.townHallBar.sig !== thSig) {
+      this.townHallBar.sig = thSig;
+      this.townHallBar.clear();
+      drawBar(this.townHallBar, th.x, th.y - 60, 70, th.hp / th.maxHp, 0x2563eb);
+      if (th.upgrade) drawBar(this.townHallBar, th.x, th.y + 40, 60, th.upgrade.progress / th.upgrade.time, 0xca8a04);
+      this.townHall.setAlpha(th.hp > 0 ? 1 : 0.35);
+    }
 
-    // selection highlight (+ the tower's range when a tower is selected)
-    this.selectRing.clear();
+    // selection highlight (+ the tower's / Town Hall's range); redrawn only when it changes
     const sel = this.selection;
-    if (sel) {
-      const p = sel.kind === 'townhall' ? th : w.spots.find((s) => s.id === sel.id);
+    const p = sel && (sel.kind === 'townhall' ? th : w.spots.find((s) => s.id === sel.id));
+    const b = sel?.kind === 'spot' && w.buildingOn(sel.id);
+    const selSig = p ? `${sel.kind}|${sel.id}|${th.level}|${b ? `${b.type}${b.level}` : ''}` : '';
+    if (this.selectRing.sig !== selSig) {
+      this.selectRing.sig = selSig;
+      const g = this.selectRing.clear();
       if (p) {
-        const r = sel.kind === 'townhall' ? 54 : 34;
-        this.selectRing.lineStyle(3, 0xca8a04, 0.9).strokeCircle(p.x, p.y, r);
-        this.selectRing.lineStyle(1.5, INK, 0.3).strokeCircle(p.x, p.y, 90 + (sel.kind === 'townhall' ? th.radius : 0));
+        g.lineStyle(3, 0xca8a04, 0.9).strokeCircle(p.x, p.y, sel.kind === 'townhall' ? 54 : 34);
+        g.lineStyle(1.5, INK, 0.3).strokeCircle(p.x, p.y, 90 + (sel.kind === 'townhall' ? th.radius : 0));
         const arrows = sel.kind === 'townhall' && w.thLevels[th.level - 1];
-        if (arrows?.range) this.selectRing.lineStyle(2, 0xdc2626, 0.5).strokeCircle(th.x, th.y, arrows.range);
-        const b = sel.kind === 'spot' && w.buildingOn(sel.id);
-        if (b && b.type === 'tower' && b.level > 0) {
-          this.selectRing.lineStyle(2, 0xdc2626, 0.5).strokeCircle(b.x, b.y, w.buildingTypes.tower.levels[b.level - 1].range);
-        }
+        if (arrows?.range) g.lineStyle(2, 0xdc2626, 0.5).strokeCircle(th.x, th.y, arrows.range);
+        if (b && b.type === 'tower' && b.level > 0) g.lineStyle(2, 0xdc2626, 0.5).strokeCircle(b.x, b.y, w.buildingTypes.tower.levels[b.level - 1].range);
       }
     }
   }
