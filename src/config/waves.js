@@ -28,11 +28,11 @@ const PLAN = [
   [['goblin', 15, 0.6], ['bat', 10, 0.8], ['orc', 8, 2.0], ['troll', 1, 1, 15], ['dragon', 1, 1, 15]],
 ];
 
-export function defaultWaves() {
+export function defaultWaves(balance = BALANCE) {
   return {
-    startCoins: BALANCE.startCoins,
-    firstPrep: BALANCE.firstPrep,
-    prep: BALANCE.prep,
+    startCoins: balance.startCoins,
+    firstPrep: balance.firstPrep,
+    prep: balance.prep,
     rounds: PLAN.map((groups) => ({
       groups: groups.map(([enemy, count, interval, delay = 0]) => ({ enemy, count, interval, delay, spawn: 'all' })),
     })),
@@ -40,6 +40,6 @@ export function defaultWaves() {
 }
 
 /** The wave config a map plays with. */
-export function wavesOf(map) {
-  return map.waves?.rounds?.length ? map.waves : defaultWaves();
+export function wavesOf(map, balance = BALANCE) {
+  return map.waves?.rounds?.length ? map.waves : defaultWaves(balance);
 }

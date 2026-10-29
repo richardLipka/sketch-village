@@ -1,11 +1,12 @@
 import React, { useState, Suspense, lazy } from 'react';
 import { useTranslation } from 'react-i18next';
+import { enterFullscreen } from '../ui/FullscreenButton.jsx';
 
 // Phaser is big – load it only when a game starts.
 const GameView = lazy(() => import('./GameView.jsx'));
 
-// Pick a level (map) and a hero, then play.
-export default function PlaySetup({ maps, assets, enemyTypes, buildingTypes }) {
+// Pick a level (map) and a hero, then play (fullscreen).
+export default function PlaySetup({ maps, assets, enemyTypes, buildingTypes, rules, settings, onSettings }) {
   const { t } = useTranslation();
   const playable = maps.filter((m) => m.valid);
   const heroes = assets.filter((a) => a.category === 'hero');
@@ -19,7 +20,10 @@ export default function PlaySetup({ maps, assets, enemyTypes, buildingTypes }) {
   if (playing && map) {
     return (
       <Suspense fallback={<p>{t('app.loading')}</p>}>
-        <GameView map={map} hero={hero} assets={assets} enemyTypes={enemyTypes} buildingTypes={buildingTypes} onExit={() => setPlaying(false)} />
+        <GameView
+          map={map} hero={hero} assets={assets} enemyTypes={enemyTypes} buildingTypes={buildingTypes} rules={rules}
+          settings={settings} onSettings={onSettings} onExit={() => setPlaying(false)}
+        />
       </Suspense>
     );
   }
@@ -51,7 +55,7 @@ export default function PlaySetup({ maps, assets, enemyTypes, buildingTypes }) {
         ))}
       </div>
 
-      <button className="btn big primary" disabled={!map} onClick={() => setPlaying(true)}>▶ {t('play.start')}</button>
+      <button className="btn big primary" disabled={!map} onClick={() => { enterFullscreen(); setPlaying(true); }}>▶ {t('play.start')}</button>
     </section>
   );
 }

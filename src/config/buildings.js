@@ -8,13 +8,16 @@ export const BUILD = {
   regenPerSecond: 0.01, // × maxHp
   regenDelay: 5, // s after the last hit
   buildingRadius: 26,
+  sellRefund: 0.7, // share of all coins spent on a building returned when it is sold
   soldier: { speed: 80, range: 30, aggro: 150, max: 3, radius: 12 },
 };
 
+// HP tuned with the balance bot (balance.test.js): buildings beside the roads
+// must survive enemies walking past while the towers shoot them.
 export const TOWN_HALL_LEVELS = [
-  { hp: 300 },
-  { cost: 60, time: 20, hp: 450 },
-  { cost: 100, time: 30, hp: 600 },
+  { hp: 600 },
+  { cost: 60, time: 20, hp: 900 },
+  { cost: 100, time: 30, hp: 1200 },
 ];
 
 export const HERO_UPGRADE_COSTS = [15, 30, 50]; // level n needs Town Hall level n
@@ -23,25 +26,25 @@ export const DEFAULT_BUILDING_TYPES = [
   {
     id: 'house', name: { cs: 'Dům', en: 'House' },
     levels: [
-      { cost: 20, time: 10, hp: 80, workers: 1 },
-      { cost: 30, time: 12, hp: 120, workers: 2 },
-      { cost: 45, time: 15, hp: 160, workers: 3 },
+      { cost: 20, time: 10, hp: 400, workers: 1 },
+      { cost: 30, time: 12, hp: 600, workers: 2 },
+      { cost: 45, time: 15, hp: 800, workers: 3 },
     ],
   },
   {
     id: 'tower', name: { cs: 'Věž', en: 'Tower' },
     levels: [
-      { cost: 30, time: 12, hp: 100, damage: 6, range: 180, cooldown: 1.0 },
-      { cost: 45, time: 14, hp: 150, damage: 10, range: 200, cooldown: 0.9 },
-      { cost: 70, time: 18, hp: 200, damage: 15, range: 220, cooldown: 0.75 },
+      { cost: 30, time: 12, hp: 500, damage: 9, range: 180, cooldown: 1.0 },
+      { cost: 45, time: 14, hp: 750, damage: 15, range: 200, cooldown: 0.9 },
+      { cost: 70, time: 18, hp: 1000, damage: 22, range: 220, cooldown: 0.75 },
     ],
   },
   {
     id: 'castle', name: { cs: 'Hrad', en: 'Castle' },
     levels: [
-      { cost: 40, time: 15, hp: 150, soldierHp: 30, soldierDamage: 4, soldierCooldown: 1.0, soldierRespawn: 12 },
-      { cost: 60, time: 18, hp: 220, soldierHp: 45, soldierDamage: 6, soldierCooldown: 1.0, soldierRespawn: 10 },
-      { cost: 90, time: 22, hp: 300, soldierHp: 60, soldierDamage: 8, soldierCooldown: 1.0, soldierRespawn: 8 },
+      { cost: 40, time: 15, hp: 750, soldierHp: 30, soldierDamage: 6, soldierCooldown: 1.0, soldierRespawn: 12 },
+      { cost: 60, time: 18, hp: 1100, soldierHp: 45, soldierDamage: 9, soldierCooldown: 1.0, soldierRespawn: 10 },
+      { cost: 90, time: 22, hp: 1500, soldierHp: 60, soldierDamage: 12, soldierCooldown: 1.0, soldierRespawn: 8 },
     ],
   },
 ];

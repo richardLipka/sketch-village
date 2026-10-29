@@ -294,7 +294,9 @@ src/
 2. **M2 Map** ✅ – Map Painter (road/grass brush, pencil, bucket, undo, live walkable overlay), Place mode (town hall, 10 spots, caves snapped to edge, hero start, decoration stamps, drag/remove), validation with kid-friendly messages, sample map, map list; Phaser game with hero click-to-move (A* on 16 px grid + smoothing), zoom (wheel/pinch/buttons) and drag-pan.
 3. **M3 Enemies, waves, hero combat** ✅ – pure `World` simulation (`src/logic/world.js`, unit-tested incl. a full 20-round run): rounds with prep countdown, Ready + early bonus, round rewards, 20-round default plan; enemies from caves on the flow field (flying straight), attack hero/Town Hall in range, melee + ranged enemies, HP scaling per round; hero melee/ranged (keys 1/2), click-to-attack, auto-attack in range, 5 lives → 30 s respawn; coins drop on roads, pick-up, 30 s despawn with blinking; Town Hall HP → defeat; victory after last round. HUD (round, countdown, coins, Town Hall HP, lives, mode, next-wave preview, flying tip), pause, 2× speed, messages. Enemy editor (drawing + stats per type) and per-map wave editor.
 4. **M4 Buildings & economy** ✅ – build/upgrade on spots when the hero is near (House → workers, Tower → arrows at the enemy nearest the centre, Castle → up to 3 soldiers guarding ~150 px around it, ground enemies only), Town Hall upgrades (HP, building level cap, hero upgrades for coins), worker speed-up, 1 %/s self-repair 5 s after the last hit, ruins rebuilt at level 1; enemies attack buildings and soldiers in range. Build panel explains every disabled button. Idle hero guards a 130 px radius and walks back afterwards. Building numbers in `src/config/buildings.js` (`buildingTypes` collection overrides them; no editor yet).
+4b. **M4 follow-ups** ✅ – **Rules editor** (⚙️ menu): every building level, Town Hall level, hero upgrade price and general number (coins, prep, rewards, refunds, regen, soldiers…) is editable and stored in the `buildingTypes` + `rules` collections, so it travels in the exported JSON. **Selling** a building returns 70 % of everything spent (rules); a ruin can be cleared for free. **Several drawings per building kind**: each building picks one of the kids' drawings at random and keeps it through upgrades. **Simple geometry** placeholders until drawings exist (house = square, tower = triangle, castle = hexagon, town hall = circle, dots = level; enemies circle / diamond = flying / triangle = shooting). **Pencil wobble** toggle (〰️) makes single drawings jitter like a flip-book. **Fullscreen** game layout + fullscreen button (game starts fullscreen). Balance retuned with a bot (`src/logic/balanceBot.js`, `balance.test.js`).
 5. **M5 Polish** – sounds, tutorial hints, balance pass after playtests, default content (`public/default-data.json`).
+6. **Later** – animated sprites (frame sheets photographed from a printed template), longbowmen soldiers that can hit flying enemies, walls.
 
 ## 15. Open questions
 
@@ -338,6 +340,15 @@ src/
 | Q36 | Do hero upgrades persist between levels? | No |
 | Q37 | Wave editor for kids? | Yes |
 | Q38 | Town Hall max level | 3 |
+| Q39 | Buildings destroyed by passing enemies | Raise building HP (×5 after bot test); all numbers editable in the Rules editor and exported |
+| Q40 | Several drawings of one building kind | Allowed; random one per building, kept through upgrades |
+| Q41 | Editor for building numbers | Yes, GUI Rules editor |
+| Q42 | Soldiers vs flying enemies | Can't hit them; longbowmen soldiers may come later |
+| Q43 | Selling buildings | Yes, ~70 % refund (editable) |
+| Q44 | Building during waves | Always allowed |
+| Q45 | Hero upgrades | Instant |
+| Q46 | Default content | Simple geometry (squares, circles…) until kids' drawings replace it |
+| Q47 | Animation | Single drawing + optional wobble now; animated sprites later |
 
 ## 16. Balance draft (v1 – starting values, tune by playtesting)
 
@@ -350,7 +361,7 @@ All values become the **defaults** in `src/config/` and are editable in the in-g
 | Start coins | **40** | enough for 1 tower + 1 house... almost (forces a choice) |
 | First prep time | **45 s** | time to look around and build |
 | Prep time (rounds 2–20) | **20 s** | |
-| Round reward | **5 + round** coins | round 1 = 6, round 20 = 25; total ≈ 310 |
+| Round reward | **10 + round** coins | round 1 = 11, round 20 = 30; total ≈ 410 |
 | Early-call bonus | **0.5 coin / remaining s** | Ready at 20 s left → +10 |
 | Coin pickup radius | 24 px | |
 | Coin despawn | **30 s** (blinks last 5 s) | |
@@ -382,41 +393,43 @@ Armor cap 60 %. Ranged cooldown floor 0.6 s. Melee is ~3× stronger than ranged 
 
 ### 16.3 Buildings
 
-Cost = coins to build (L1) or upgrade to that level. Rebuild after destruction = L1 cost. Time = base build time before worker speed-up.
+Cost = coins to build (L1) or upgrade to that level. Rebuild after destruction = L1 cost. Time = base build time before worker speed-up. Selling returns 70 % of all coins spent on the building. All values below are defaults; the Rules editor changes them.
+
+v2 (after the balance bot): HP ×5 (buildings) / ×2 (Town Hall), tower and soldier damage ×1.5, round reward base 5 → 10. With these, an average build order wins all 20 rounds on a 4-cave test map and loses ~5 buildings in total, none in the first 4 rounds (`npm test` checks this).
 
 **Town Hall** (pre-built, centre)
 
 | Level | Upgrade cost | Time | HP | Unlocks |
 |---|---|---|---|---|
-| 1 | – | – | 300 | buildings L1, hero upgrades L1 |
-| 2 | 60 | 20 | 450 | buildings L2, hero upgrades L2 |
-| 3 | 100 | 30 | 600 | buildings L3, hero upgrades L3 |
+| 1 | – | – | 600 | buildings L1, hero upgrades L1 |
+| 2 | 60 | 20 | 900 | buildings L2, hero upgrades L2 |
+| 3 | 100 | 30 | 1200 | buildings L3, hero upgrades L3 |
 
 **House**
 
 | Level | Cost | Time | HP | Workers |
 |---|---|---|---|---|
-| 1 | 20 | 10 | 80 | 1 |
-| 2 | 30 | 12 | 120 | 2 |
-| 3 | 45 | 15 | 160 | 3 |
+| 1 | 20 | 10 | 400 | 1 |
+| 2 | 30 | 12 | 600 | 2 |
+| 3 | 45 | 15 | 800 | 3 |
 
 **Tower** – shoots the enemy in range nearest to the centre; hits ground and flying.
 
 | Level | Cost | Time | HP | Damage | Range | Cooldown | DPS |
 |---|---|---|---|---|---|---|---|
-| 1 | 30 | 12 | 100 | 6 | 180 | 1.0 | 6 |
-| 2 | 45 | 14 | 150 | 10 | 200 | 0.9 | 11 |
-| 3 | 70 | 18 | 200 | 15 | 220 | 0.75 | 20 |
+| 1 | 30 | 12 | 500 | 9 | 180 | 1.0 | 9 |
+| 2 | 45 | 14 | 750 | 15 | 200 | 0.9 | 17 |
+| 3 | 70 | 18 | 1000 | 22 | 220 | 0.75 | 29 |
 
 **Castle** – max 3 soldiers, melee only (can't hit flying).
 
 | Level | Cost | Time | HP | Soldier HP | Soldier dmg / cd | Soldier respawn |
 |---|---|---|---|---|---|---|
-| 1 | 40 | 15 | 150 | 30 | 4 / 1.0 | 12 s |
-| 2 | 60 | 18 | 220 | 45 | 6 / 1.0 | 10 s |
-| 3 | 90 | 22 | 300 | 60 | 8 / 1.0 | 8 s |
+| 1 | 40 | 15 | 750 | 30 | 6 / 1.0 | 12 s |
+| 2 | 60 | 18 | 1100 | 45 | 9 / 1.0 | 10 s |
+| 3 | 90 | 22 | 1500 | 60 | 12 / 1.0 | 8 s |
 
-Soldier speed 80, range 30, aggro radius 150 around castle.
+Soldier speed 80, range 30, aggro radius 150 around castle (300 against enemies attacking that castle or its soldiers).
 
 Full village (10 spots maxed + Town Hall + all hero upgrades) costs ≈ **2 000 coins**; a good run earns ≈ **1 500**, so players must choose – that's the strategy.
 

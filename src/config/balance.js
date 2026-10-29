@@ -4,7 +4,7 @@ export const BALANCE = {
   startCoins: 40,
   firstPrep: 45,
   prep: 20,
-  rewardBase: 5, // round reward = rewardBase + round number (1-based)
+  rewardBase: 10, // round reward = rewardBase + round number (1-based)
   earlyBonusPerSecond: 0.5,
   hpScalePerRound: 0.04, // enemy HP × (1 + k × (round − 1))
   coinPickupRadius: 24,
@@ -14,7 +14,6 @@ export const BALANCE = {
   heroRespawnDelay: 30,
   hitInvulnerability: 1.5,
   heroRadius: 14,
-  townHallHp: [300, 450, 600],
   townHallRadius: 40,
   projectileSpeed: 450,
   enemyRadius: 16,

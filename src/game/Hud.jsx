@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { roundSummary } from '../logic/waves.js';
 
 // Top bar: round, countdown + Ready, coins, Town Hall HP, hero lives, melee/ranged.
-export default function Hud({ hud, onReady, onMode, enemyName, enemyTypes }) {
+export default function Hud({ hud, onReady, onMode, enemyName, enemyTypes, maxLives = 5 }) {
   const { t } = useTranslation();
   const { hero, townHall } = hud;
   const thPct = Math.round((townHall.hp / townHall.maxHp) * 100);
@@ -30,7 +30,7 @@ export default function Hud({ hud, onReady, onMode, enemyName, enemyTypes }) {
           🏛️ <span className="hud-bar"><span style={{ width: `${thPct}%`, background: '#2563eb' }} /></span> {townHall.hp}
         </span>
         <span title={t('game.lives')} className="hud-num" style={{ color: '#dc2626', letterSpacing: 1 }}>
-          {hero.dead ? `⏳ ${Math.ceil(hero.respawnIn)} s` : '♥'.repeat(hero.lives) + '♡'.repeat(Math.max(0, 5 - hero.lives))}
+          {hero.dead ? `⏳ ${Math.ceil(hero.respawnIn)} s` : '♥'.repeat(hero.lives) + '♡'.repeat(Math.max(0, maxLives - hero.lives))}
         </span>
         <span className="row" style={{ gap: 4 }}>
           <button className={`btn icon ${hero.mode === 'melee' ? 'active' : ''}`} onClick={() => onMode('melee')} title={`${t('hero.stat_melee')} (1)`}>⚔️</button>

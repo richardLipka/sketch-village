@@ -27,7 +27,23 @@ export default class GameScene extends Phaser.Scene {
     this.sprites = new Map(); // world entity id → { img, bar }
     this.speed = 1;
     this.paused = false;
+    this.wobble = !!data.wobble; // "pencil wobble": drawings jitter a little, like a flip-book
+    this.townHallVariant = Math.random();
     this.hudTimer = 0;
+  }
+
+  // Texture of a building: one of the kids' drawings of that kind (picked by the
+  // building's variant), or the geometric placeholder.
+  buildingKey(type, variant, level) {
+    const n = this.cfg.variants?.[type] ?? 0;
+    return n ? `${type}#${Math.floor(variant * n) % n}:${level}` : `${type}:${level}`;
+  }
+
+  // -1..1, changes ~5× per second, different per thing (seed); 0 when wobble is off
+  jitter(seed) {
+    if (!this.wobble) return 0;
+    const h = Math.sin(seed * 12.9898 + Math.floor(this.time.now / 190) * 78.233) * 43758.5453;
+    return (h - Math.floor(h)) * 2 - 1;
   }
 
   create() {
@@ -59,7 +75,7 @@ export default class GameScene extends Phaser.Scene {
     for (const c of map.caves) this.add.image(c.x, c.y, 'cave').setDisplaySize(64, 64).setDepth(c.y);
 
     const th = this.world.townHall;
-    this.townHall = this.add.image(th.x, th.y, 'townhall:1').setDisplaySize(96, 96).setDepth(th.y);
+    this.townHall = this.add.image(th.x, th.y, this.buildingKey('townhall', this.townHallVariant, 1)).setDisplaySize(96, 96).setDepth(th.y);
     this.townHallBar = this.add.graphics().setDepth(9000);
     this.selectRing = this.add.graphics().setDepth(-300);
     this.selection = null;
@@ -80,7 +96,10 @@ export default class GameScene extends Phaser.Scene {
 
   // ---------------- textures ----------------
 
-  // Simple sketchy textures for anything the kids haven't drawn yet.
+  // Simple geometric shapes for anything the kids haven't drawn yet; their
+  // drawings replace them as soon as they exist. Shape tells the kind
+  // (house = square, tower = triangle, castle = hexagon, town hall = circle),
+  // dots tell the level.
   makePlaceholders() {
     const g = this.make.graphics({ x: 0, y: 0 }, false);
     const tex = (key, size, draw) => {
@@ -89,58 +108,45 @@ export default class GameScene extends Phaser.Scene {
       draw(g);
       g.generateTexture(key, size, size);
     };
-    tex('hero', 64, (g) => {
-      g.fillStyle(0xfde68a).fillCircle(32, 22, 16);
-      g.lineStyle(3, INK).strokeCircle(32, 22, 16);
-      g.lineBetween(32, 38, 32, 54).lineBetween(32, 44, 18, 36).lineBetween(32, 44, 46, 36);
-      g.lineBetween(32, 54, 22, 63).lineBetween(32, 54, 42, 63);
-      g.fillStyle(INK).fillCircle(26, 20, 2).fillCircle(38, 20, 2);
-    });
-    // level marks: 1–3 little stars drawn as crosses on the roof
-    const stars = (g, n, cx, y) => {
-      for (let i = 0; i < n; i++) {
-        const x = cx + (i - (n - 1) / 2) * 12;
-        g.lineStyle(2, 0xca8a04).lineBetween(x - 4, y, x + 4, y).lineBetween(x, y - 4, x, y + 4);
-      }
+    const poly = (g, cx, cy, r, n, rot, fill) => {
+      const pts = Array.from({ length: n }, (_, i) => {
+        const a = rot + (i / n) * Math.PI * 2;
+        return new Phaser.Geom.Point(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+      });
+      g.fillStyle(fill).fillPoints(pts, true);
+      g.lineStyle(3, INK).strokePoints(pts, true);
     };
+    const dots = (g, n, cx, y) => {
+      for (let i = 0; i < n; i++) g.fillStyle(INK).fillCircle(cx + (i - (n - 1) / 2) * 12, y, 4);
+    };
+    tex('hero', 64, (g) => {
+      g.fillStyle(0x60a5fa).fillCircle(32, 32, 22);
+      g.lineStyle(4, INK).strokeCircle(32, 32, 22);
+      g.fillStyle(0xffffff).fillCircle(32, 32, 7);
+    });
     for (let lvl = 1; lvl <= 3; lvl++) {
       tex(`townhall:${lvl}`, 96, (g) => {
-        g.fillStyle(0xfffdf7).fillRect(14, 40, 68, 48);
-        g.lineStyle(3, INK).strokeRect(14, 40, 68, 48);
-        g.fillStyle(0xfecaca).fillTriangle(6, 42, 48, 8, 90, 42);
-        g.lineStyle(3, INK).strokeTriangle(6, 42, 48, 8, 90, 42);
-        g.strokeRect(40, 60, 16, 28);
-        stars(g, lvl, 48, 30);
+        g.fillStyle(0xfda4af).fillCircle(48, 48, 40);
+        g.lineStyle(4, INK).strokeCircle(48, 48, 40);
+        dots(g, lvl, 48, 48);
       });
       tex(`house:${lvl}`, 64, (g) => {
-        g.fillStyle(0xfffdf7).fillRect(12, 30, 40, 30);
-        g.lineStyle(3, INK).strokeRect(12, 30, 40, 30);
-        g.fillStyle(0xfde68a).fillTriangle(6, 32, 32, 8, 58, 32);
-        g.lineStyle(3, INK).strokeTriangle(6, 32, 32, 8, 58, 32);
-        g.strokeRect(27, 42, 10, 18);
-        stars(g, lvl, 32, 24);
+        g.fillStyle(0xfde047).fillRect(10, 10, 44, 44);
+        g.lineStyle(3, INK).strokeRect(10, 10, 44, 44);
+        dots(g, lvl, 32, 32);
       });
       tex(`tower:${lvl}`, 64, (g) => {
-        g.fillStyle(0xe5e7eb).fillRect(20, 16, 24, 46);
-        g.lineStyle(3, INK).strokeRect(20, 16, 24, 46);
-        for (const x of [18, 28, 38]) g.fillStyle(0xe5e7eb).fillRect(x, 8, 8, 9).lineStyle(2, INK).strokeRect(x, 8, 8, 9);
-        g.lineStyle(2, INK).strokeRect(29, 26, 6, 10);
-        stars(g, lvl, 32, 48);
+        poly(g, 32, 36, 28, 3, -Math.PI / 2, 0x93c5fd);
+        dots(g, lvl, 32, 42);
       });
       tex(`castle:${lvl}`, 64, (g) => {
-        g.fillStyle(0xd6d3d1).fillRect(8, 26, 48, 34);
-        g.lineStyle(3, INK).strokeRect(8, 26, 48, 34);
-        for (const x of [4, 44]) g.fillStyle(0xd6d3d1).fillRect(x, 14, 16, 46).lineStyle(3, INK).strokeRect(x, 14, 16, 46);
-        g.lineStyle(3, INK).beginPath().arc(32, 60, 8, Math.PI, 0).strokePath();
-        g.lineStyle(2, 0xdc2626).lineBetween(32, 26, 32, 8).lineBetween(32, 8, 42, 12).lineBetween(42, 12, 32, 16);
-        stars(g, lvl, 32, 38);
+        poly(g, 32, 32, 27, 6, 0, 0xc4b5fd);
+        dots(g, lvl, 32, 32);
       });
     }
     tex('soldier', 48, (g) => {
-      g.fillStyle(0xbfdbfe).fillCircle(24, 14, 9);
-      g.lineStyle(2.5, INK).strokeCircle(24, 14, 9);
-      g.lineBetween(24, 23, 24, 36).lineBetween(24, 27, 14, 32).lineBetween(24, 36, 17, 46).lineBetween(24, 36, 31, 46);
-      g.lineStyle(2.5, 0x6b7280).lineBetween(32, 34, 40, 14); // spear
+      g.fillStyle(0x93c5fd).fillRect(12, 12, 24, 24);
+      g.lineStyle(3, INK).strokeRect(12, 12, 24, 24);
     });
     tex('cave', 64, (g) => {
       g.fillStyle(0x3f3f46).slice(32, 44, 26, Math.PI, 0, false).fillPath();
@@ -155,17 +161,22 @@ export default class GameScene extends Phaser.Scene {
       g.lineStyle(3, 0x78350f).lineBetween(4, 16, 26, 16);
       g.fillStyle(0x374151).fillTriangle(26, 11, 31, 16, 26, 21);
     });
+    // enemies: their colour; circle = walks, diamond = flies, triangle = shoots
     for (const t of this.cfg.enemyTypes) {
       tex(`enemy:${t.id}`, 64, (g) => {
         const col = hexNum(t.color ?? '#16a34a');
         if (t.flying) {
-          g.fillStyle(col).fillTriangle(4, 22, 32, 30, 14, 44).fillTriangle(60, 22, 32, 30, 50, 44);
+          const pts = [[32, 6], [58, 32], [32, 58], [6, 32]].map(([x, y]) => new Phaser.Geom.Point(x, y));
+          g.fillStyle(col).fillPoints(pts, true);
+          g.lineStyle(3, 0x111827).strokePoints(pts, true);
+        } else if (t.ranged) {
+          g.fillStyle(col).fillTriangle(32, 6, 60, 56, 4, 56);
+          g.lineStyle(3, 0x111827).strokeTriangle(32, 6, 60, 56, 4, 56);
+        } else {
+          g.fillStyle(col).fillCircle(32, 32, 24);
+          g.lineStyle(3, 0x111827).strokeCircle(32, 32, 24);
         }
-        g.fillStyle(col).fillCircle(32, 34, 18);
-        g.lineStyle(3, 0x111827).strokeCircle(32, 34, 18);
-        g.fillStyle(0xffffff).fillCircle(25, 30, 5).fillCircle(39, 30, 5);
-        g.fillStyle(0x111827).fillCircle(26, 31, 2).fillCircle(40, 31, 2);
-        g.lineStyle(2, 0x111827).lineBetween(24, 42, 40, 42);
+        if (t.boss) g.lineStyle(3, 0xfacc15).strokeCircle(32, 34, 10);
       });
     }
     g.destroy();
@@ -297,7 +308,8 @@ export default class GameScene extends Phaser.Scene {
     if (e.type === 'coinPicked') this.floatText(e.x, e.y - 16, '+1', '#a16207');
     if (e.type === 'cantHit') this.cfg.onEvent?.(e);
     if (e.type === 'buildingDestroyed') { const s = this.world.spots.find((p) => p.id === e.spotId); if (s) this.puff(s.x, s.y); }
-    if (['waveStart', 'roundEnd', 'won', 'lost', 'heroDown', 'heroRespawn', 'bonus', 'heroLostLife', 'built', 'upgraded', 'buildingDestroyed', 'heroUpgraded'].includes(e.type)) this.cfg.onEvent?.(e);
+    if (e.type === 'sold') { this.puff(e.x, e.y); if (e.refund) this.floatText(e.x, e.y - 30, `+${e.refund}`, '#a16207'); }
+    if (['waveStart', 'roundEnd', 'won', 'lost', 'heroDown', 'heroRespawn', 'bonus', 'heroLostLife', 'built', 'upgraded', 'buildingDestroyed', 'sold', 'heroUpgraded'].includes(e.type)) this.cfg.onEvent?.(e);
   }
 
   floatText(x, y, text, color) {
@@ -337,19 +349,20 @@ export default class GameScene extends Phaser.Scene {
       const bob = e.flying ? Math.sin(this.time.now / 180 + e.id) * 4 - 18 : 0;
       s.img.setPosition(e.x, e.y + bob).setDepth(e.flying ? 8000 + e.y : e.y);
       if (e.facing) s.img.setFlipX(e.facing < 0);
-      s.img.setAngle(e.attacking ? Math.sin(this.time.now / 60) * 6 : 0);
+      s.img.setAngle((e.attacking ? Math.sin(this.time.now / 60) * 6 : 0) + this.jitter(e.id) * 3);
       drawBar(s.bar.clear(), e.x, e.y + bob - size * 0.75 - 6, 36, e.hp / e.maxHp, 0xdc2626);
     }
 
     for (const b of w.buildings) {
       // show the drawing of the level being built (or the current one), at least level 1
       const shownLevel = Math.max(1, b.state === 'building' || b.state === 'upgrading' ? b.level + 1 : b.level);
-      const key = `${b.type}:${shownLevel}`;
+      const key = this.buildingKey(b.type, b.variant ?? 0, shownLevel);
       const s = this.sprite(`b${b.id}`, () => ({
         img: this.add.image(b.x, b.y, key).setDisplaySize(64, 64).setOrigin(0.5, 0.6).setDepth(b.y),
         bar: this.add.graphics().setDepth(9000),
       }));
       if (s.img.texture.key !== key) s.img.setTexture(key).setDisplaySize(64, 64);
+      s.img.setAngle(this.jitter(b.id) * 2);
       s.bar.clear();
       if (b.state === 'ruin') {
         s.img.setAlpha(0.4).setTint(0x9ca3af);
@@ -372,7 +385,7 @@ export default class GameScene extends Phaser.Scene {
         img: this.add.image(so.x, so.y, 'soldier').setDisplaySize(36, 36).setOrigin(0.5, 0.85),
         bar: this.add.graphics().setDepth(9000),
       }));
-      s.img.setPosition(so.x, so.y).setDepth(so.y).setFlipX(so.facing < 0);
+      s.img.setPosition(so.x, so.y).setDepth(so.y).setFlipX(so.facing < 0).setAngle(this.jitter(so.id) * 3);
       s.bar.clear();
       if (so.hp < so.maxHp) drawBar(s.bar, so.x, so.y - 38, 26, so.hp / so.maxHp, 0x2563eb);
     }
@@ -398,7 +411,7 @@ export default class GameScene extends Phaser.Scene {
 
     // hero
     const h = w.hero;
-    this.hero.setVisible(!h.dead).setPosition(h.x, h.y).setDepth(h.y).setFlipX(h.facing < 0);
+    this.hero.setVisible(!h.dead).setPosition(h.x, h.y).setDepth(h.y).setFlipX(h.facing < 0).setAngle(this.jitter(0.7) * 3);
     this.hero.setAlpha(h.invuln > 0 ? (Math.floor(this.time.now / 100) % 2 ? 0.35 : 1) : 1);
     this.heroBar.clear();
     this.rangeRing.clear();
@@ -410,8 +423,9 @@ export default class GameScene extends Phaser.Scene {
 
     // town hall
     const th = w.townHall;
-    const thKey = `townhall:${th.level}`;
+    const thKey = this.buildingKey('townhall', this.townHallVariant, th.level);
     if (this.townHall.texture.key !== thKey) this.townHall.setTexture(thKey).setDisplaySize(96, 96);
+    this.townHall.setAngle(this.jitter(0.3) * 1.5);
     this.townHallBar.clear();
     drawBar(this.townHallBar, th.x, th.y - 60, 70, th.hp / th.maxHp, 0x2563eb);
     if (th.upgrade) drawBar(this.townHallBar, th.x, th.y + 40, 60, th.upgrade.progress / th.upgrade.time, 0xca8a04);

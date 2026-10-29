@@ -16,8 +16,8 @@
 //              and hero upgrades.
 //   lost:      Town Hall destroyed
 
-import { BALANCE } from '../config/balance.js';
-import { BUILD, TOWN_HALL_LEVELS, HERO_UPGRADE_COSTS, DEFAULT_BUILDING_TYPES } from '../config/buildings.js';
+import { DEFAULT_BUILDING_TYPES } from '../config/buildings.js';
+import { DEFAULT_RULES } from '../config/rules.js';
 import { heroNumbers, HERO_STATS, DEFAULT_HERO_POINTS } from '../config/heroStats.js';
 import { worldToCell, cellCenter, nearestWalkable, isWalkable } from './pathGrid.js';
 import { findPath, smoothPath, flowField } from './pathfinding.js';
@@ -49,11 +49,15 @@ export class World {
    * @param {object} o.waves          { startCoins, firstPrep, prep, rounds }
    * @param {object} [o.heroPoints]   skill points { melee, ranged, armor, speed }
    * @param {object[]} [o.buildingTypes]
-   * @param {object} [o.balance]
+   * @param {object} [o.rules]        editable rules (config/rules.js)
+   * @param {object} [o.balance]      overrides rules.balance
    * @param {number} [o.seed]
    */
-  constructor({ map, grid, enemyTypes, waves, heroPoints = DEFAULT_HERO_POINTS, buildingTypes = DEFAULT_BUILDING_TYPES, balance = BALANCE, seed = Date.now() }) {
+  constructor({ map, grid, enemyTypes, waves, heroPoints = DEFAULT_HERO_POINTS, buildingTypes = DEFAULT_BUILDING_TYPES, rules = DEFAULT_RULES, balance = rules.balance, seed = Date.now() }) {
     this.b = balance;
+    this.cfg = rules.build;
+    this.thLevels = rules.townHallLevels;
+    this.heroCosts = rules.heroUpgradeCosts;
     this.map = map;
     this.grid = grid;
     this.types = Object.fromEntries(enemyTypes.map((t) => [t.id, t]));
@@ -68,7 +72,7 @@ export class World {
     this.centreCell = nearestWalkable(grid, c.cx, c.cy);
     this.flow = flowField(grid, this.centreCell);
 
-    const thHp = TOWN_HALL_LEVELS[0].hp;
+    const thHp = this.thLevels[0].hp;
     this.townHall = {
       kind: 'townhall', x: map.centre.x, y: map.centre.y, level: 1, hp: thHp, maxHp: thHp,
       radius: balance.townHallRadius, lastHit: -Infinity, upgrade: null, // { progress, time }
@@ -102,7 +106,7 @@ export class World {
 
   get totalRounds() { return this.waves.rounds.length; }
 
-  emit(type, data = {}) { this.events.push({ type, ...data }); }
+  emit(type, data = {}) { this.events.push({ ...data, type }); }
   drainEvents() { const e = this.events; this.events = []; return e; }
 
   snapToRoad(p) {
@@ -217,12 +221,23 @@ export class World {
     return n;
   }
 
-  get buildSpeed() { return 1 + BUILD.workerSpeedup * this.workers; }
+  get buildSpeed() { return 1 + this.cfg.workerSpeedup * this.workers; }
 
   buildingOn(spotId) { return this.buildings.find((b) => b.spotId === spotId) ?? null; }
 
   heroNear(p, extra = 0) {
-    return !this.hero.dead && dist(this.hero, p) <= BUILD.interactRadius + extra;
+    return !this.hero.dead && dist(this.hero, p) <= this.cfg.interactRadius + extra;
+  }
+
+  sellCheck(b) {
+    if (this.hero.dead) return 'dead';
+    if (!this.heroNear(b)) return 'far';
+    return null;
+  }
+
+  /** Coins returned when selling: a share of everything spent on it (a ruin gives nothing). */
+  refundOf(b) {
+    return b.state === 'ruin' ? 0 : Math.floor(b.invested * this.cfg.sellRefund);
   }
 
   /** null when allowed, otherwise a reason key. */
@@ -253,20 +268,20 @@ export class World {
   townHallUpgradeCheck() {
     const th = this.townHall;
     if (th.upgrade) return 'busy';
-    if (th.level >= TOWN_HALL_LEVELS.length) return 'max';
+    if (th.level >= this.thLevels.length) return 'max';
     if (this.hero.dead) return 'dead';
     if (!this.heroNear(th, th.radius)) return 'far';
-    if (this.coins < TOWN_HALL_LEVELS[th.level].cost) return 'coins';
+    if (this.coins < this.thLevels[th.level].cost) return 'coins';
     return null;
   }
 
   heroUpgradeCheck(stat) {
     const lvl = this.heroUpgrades[stat];
-    if (lvl >= HERO_UPGRADE_COSTS.length) return 'max';
+    if (lvl >= this.heroCosts.length) return 'max';
     if (lvl + 1 > this.townHall.level) return 'townhall';
     if (this.hero.dead) return 'dead';
     if (!this.heroNear(this.townHall, this.townHall.radius)) return 'far';
-    if (this.coins < HERO_UPGRADE_COSTS[lvl]) return 'coins';
+    if (this.coins < this.heroCosts[lvl]) return 'coins';
     return null;
   }
 
@@ -283,6 +298,7 @@ export class World {
         hp: Math.ceil(b.hp), maxHp: b.maxHp, progress: b.state === 'building' || b.state === 'upgrading' ? b.progress / b.buildTime : null,
         stats: b.level ? t.levels[b.level - 1] : null,
       };
+      out.sell = { refund: this.refundOf(b), reason: this.sellCheck(b) };
       if (b.state === 'ruin') {
         out.options.push({ type: b.type, cost: t.levels[0].cost, rebuild: true, reason: this.buildCheck(spot, b.type) });
       } else if (b.level < t.levels.length) {
@@ -298,15 +314,15 @@ export class World {
 
   describeTownHall() {
     const th = this.townHall;
-    const next = TOWN_HALL_LEVELS[th.level];
+    const next = this.thLevels[th.level];
     return {
-      kind: 'townhall', level: th.level, maxLevel: TOWN_HALL_LEVELS.length, hp: Math.ceil(th.hp), maxHp: th.maxHp,
+      kind: 'townhall', level: th.level, maxLevel: this.thLevels.length, hp: Math.ceil(th.hp), maxHp: th.maxHp,
       near: this.heroNear(th, th.radius),
       progress: th.upgrade ? th.upgrade.progress / th.upgrade.time : null,
       upgrade: next ? { toLevel: th.level + 1, cost: next.cost, hp: next.hp, reason: this.townHallUpgradeCheck() } : null,
       heroUpgrades: HERO_STATS.map((stat) => ({
-        stat, level: this.heroUpgrades[stat], maxLevel: HERO_UPGRADE_COSTS.length,
-        cost: HERO_UPGRADE_COSTS[this.heroUpgrades[stat]] ?? null, reason: this.heroUpgradeCheck(stat),
+        stat, level: this.heroUpgrades[stat], maxLevel: this.heroCosts.length,
+        cost: this.heroCosts[this.heroUpgrades[stat]] ?? null, reason: this.heroUpgradeCheck(stat),
       })),
     };
   }
@@ -325,12 +341,26 @@ export class World {
     if (old) this.buildings = this.buildings.filter((b) => b !== old);
     const b = {
       id: this.nextId++, kind: 'building', type: typeId, spotId, x: spot.x, y: spot.y,
-      level: 0, state: 'building', progress: 0, buildTime: L1.time,
-      hp: L1.hp, maxHp: L1.hp, radius: BUILD.buildingRadius, lastHit: -Infinity, cooldown: 0, spawnTimer: 0,
+      level: 0, state: 'building', progress: 0, buildTime: L1.time, invested: L1.cost,
+      hp: L1.hp, maxHp: L1.hp, radius: this.cfg.buildingRadius, lastHit: -Infinity, cooldown: 0, spawnTimer: 0,
+      variant: this.rng(), // which of the kids' drawings of this type the renderer shows (0..1)
     };
     this.buildings.push(b);
-    this.emit('buildStart', { spotId, type: typeId, rebuild: !!old });
+    this.emit('buildStart', { spotId, building: typeId, rebuild: !!old });
     return { ok: true };
+  }
+
+  /** Demolish a building (or clear a ruin) for a partial refund; the spot becomes free. */
+  sell(spotId) {
+    const b = this.buildingOn(spotId);
+    if (!b) return { ok: false, reason: 'unknown' };
+    const reason = this.sellCheck(b);
+    if (reason) return { ok: false, reason };
+    const refund = this.refundOf(b);
+    this.coins += refund;
+    this.buildings = this.buildings.filter((x) => x !== b);
+    this.emit('sold', { spotId, building: b.type, refund, x: b.x, y: b.y });
+    return { ok: true, refund };
   }
 
   upgrade(spotId) {
@@ -340,6 +370,7 @@ export class World {
     if (reason) return { ok: false, reason };
     const next = this.buildingTypes[b.type].levels[b.level];
     this.coins -= next.cost;
+    b.invested += next.cost;
     Object.assign(b, { state: 'upgrading', progress: 0, buildTime: next.time });
     this.emit('upgradeStart', { spotId, toLevel: b.level + 1 });
     return { ok: true };
@@ -348,7 +379,7 @@ export class World {
   upgradeTownHall() {
     const reason = this.townHallUpgradeCheck();
     if (reason) return { ok: false, reason };
-    const next = TOWN_HALL_LEVELS[this.townHall.level];
+    const next = this.thLevels[this.townHall.level];
     this.coins -= next.cost;
     this.townHall.upgrade = { progress: 0, time: next.time };
     this.emit('upgradeStart', { townHall: true, toLevel: this.townHall.level + 1 });
@@ -358,7 +389,7 @@ export class World {
   upgradeHero(stat) {
     const reason = this.heroUpgradeCheck(stat);
     if (reason) return { ok: false, reason };
-    this.coins -= HERO_UPGRADE_COSTS[this.heroUpgrades[stat]];
+    this.coins -= this.heroCosts[this.heroUpgrades[stat]];
     this.heroUpgrades[stat]++;
     this.heroStats = heroNumbers(this.heroPoints, this.heroUpgrades);
     this.emit('heroUpgraded', { stat, level: this.heroUpgrades[stat] });
@@ -368,8 +399,8 @@ export class World {
   // ---------------- buildings: simulation ----------------
 
   regen(o, dt) {
-    if (o.hp > 0 && o.hp < o.maxHp && this.time - o.lastHit >= BUILD.regenDelay) {
-      o.hp = Math.min(o.maxHp, o.hp + o.maxHp * BUILD.regenPerSecond * dt);
+    if (o.hp > 0 && o.hp < o.maxHp && this.time - o.lastHit >= this.cfg.regenDelay) {
+      o.hp = Math.min(o.maxHp, o.hp + o.maxHp * this.cfg.regenPerSecond * dt);
     }
   }
 
@@ -380,7 +411,7 @@ export class World {
       th.upgrade.progress += dt * this.buildSpeed;
       if (th.upgrade.progress >= th.upgrade.time) {
         th.upgrade = null;
-        const lvl = TOWN_HALL_LEVELS[th.level];
+        const lvl = this.thLevels[th.level];
         th.level++;
         th.hp += lvl.hp - th.maxHp;
         th.maxHp = lvl.hp;
@@ -400,7 +431,7 @@ export class World {
         b.hp = b.state === 'building' ? lvl.hp : b.hp + (lvl.hp - b.maxHp);
         b.maxHp = lvl.hp;
         b.state = 'ready';
-        this.emit(b.level === 1 ? 'built' : 'upgraded', { spotId: b.spotId, type: b.type, level: b.level });
+        this.emit(b.level === 1 ? 'built' : 'upgraded', { spotId: b.spotId, building: b.type, level: b.level });
       }
     }
     this.regen(b, dt);
@@ -434,17 +465,19 @@ export class World {
 
   castleSpawn(b, stats, dt) {
     const mine = this.soldiers.filter((s) => s.castleId === b.id);
-    if (mine.length >= BUILD.soldier.max) return;
+    if (mine.length >= this.cfg.soldier.max) return;
     b.spawnTimer -= dt;
     if (b.spawnTimer > 0) return;
     b.spawnTimer = stats.soldierRespawn;
-    const slot = [0, 1, 2].find((k) => !mine.some((s) => s.slot === k)) ?? 0;
+    let slot = 0;
+    while (mine.some((s) => s.slot === slot)) slot++;
     const door = this.snapToRoad(b);
-    const home = { x: door.x + (slot - 1) * 10, y: door.y + (slot === 1 ? -6 : 6) };
+    const a = slot * 2.1; // spread soldiers around the castle's door
+    const home = { x: door.x + Math.cos(a) * 10 * Math.min(slot, 1.5), y: door.y + Math.sin(a) * 8 * Math.min(slot, 1.5) };
     this.soldiers.push({
       id: this.nextId++, kind: 'soldier', castleId: b.id, slot, x: door.x, y: door.y, home,
       hp: stats.soldierHp, maxHp: stats.soldierHp, damage: stats.soldierDamage, attackCooldown: stats.soldierCooldown,
-      cooldown: 0, radius: BUILD.soldier.radius, target: null, path: [], repath: 0, facing: 1, dead: false,
+      cooldown: 0, radius: this.cfg.soldier.radius, target: null, path: [], repath: 0, facing: 1, dead: false,
     });
     this.emit('soldierSpawn', { castleId: b.id });
   }
@@ -453,17 +486,20 @@ export class World {
     const castle = this.buildings.find((b) => b.id === s.castleId);
     if (!castle || castle.state === 'ruin') { s.dead = true; return; }
     s.cooldown = Math.max(0, s.cooldown - dt);
-    const cfg = BUILD.soldier;
+    const cfg = this.cfg.soldier;
 
-    // keep the current target while it is alive and not too far from home
+    // keep the current target while it is alive and not too far from home;
+    // enemies attacking this castle or its soldiers are chased twice as far
+    const ours = (e) => e.victim && (e.victim.id === castle.id || e.victim.castleId === castle.id);
+    const reach = (e) => cfg.aggro * (ours(e) ? 2 : 1);
     let target = s.target ? this.enemies.find((e) => e.id === s.target && !e.flying) : null;
-    if (target && dist(target, s.home) > cfg.aggro * 1.5) target = null;
+    if (target && dist(target, s.home) > reach(target) * 1.5) target = null;
     if (!target) {
       let bd = Infinity;
       for (const e of this.enemies) {
         if (e.flying) continue;
         const d = dist(e, s.home);
-        if (d <= cfg.aggro && d < bd) { bd = d; target = e; }
+        if (d <= reach(e) && d < bd) { bd = d; target = e; }
       }
     }
     s.target = target?.id ?? null;
@@ -526,6 +562,7 @@ export class World {
     e.cooldown = Math.max(0, e.cooldown - dt);
     const target = this.enemyTarget(e, type);
     e.attacking = !!target;
+    e.victim = target;
     if (target) {
       if (e.cooldown === 0) {
         e.cooldown = type.cooldown;
@@ -615,7 +652,7 @@ export class World {
         this.emit('hit', { kind: 'building', x: target.x, y: target.y, amount });
         if (target.hp === 0) {
           Object.assign(target, { state: 'ruin', level: 0, progress: 0 });
-          this.emit('buildingDestroyed', { spotId: target.spotId, type: target.type });
+          this.emit('buildingDestroyed', { spotId: target.spotId, building: target.type });
         }
         return;
       }

@@ -6,14 +6,18 @@ import Hud from './Hud.jsx';
 import { mapCanvas, gridFromCanvas } from '../maps/mapRuntime.js';
 import { loadImage } from '../assets/imageEncoding.js';
 import BuildPanel from './BuildPanel.jsx';
+import FullscreenButton from '../ui/FullscreenButton.jsx';
 import { DEFAULT_HERO_POINTS } from '../config/heroStats.js';
+import { DEFAULT_RULES } from '../config/rules.js';
 import { wavesOf } from '../config/waves.js';
 import { World } from '../logic/world.js';
 
 const MESSAGE_MS = 2600;
+const BUILDING_CATS = ['townhall', 'house', 'tower', 'castle'];
 
 // React wrapper: prepares images, grid and the World, runs Phaser, shows the HUD.
-export default function GameView({ map, hero, assets, enemyTypes, buildingTypes, onExit }) {
+// Fills the whole window; the map is scaled to fit.
+export default function GameView({ map, hero, assets, enemyTypes, buildingTypes, rules = DEFAULT_RULES, settings = {}, onSettings, onExit }) {
   const { t, i18n } = useTranslation();
   const hostRef = useRef(null);
   const gameRef = useRef(null);
@@ -25,6 +29,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
   const [paused, setPaused] = useState(false);
   const [restart, setRestart] = useState(0);
   const [selection, setSelection] = useState(null);
+  const wobble = !!settings.wobble;
 
   const say = useCallback((text) => {
     setMessage({ text, at: Date.now() });
@@ -37,6 +42,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
   }, [message]);
 
   const onEvent = useCallback((e) => {
+    const name = () => t(`build.type_${e.building}`);
     const msg = {
       waveStart: () => t('game.msg_wave', { n: e.round }),
       roundEnd: () => t('game.msg_round_end', { n: e.round, coins: e.reward }),
@@ -45,9 +51,10 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
       heroLostLife: () => (e.lives > 0 ? t('game.msg_life', { n: e.lives }) : null),
       heroDown: () => t('game.msg_hero_down', { s: e.respawnIn }),
       heroRespawn: () => t('game.msg_hero_back'),
-      built: () => t('build.msg_built', { name: t(`build.type_${e.type}`) }),
-      upgraded: () => (e.townHall ? t('build.msg_th_upgraded', { n: e.level }) : t('build.msg_upgraded', { name: t(`build.type_${e.type}`), n: e.level })),
-      buildingDestroyed: () => t('build.msg_destroyed', { name: t(`build.type_${e.type}`) }),
+      built: () => t('build.msg_built', { name: name() }),
+      upgraded: () => (e.townHall ? t('build.msg_th_upgraded', { n: e.level }) : t('build.msg_upgraded', { name: name(), n: e.level })),
+      buildingDestroyed: () => t('build.msg_destroyed', { name: name() }),
+      sold: () => t('build.msg_sold', { name: name(), coins: e.refund }),
       heroUpgraded: () => t('build.msg_hero_upgraded', { stat: t(`hero.stat_${e.stat}`), n: e.level }),
     }[e.type];
     const text = msg?.();
@@ -65,13 +72,18 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
       const images = { background: bg };
       const load = async (key, src) => { if (src) images[key] = await loadImage(src); };
       await load('hero', hero?.images[0]);
-      // buildings: one texture per level; a missing level uses the previous drawing
-      for (const cat of ['townhall', 'house', 'tower', 'castle']) {
-        const imgs = assets.find((a) => a.category === cat)?.images ?? [];
-        let last = null;
-        for (let lvl = 1; lvl <= 3; lvl++) {
-          last = imgs[lvl - 1] || last;
-          await load(`${cat}:${lvl}`, last);
+      // buildings: every drawing of a kind is one variant (a random one is used per
+      // building); one texture per level, a missing level uses the previous drawing
+      const variants = {};
+      for (const cat of BUILDING_CATS) {
+        const drawn = assets.filter((a) => a.category === cat && a.images.some(Boolean));
+        variants[cat] = drawn.length;
+        for (const [v, a] of drawn.entries()) {
+          let last = a.images.find(Boolean);
+          for (let lvl = 1; lvl <= 3; lvl++) {
+            last = a.images[lvl - 1] || last;
+            await load(`${cat}#${v}:${lvl}`, last);
+          }
         }
       }
       await load('soldier', firstImage('soldier'));
@@ -89,8 +101,8 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
       if (!alive) return;
 
       const world = new World({
-        map, grid, enemyTypes, buildingTypes,
-        waves: wavesOf(map),
+        map, grid, enemyTypes, buildingTypes, rules,
+        waves: wavesOf(map, rules.balance),
         heroPoints: hero?.stats ?? DEFAULT_HERO_POINTS,
       });
       worldRef.current = world;
@@ -103,7 +115,10 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
         disableContextMenu: true,
         scene: [],
       });
-      gameRef.current.scene.add('game', GameScene, true, { world, map, images, enemyTypes, onHud: setHud, onEvent, onSelect: setSelection });
+      gameRef.current.scene.add('game', GameScene, true, {
+        world, map, images, variants, enemyTypes, wobble: !!settings.wobble,
+        onHud: setHud, onEvent, onSelect: setSelection,
+      });
       // dev-only handle for automated browser testing
       if (import.meta.env.DEV) window.__sv = { game: gameRef.current, world };
     })().catch((e) => setError(String(e)));
@@ -114,14 +129,19 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
       gameRef.current = null;
       worldRef.current = null;
     };
-  }, [map, hero, assets, enemyTypes, buildingTypes, onEvent, restart]);
+    // settings.wobble is applied live below, not by restarting
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, hero, assets, enemyTypes, buildingTypes, rules, onEvent, restart]);
 
   const scene = () => gameRef.current?.scene.getScene('game');
+  useEffect(() => { const s = scene(); if (s) s.wobble = wobble; }, [wobble, hud === null]);
+
   const zoom = (f) => scene()?.zoomBy(f);
   const setMode = (m) => { worldRef.current?.setMode(m); setHud((h) => h && { ...h, hero: { ...h.hero, mode: m } }); };
   const ready = () => worldRef.current?.callReady();
   const changeSpeed = () => { const s = speed === 1 ? 2 : 1; setSpeed(s); if (scene()) scene().speed = s; };
   const togglePause = () => { const p = !paused; setPaused(p); if (scene()) scene().paused = p; };
+  const toggleWobble = () => onSettings?.({ wobble: !wobble });
 
   // keyboard: 1 = melee, 2 = ranged, space = ready, P = pause
   useEffect(() => {
@@ -136,7 +156,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
     return () => window.removeEventListener('keydown', onKey);
   });
 
-  // build / upgrade actions from the panel; failures are explained in a message
+  // build / upgrade / sell actions from the panel; failures are explained in a message
   const act = (fn) => {
     const r = fn(worldRef.current);
     if (r && !r.ok) say(t(`build.reason_${r.reason}`));
@@ -151,32 +171,35 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
   const enemyName = (id) => enemyTypes.find((e) => e.id === id)?.name?.[lang] ?? id;
 
   return (
-    <section>
-      <div className="row" style={{ marginBottom: 6 }}>
+    <section className="game-screen">
+      <div className="row game-toolbar">
         <button className="btn" onClick={onExit}>← {t('game.exit')}</button>
         <b>{map.name}</b>
         {hero && <span className="muted">· {hero.name}</span>}
         <span className="spacer" />
+        <button className={`btn icon ${wobble ? 'active' : ''}`} onClick={toggleWobble} title={t('game.wobble')}>〰️</button>
         <button className={`btn icon ${paused ? 'active' : ''}`} onClick={togglePause} title={t('game.pause')}>{paused ? '▶' : '⏸'}</button>
         <button className={`btn icon ${speed === 2 ? 'active' : ''}`} onClick={changeSpeed} title={t('game.speed')}>{speed}×</button>
         <button className="btn icon" onClick={() => zoom(1 / 1.25)} title={t('game.zoom_out')}>−</button>
         <button className="btn icon" onClick={() => zoom(1.25)} title={t('game.zoom_in')}>+</button>
+        <button className="btn icon" title={t('game.hint')}>?</button>
+        <FullscreenButton />
       </div>
 
-      {hud && <Hud hud={hud} onReady={ready} onMode={setMode} enemyName={enemyName} enemyTypes={enemyTypes} />}
+      {hud && <Hud hud={hud} onReady={ready} onMode={setMode} enemyName={enemyName} enemyTypes={enemyTypes} maxLives={rules.balance.heroLives} />}
 
       {error && <p className="error-text">{error}</p>}
-      <div style={{ position: 'relative' }}>
-        <div ref={hostRef} style={{ width: '100%', aspectRatio: `${map.world.width} / ${map.world.height}`, border: '2.5px solid var(--ink)', borderRadius: 6, overflow: 'hidden', touchAction: 'none' }} />
+      <div className="game-stage">
+        <div ref={hostRef} className="game-host" />
         {message && <div className="game-msg sketch-card" key={message.at}>{message.text}</div>}
         {panel && hud && hud.phase !== 'won' && hud.phase !== 'lost' && (
           <BuildPanel
             info={panel}
-            coins={hud.coins}
-            buildingTypes={buildingTypes}
+            soldierMax={rules.build.soldier.max}
             onClose={closePanel}
             onBuild={(type) => act((w) => w.build(selection.id, type))}
             onUpgrade={() => act((w) => w.upgrade(selection.id))}
+            onSell={() => act((w) => w.sell(selection.id))}
             onUpgradeTownHall={() => act((w) => w.upgradeTownHall())}
             onUpgradeHero={(stat) => act((w) => w.upgradeHero(stat))}
           />
@@ -195,7 +218,6 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
           </div>
         )}
       </div>
-      <p className="small muted" style={{ marginTop: 6 }}>{t('game.hint')}</p>
     </section>
   );
 }

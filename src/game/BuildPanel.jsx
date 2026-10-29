@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 // Panel for the selected building spot or the Town Hall (SPEC §7).
@@ -11,15 +11,19 @@ function Bar({ frac, color }) {
   return <span className="hud-bar" style={{ width: 90 }}><span style={{ width: `${Math.round(frac * 100)}%`, background: color }} /></span>;
 }
 
-export default function BuildPanel({ info, onClose, onBuild, onUpgrade, onUpgradeTownHall, onUpgradeHero }) {
+export default function BuildPanel({ info, soldierMax = 3, onClose, onBuild, onUpgrade, onSell, onUpgradeTownHall, onUpgradeHero }) {
   const { t } = useTranslation();
   const why = (reason) => (reason ? t(`build.reason_${reason}`) : null);
+  // selling needs a second tap, so a misclick doesn't demolish anything
+  const [confirmSell, setConfirmSell] = useState(false);
+  const spotKey = info.kind === 'spot' ? info.id : 'th';
+  useEffect(() => setConfirmSell(false), [spotKey]);
 
   const statLine = (type, s) => {
     if (!s) return '';
     if (type === 'house') return t('build.stat_house', { n: s.workers });
     if (type === 'tower') return t('build.stat_tower', { dmg: s.damage, range: s.range, cd: s.cooldown });
-    if (type === 'castle') return t('build.stat_castle', { hp: s.soldierHp, dmg: s.soldierDamage });
+    if (type === 'castle') return t('build.stat_castle', { n: soldierMax, hp: s.soldierHp, dmg: s.soldierDamage });
     return '';
   };
 
@@ -78,6 +82,22 @@ export default function BuildPanel({ info, onClose, onBuild, onUpgrade, onUpgrad
             sub={statLine(b.type, info.upgrade.stats)} onClick={onUpgrade} />
         )}
         {b && !info.upgrade && b.state !== 'ruin' && b.level === b.maxLevel && <p className="small muted">{t('build.max_level')}</p>}
+        {info.sell && (
+          <div className="build-option" style={{ borderTop: '1.5px dashed var(--ink-soft)', paddingTop: 6 }}>
+            {!confirmSell ? (
+              <button className="btn" disabled={!!info.sell.reason} onClick={() => setConfirmSell(true)}>
+                {b.state === 'ruin' ? `🧹 ${t('build.clear')}` : `💰 ${t('build.sell')} · +${info.sell.refund} 🪙`}
+              </button>
+            ) : (
+              <span className="row" style={{ gap: 6 }}>
+                <b className="small">{t('build.sell_sure')}</b>
+                <button className="btn danger" onClick={() => { setConfirmSell(false); onSell(); }}>✓ {t('build.sell_yes')}</button>
+                <button className="btn" onClick={() => setConfirmSell(false)}>✕</button>
+              </span>
+            )}
+            {info.sell.reason && <div className="small error-text">{why(info.sell.reason)}</div>}
+          </div>
+        )}
       </>
     );
   }

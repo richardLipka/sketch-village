@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { World } from './world.js';
 import { DEFAULT_ENEMY_TYPES } from '../config/enemies.js';
-import { TOWN_HALL_LEVELS, HERO_UPGRADE_COSTS } from '../config/buildings.js';
+import { TOWN_HALL_LEVELS, HERO_UPGRADE_COSTS, DEFAULT_BUILDING_TYPES } from '../config/buildings.js';
+import { DEFAULT_RULES, mergeRules, rulesOf } from '../config/rules.js';
+import { COLLECTIONS } from '../data/saveFile.js';
 
 // Plus-shaped roads (3 cells wide) crossing at the centre; spots next to the roads.
-function makeWorld({ coins = 500, rounds = [{ groups: [] }, { groups: [] }] } = {}) {
+function makeWorld({ coins = 500, rounds = [{ groups: [] }, { groups: [] }], rules = DEFAULT_RULES } = {}) {
   const cols = 80, rows = 45, cell = 16;
   const walk = new Uint8Array(cols * rows);
   for (let x = 0; x < cols; x++) for (const y of [21, 22, 23]) walk[y * cols + x] = 1;
@@ -21,7 +23,7 @@ function makeWorld({ coins = 500, rounds = [{ groups: [] }, { groups: [] }] } = 
     ],
   };
   const w = new World({
-    map, grid: { cols, rows, cell, walk }, enemyTypes: DEFAULT_ENEMY_TYPES, seed: 7,
+    map, grid: { cols, rows, cell, walk }, enemyTypes: DEFAULT_ENEMY_TYPES, seed: 7, rules,
     waves: { startCoins: coins, firstPrep: 10000, prep: 10000, rounds },
   });
   return w;
@@ -30,6 +32,7 @@ function makeWorld({ coins = 500, rounds = [{ groups: [] }, { groups: [] }] } = 
 const run = (w, seconds, dt = 1 / 30) => { for (let t = 0; t < seconds && w.phase !== 'lost' && w.phase !== 'won'; t += dt) w.update(dt); };
 const goTo = (w, p) => { w.moveHeroTo(p.x, p.y); run(w, 15); };
 const spot = (w, id) => w.spots.find((s) => s.id === id);
+const hpOf = (type, level) => DEFAULT_BUILDING_TYPES.find((t) => t.id === type).levels[level - 1].hp;
 
 describe('building', () => {
   it('needs the hero nearby and enough coins', () => {
@@ -50,7 +53,7 @@ describe('building', () => {
     run(w, 9.5);
     expect(w.buildingOn('s1').state).toBe('building');
     run(w, 1);
-    expect(w.buildingOn('s1')).toMatchObject({ state: 'ready', level: 1, hp: 80 });
+    expect(w.buildingOn('s1')).toMatchObject({ state: 'ready', level: 1, hp: hpOf('house', 1) });
     expect(w.workers).toBe(1);
   });
 
@@ -78,12 +81,12 @@ describe('building', () => {
     expect(w.upgradeTownHall()).toEqual({ ok: true });
     expect(w.upgradeTownHall().reason).toBe('busy');
     run(w, TOWN_HALL_LEVELS[1].time + 0.5);
-    expect(w.townHall).toMatchObject({ level: 2, maxHp: 450 });
+    expect(w.townHall).toMatchObject({ level: 2, maxHp: TOWN_HALL_LEVELS[1].hp });
     goTo(w, spot(w, 's1'));
     expect(w.upgrade('s1')).toEqual({ ok: true });
     expect(w.upgrade('s1').reason).toBe('busy');
     run(w, 15);
-    expect(w.buildingOn('s1')).toMatchObject({ level: 2, state: 'ready', maxHp: 150 });
+    expect(w.buildingOn('s1')).toMatchObject({ level: 2, state: 'ready', maxHp: hpOf('tower', 2) });
     expect(w.upgrade('s1').reason).toBe('townhall');
   });
 });
@@ -177,12 +180,13 @@ describe('damage, ruins and repair', () => {
 
   it('buildings and the Town Hall repair themselves 5 s after the last hit', () => {
     const w = makeWorld();
-    w.damage(w.townHall, 100);
+    const full = TOWN_HALL_LEVELS[0].hp;
+    w.damage(w.townHall, 300);
     run(w, 4.5);
-    expect(w.townHall.hp).toBe(200);
+    expect(w.townHall.hp).toBe(full - 300);
     run(w, 6);
-    expect(w.townHall.hp).toBeGreaterThan(200);
-    expect(w.townHall.hp).toBeLessThan(300);
+    expect(w.townHall.hp).toBeGreaterThan(full - 300);
+    expect(w.townHall.hp).toBeLessThan(full);
   });
 
   it('enemies attack buildings they pass', () => {
@@ -194,7 +198,7 @@ describe('damage, ruins and repair', () => {
     w.hero.dead = true; w.hero.respawnAt = 1e9;
     w.callReady();
     run(w, 25);
-    expect(w.buildingOn('s3').hp).toBeLessThan(80);
+    expect(w.buildingOn('s3').hp).toBeLessThan(hpOf('house', 1));
   });
 });
 
@@ -221,6 +225,71 @@ describe('hero guarding', () => {
     w.callReady();
     run(w, 8);
     expect(w.hero.target).toBeNull();
+  });
+});
+
+describe('selling', () => {
+  it('returns 70 % of everything spent and frees the spot', () => {
+    const w = makeWorld();
+    goTo(w, spot(w, 's1'));
+    w.build('s1', 'tower');
+    run(w, 13);
+    goTo(w, w.townHall);
+    w.upgradeTownHall();
+    run(w, 31);
+    goTo(w, spot(w, 's1'));
+    w.upgrade('s1');
+    const spent = 30 + 45;
+    expect(w.describeSpot('s1').sell).toEqual({ refund: Math.floor(spent * 0.7), reason: null });
+    const coins = w.coins;
+    expect(w.sell('s1')).toEqual({ ok: true, refund: 52 });
+    expect(w.coins).toBe(coins + 52);
+    expect(w.buildingOn('s1')).toBeNull();
+    expect(w.build('s1', 'house').ok).toBe(true); // any type can be built again
+  });
+
+  it('needs the hero nearby; a ruin is cleared for nothing; castle soldiers leave', () => {
+    const w = makeWorld();
+    goTo(w, spot(w, 's1'));
+    w.build('s1', 'castle');
+    run(w, 30);
+    expect(w.soldiers.length).toBeGreaterThan(0);
+    goTo(w, spot(w, 's3'));
+    expect(w.sell('s1').reason).toBe('far');
+    goTo(w, spot(w, 's1'));
+    w.damage(w.buildingOn('s1'), 1e6);
+    const coins = w.coins;
+    expect(w.sell('s1')).toEqual({ ok: true, refund: 0 });
+    expect(w.coins).toBe(coins);
+    run(w, 0.1);
+    expect(w.soldiers).toHaveLength(0);
+  });
+});
+
+describe('editable rules', () => {
+  it('the World uses the given rules instead of the defaults', () => {
+    const rules = mergeRules({
+      build: { sellRefund: 0.5, soldier: { max: 1 } },
+      townHallLevels: [{ hp: 999 }, { cost: 1, time: 1, hp: 1500 }],
+      heroUpgradeCosts: [3],
+    });
+    expect(rules.build.soldier.speed).toBe(DEFAULT_RULES.build.soldier.speed); // untouched fields keep defaults
+    const w = makeWorld({ rules });
+    expect(w.townHall).toMatchObject({ hp: 999, maxHp: 999 });
+    goTo(w, w.townHall);
+    w.upgradeHero('melee');
+    expect(w.coins).toBe(497);
+    expect(w.upgradeHero('melee').reason).toBe('max');
+    goTo(w, spot(w, 's1'));
+    w.build('s1', 'castle');
+    run(w, 40);
+    expect(w.soldiers).toHaveLength(1);
+    expect(w.sell('s1').refund).toBe(20);
+  });
+
+  it('rules are a save-file collection', () => {
+    expect(COLLECTIONS).toContain('rules');
+    expect(rulesOf({ rules: [] })).toBe(DEFAULT_RULES);
   });
 });
 

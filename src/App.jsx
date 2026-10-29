@@ -1,14 +1,17 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { loadDb, saveCollection } from './data/store.js';
+import { loadDb, saveCollection, saveSettings } from './data/store.js';
 import AssetStudio from './assets/AssetStudio.jsx';
 import DataPanel from './data/DataPanel.jsx';
 import LanguageSwitcher from './ui/LanguageSwitcher.jsx';
+import FullscreenButton from './ui/FullscreenButton.jsx';
 import MapList from './maps/MapList.jsx';
 import PlaySetup from './game/PlaySetup.jsx';
 import EnemyEditor from './game/EnemyEditor.jsx';
+import RulesEditor from './game/RulesEditor.jsx';
 import { enemyTypesOf } from './config/enemies.js';
 import { buildingTypesOf } from './config/buildings.js';
+import { rulesOf } from './config/rules.js';
 
 export default function App() {
   const { t } = useTranslation();
@@ -20,10 +23,22 @@ export default function App() {
     loadDb().then(setDb).catch((e) => setLoadError(String(e)));
   }, []);
 
+  // stable object, so a running game isn't restarted by unrelated re-renders
+  const storedRules = db?.rules;
+  const rules = useMemo(() => rulesOf({ rules: storedRules }), [storedRules]);
+
   // Replace one collection in memory and persist it.
   const updateCollection = useCallback(async (name, records) => {
     setDb((cur) => ({ ...cur, [name]: records }));
     await saveCollection(name, records);
+  }, []);
+
+  const updateSettings = useCallback((patch) => {
+    setDb((cur) => {
+      const settings = { ...cur.settings, ...patch };
+      saveSettings(settings);
+      return { ...cur, settings };
+    });
   }, []);
 
   if (loadError) return <div className="page error-text">{t('app.load_error')} {loadError}</div>;
@@ -36,6 +51,7 @@ export default function App() {
           <button className="btn" onClick={() => setScreen('menu')}>← {t('app.back')}</button>
         )}
         <span className="spacer" />
+        <FullscreenButton />
         <LanguageSwitcher />
       </header>
 
@@ -48,6 +64,7 @@ export default function App() {
             <button className="btn big" onClick={() => setScreen('studio')}>✏️ {t('menu.studio')}</button>
             <button className="btn big" onClick={() => setScreen('maps')}>🗺️ {t('menu.maps')}</button>
             <button className="btn big" onClick={() => setScreen('enemies')}>👾 {t('menu.enemies')}</button>
+            <button className="btn big" onClick={() => setScreen('rules')}>⚙️ {t('menu.rules')}</button>
             <button className="btn big" onClick={() => setScreen('data')}>💾 {t('menu.data')}</button>
           </div>
         </main>
@@ -65,7 +82,20 @@ export default function App() {
         <EnemyEditor enemyTypes={enemyTypesOf(db)} assets={db.assets} onChange={(list) => updateCollection('enemyTypes', list)} />
       )}
 
-      {screen === 'play' && <PlaySetup maps={db.maps} assets={db.assets} enemyTypes={enemyTypesOf(db)} buildingTypes={buildingTypesOf(db)} />}
+      {screen === 'rules' && (
+        <RulesEditor
+          buildingTypes={buildingTypesOf(db)}
+          rules={rules}
+          onSave={(types, rules) => { updateCollection('buildingTypes', types); updateCollection('rules', [rules]); }}
+        />
+      )}
+
+      {screen === 'play' && (
+        <PlaySetup
+          maps={db.maps} assets={db.assets} enemyTypes={enemyTypesOf(db)} buildingTypes={buildingTypesOf(db)} rules={rules}
+          settings={db.settings} onSettings={updateSettings} onExit={() => setScreen('menu')}
+        />
+      )}
 
       {screen === 'data' && <DataPanel db={db} onReplaceDb={setDb} />}
     </div>
