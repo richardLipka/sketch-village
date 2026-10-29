@@ -4,7 +4,6 @@ import { World } from './world.js';
 import { defaultWaves } from '../config/waves.js';
 import { DEFAULT_ENEMY_TYPES } from '../config/enemies.js';
 import { BALANCE } from '../config/balance.js';
-import { heroNumbers } from '../config/heroStats.js';
 
 describe('expandRound', () => {
   it('spreads over caves and orders by time', () => {
@@ -54,7 +53,7 @@ function makeWorld(waves, opts = {}) {
   const { map, grid } = testMap();
   return new World({
     map, grid, enemyTypes: DEFAULT_ENEMY_TYPES, seed: 42,
-    hero: heroNumbers({ melee: 3, ranged: 3, armor: 2, speed: 2 }),
+    heroPoints: { melee: 3, ranged: 3, armor: 2, speed: 2 },
     // long prep by default so a finished round doesn't immediately end the game
     waves: { startCoins: 40, firstPrep: 1000, prep: 1000, ...waves },
     ...opts,

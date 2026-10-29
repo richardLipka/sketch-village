@@ -5,14 +5,15 @@ import GameScene from './GameScene.js';
 import Hud from './Hud.jsx';
 import { mapCanvas, gridFromCanvas } from '../maps/mapRuntime.js';
 import { loadImage } from '../assets/imageEncoding.js';
-import { heroNumbers, DEFAULT_HERO_POINTS } from '../config/heroStats.js';
+import BuildPanel from './BuildPanel.jsx';
+import { DEFAULT_HERO_POINTS } from '../config/heroStats.js';
 import { wavesOf } from '../config/waves.js';
 import { World } from '../logic/world.js';
 
 const MESSAGE_MS = 2600;
 
 // React wrapper: prepares images, grid and the World, runs Phaser, shows the HUD.
-export default function GameView({ map, hero, assets, enemyTypes, onExit }) {
+export default function GameView({ map, hero, assets, enemyTypes, buildingTypes, onExit }) {
   const { t, i18n } = useTranslation();
   const hostRef = useRef(null);
   const gameRef = useRef(null);
@@ -23,6 +24,7 @@ export default function GameView({ map, hero, assets, enemyTypes, onExit }) {
   const [speed, setSpeed] = useState(1);
   const [paused, setPaused] = useState(false);
   const [restart, setRestart] = useState(0);
+  const [selection, setSelection] = useState(null);
 
   const say = useCallback((text) => {
     setMessage({ text, at: Date.now() });
@@ -43,6 +45,10 @@ export default function GameView({ map, hero, assets, enemyTypes, onExit }) {
       heroLostLife: () => (e.lives > 0 ? t('game.msg_life', { n: e.lives }) : null),
       heroDown: () => t('game.msg_hero_down', { s: e.respawnIn }),
       heroRespawn: () => t('game.msg_hero_back'),
+      built: () => t('build.msg_built', { name: t(`build.type_${e.type}`) }),
+      upgraded: () => (e.townHall ? t('build.msg_th_upgraded', { n: e.level }) : t('build.msg_upgraded', { name: t(`build.type_${e.type}`), n: e.level })),
+      buildingDestroyed: () => t('build.msg_destroyed', { name: t(`build.type_${e.type}`) }),
+      heroUpgraded: () => t('build.msg_hero_upgraded', { stat: t(`hero.stat_${e.stat}`), n: e.level }),
     }[e.type];
     const text = msg?.();
     if (text) say(text);
@@ -51,6 +57,7 @@ export default function GameView({ map, hero, assets, enemyTypes, onExit }) {
   useEffect(() => {
     let alive = true;
     setHud(null);
+    setSelection(null);
     (async () => {
       const bg = await mapCanvas(map);
       const grid = gridFromCanvas(bg, map.palette);
@@ -58,7 +65,16 @@ export default function GameView({ map, hero, assets, enemyTypes, onExit }) {
       const images = { background: bg };
       const load = async (key, src) => { if (src) images[key] = await loadImage(src); };
       await load('hero', hero?.images[0]);
-      await load('townhall', firstImage('townhall'));
+      // buildings: one texture per level; a missing level uses the previous drawing
+      for (const cat of ['townhall', 'house', 'tower', 'castle']) {
+        const imgs = assets.find((a) => a.category === cat)?.images ?? [];
+        let last = null;
+        for (let lvl = 1; lvl <= 3; lvl++) {
+          last = imgs[lvl - 1] || last;
+          await load(`${cat}:${lvl}`, last);
+        }
+      }
+      await load('soldier', firstImage('soldier'));
       await load('cave', firstImage('cave'));
       await load('coin', firstImage('coin'));
       await load('projectile', firstImage('projectile'));
@@ -73,9 +89,9 @@ export default function GameView({ map, hero, assets, enemyTypes, onExit }) {
       if (!alive) return;
 
       const world = new World({
-        map, grid, enemyTypes,
+        map, grid, enemyTypes, buildingTypes,
         waves: wavesOf(map),
-        hero: heroNumbers(hero?.stats ?? DEFAULT_HERO_POINTS),
+        heroPoints: hero?.stats ?? DEFAULT_HERO_POINTS,
       });
       worldRef.current = world;
 
@@ -87,7 +103,7 @@ export default function GameView({ map, hero, assets, enemyTypes, onExit }) {
         disableContextMenu: true,
         scene: [],
       });
-      gameRef.current.scene.add('game', GameScene, true, { world, map, images, enemyTypes, onHud: setHud, onEvent });
+      gameRef.current.scene.add('game', GameScene, true, { world, map, images, enemyTypes, onHud: setHud, onEvent, onSelect: setSelection });
       // dev-only handle for automated browser testing
       if (import.meta.env.DEV) window.__sv = { game: gameRef.current, world };
     })().catch((e) => setError(String(e)));
@@ -98,7 +114,7 @@ export default function GameView({ map, hero, assets, enemyTypes, onExit }) {
       gameRef.current = null;
       worldRef.current = null;
     };
-  }, [map, hero, assets, enemyTypes, onEvent, restart]);
+  }, [map, hero, assets, enemyTypes, buildingTypes, onEvent, restart]);
 
   const scene = () => gameRef.current?.scene.getScene('game');
   const zoom = (f) => scene()?.zoomBy(f);
@@ -119,6 +135,17 @@ export default function GameView({ map, hero, assets, enemyTypes, onExit }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   });
+
+  // build / upgrade actions from the panel; failures are explained in a message
+  const act = (fn) => {
+    const r = fn(worldRef.current);
+    if (r && !r.ok) say(t(`build.reason_${r.reason}`));
+  };
+  const closePanel = () => { setSelection(null); const s = scene(); if (s) s.selection = null; };
+  const world = worldRef.current;
+  const panel = world && selection
+    ? (selection.kind === 'spot' ? world.describeSpot(selection.id) : world.describeTownHall())
+    : null;
 
   const lang = i18n.language;
   const enemyName = (id) => enemyTypes.find((e) => e.id === id)?.name?.[lang] ?? id;
@@ -142,6 +169,18 @@ export default function GameView({ map, hero, assets, enemyTypes, onExit }) {
       <div style={{ position: 'relative' }}>
         <div ref={hostRef} style={{ width: '100%', aspectRatio: `${map.world.width} / ${map.world.height}`, border: '2.5px solid var(--ink)', borderRadius: 6, overflow: 'hidden', touchAction: 'none' }} />
         {message && <div className="game-msg sketch-card" key={message.at}>{message.text}</div>}
+        {panel && hud && hud.phase !== 'won' && hud.phase !== 'lost' && (
+          <BuildPanel
+            info={panel}
+            coins={hud.coins}
+            buildingTypes={buildingTypes}
+            onClose={closePanel}
+            onBuild={(type) => act((w) => w.build(selection.id, type))}
+            onUpgrade={() => act((w) => w.upgrade(selection.id))}
+            onUpgradeTownHall={() => act((w) => w.upgradeTownHall())}
+            onUpgradeHero={(stat) => act((w) => w.upgradeHero(stat))}
+          />
+        )}
         {paused && hud && hud.phase !== 'won' && hud.phase !== 'lost' && <div className="game-over"><div className="sketch-card"><h2>{t('game.paused')}</h2><button className="btn primary" onClick={togglePause}>▶ {t('game.resume')}</button></div></div>}
         {hud && (hud.phase === 'won' || hud.phase === 'lost') && (
           <div className="game-over">

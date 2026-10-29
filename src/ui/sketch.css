@@ -173,6 +173,13 @@ label { display: inline-flex; gap: 8px; align-items: center; }
   animation: msg-in .25s ease-out;
 }
 @keyframes msg-in { from { opacity: 0; transform: translateX(-50%) translateY(-10px) rotate(-1deg); } }
+.build-panel {
+  position: absolute; left: 10px; bottom: 10px; width: min(330px, 70%);
+  max-height: calc(100% - 20px); overflow: auto; padding: 10px 12px; font-size: 18px;
+}
+.build-panel h3 { font-size: 20px; margin: 0 0 4px; }
+.build-option { margin: 6px 0; }
+.build-option .btn { font-size: 18px; padding: 3px 12px; }
 .game-over { position: absolute; inset: 0; display: grid; place-items: center; background: #fbf8efaa; }
 
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) rotate(-1deg); z-index: 200; background: var(--hl-green); }

@@ -59,8 +59,10 @@ export default class GameScene extends Phaser.Scene {
     for (const c of map.caves) this.add.image(c.x, c.y, 'cave').setDisplaySize(64, 64).setDepth(c.y);
 
     const th = this.world.townHall;
-    this.townHall = this.add.image(th.x, th.y, 'townhall').setDisplaySize(96, 96).setDepth(th.y);
+    this.townHall = this.add.image(th.x, th.y, 'townhall:1').setDisplaySize(96, 96).setDepth(th.y);
     this.townHallBar = this.add.graphics().setDepth(9000);
+    this.selectRing = this.add.graphics().setDepth(-300);
+    this.selection = null;
 
     const h = this.world.hero;
     this.hero = this.add.image(h.x, h.y, 'hero').setDisplaySize(56, 56).setOrigin(0.5, 0.8).setDepth(h.y);
@@ -94,12 +96,51 @@ export default class GameScene extends Phaser.Scene {
       g.lineBetween(32, 54, 22, 63).lineBetween(32, 54, 42, 63);
       g.fillStyle(INK).fillCircle(26, 20, 2).fillCircle(38, 20, 2);
     });
-    tex('townhall', 96, (g) => {
-      g.fillStyle(0xfffdf7).fillRect(14, 40, 68, 48);
-      g.lineStyle(3, INK).strokeRect(14, 40, 68, 48);
-      g.fillStyle(0xfecaca).fillTriangle(6, 42, 48, 8, 90, 42);
-      g.lineStyle(3, INK).strokeTriangle(6, 42, 48, 8, 90, 42);
-      g.strokeRect(40, 60, 16, 28);
+    // level marks: 1–3 little stars drawn as crosses on the roof
+    const stars = (g, n, cx, y) => {
+      for (let i = 0; i < n; i++) {
+        const x = cx + (i - (n - 1) / 2) * 12;
+        g.lineStyle(2, 0xca8a04).lineBetween(x - 4, y, x + 4, y).lineBetween(x, y - 4, x, y + 4);
+      }
+    };
+    for (let lvl = 1; lvl <= 3; lvl++) {
+      tex(`townhall:${lvl}`, 96, (g) => {
+        g.fillStyle(0xfffdf7).fillRect(14, 40, 68, 48);
+        g.lineStyle(3, INK).strokeRect(14, 40, 68, 48);
+        g.fillStyle(0xfecaca).fillTriangle(6, 42, 48, 8, 90, 42);
+        g.lineStyle(3, INK).strokeTriangle(6, 42, 48, 8, 90, 42);
+        g.strokeRect(40, 60, 16, 28);
+        stars(g, lvl, 48, 30);
+      });
+      tex(`house:${lvl}`, 64, (g) => {
+        g.fillStyle(0xfffdf7).fillRect(12, 30, 40, 30);
+        g.lineStyle(3, INK).strokeRect(12, 30, 40, 30);
+        g.fillStyle(0xfde68a).fillTriangle(6, 32, 32, 8, 58, 32);
+        g.lineStyle(3, INK).strokeTriangle(6, 32, 32, 8, 58, 32);
+        g.strokeRect(27, 42, 10, 18);
+        stars(g, lvl, 32, 24);
+      });
+      tex(`tower:${lvl}`, 64, (g) => {
+        g.fillStyle(0xe5e7eb).fillRect(20, 16, 24, 46);
+        g.lineStyle(3, INK).strokeRect(20, 16, 24, 46);
+        for (const x of [18, 28, 38]) g.fillStyle(0xe5e7eb).fillRect(x, 8, 8, 9).lineStyle(2, INK).strokeRect(x, 8, 8, 9);
+        g.lineStyle(2, INK).strokeRect(29, 26, 6, 10);
+        stars(g, lvl, 32, 48);
+      });
+      tex(`castle:${lvl}`, 64, (g) => {
+        g.fillStyle(0xd6d3d1).fillRect(8, 26, 48, 34);
+        g.lineStyle(3, INK).strokeRect(8, 26, 48, 34);
+        for (const x of [4, 44]) g.fillStyle(0xd6d3d1).fillRect(x, 14, 16, 46).lineStyle(3, INK).strokeRect(x, 14, 16, 46);
+        g.lineStyle(3, INK).beginPath().arc(32, 60, 8, Math.PI, 0).strokePath();
+        g.lineStyle(2, 0xdc2626).lineBetween(32, 26, 32, 8).lineBetween(32, 8, 42, 12).lineBetween(42, 12, 32, 16);
+        stars(g, lvl, 32, 38);
+      });
+    }
+    tex('soldier', 48, (g) => {
+      g.fillStyle(0xbfdbfe).fillCircle(24, 14, 9);
+      g.lineStyle(2.5, INK).strokeCircle(24, 14, 9);
+      g.lineBetween(24, 23, 24, 36).lineBetween(24, 27, 14, 32).lineBetween(24, 36, 17, 46).lineBetween(24, 36, 31, 46);
+      g.lineStyle(2.5, 0x6b7280).lineBetween(32, 34, 40, 14); // spear
     });
     tex('cave', 64, (g) => {
       g.fillStyle(0x3f3f46).slice(32, 44, 26, Math.PI, 0, false).fillPath();
@@ -196,6 +237,7 @@ export default class GameScene extends Phaser.Scene {
     this.setZoom(this.cameras.main.zoom * f);
   }
 
+  // click priority: enemy (attack) > Town Hall / building spot (select + walk there) > road (walk)
   onWorldClick(x, y) {
     const w = this.world;
     const enemy = w.enemyAt(x, y, 20 / this.cameras.main.zoom + 8);
@@ -204,8 +246,25 @@ export default class GameScene extends Phaser.Scene {
       this.flashMarker(enemy.x, enemy.y - 30, '⚔');
       return;
     }
+    if (w.isTownHallAt(x, y)) {
+      this.select({ kind: 'townhall' });
+      if (!w.heroNear(w.townHall, w.townHall.radius)) w.moveHeroTo(w.townHall.x, w.townHall.y);
+      return;
+    }
+    const spot = w.spotAt(x, y);
+    if (spot) {
+      this.select({ kind: 'spot', id: spot.id });
+      if (!w.heroNear(spot)) w.moveHeroTo(spot.x, spot.y);
+      return;
+    }
+    this.select(null);
     const end = w.moveHeroTo(x, y);
     if (end) this.flashMarker(end.x, end.y, '✕');
+  }
+
+  select(sel) {
+    this.selection = sel;
+    this.cfg.onSelect?.(sel);
   }
 
   flashMarker(x, y, text) {
@@ -237,7 +296,8 @@ export default class GameScene extends Phaser.Scene {
     if (e.type === 'enemyDied') this.puff(e.x, e.y);
     if (e.type === 'coinPicked') this.floatText(e.x, e.y - 16, '+1', '#a16207');
     if (e.type === 'cantHit') this.cfg.onEvent?.(e);
-    if (['waveStart', 'roundEnd', 'won', 'lost', 'heroDown', 'heroRespawn', 'bonus', 'heroLostLife'].includes(e.type)) this.cfg.onEvent?.(e);
+    if (e.type === 'buildingDestroyed') { const s = this.world.spots.find((p) => p.id === e.spotId); if (s) this.puff(s.x, s.y); }
+    if (['waveStart', 'roundEnd', 'won', 'lost', 'heroDown', 'heroRespawn', 'bonus', 'heroLostLife', 'built', 'upgraded', 'buildingDestroyed', 'heroUpgraded'].includes(e.type)) this.cfg.onEvent?.(e);
   }
 
   floatText(x, y, text, color) {
@@ -281,6 +341,42 @@ export default class GameScene extends Phaser.Scene {
       drawBar(s.bar.clear(), e.x, e.y + bob - size * 0.75 - 6, 36, e.hp / e.maxHp, 0xdc2626);
     }
 
+    for (const b of w.buildings) {
+      // show the drawing of the level being built (or the current one), at least level 1
+      const shownLevel = Math.max(1, b.state === 'building' || b.state === 'upgrading' ? b.level + 1 : b.level);
+      const key = `${b.type}:${shownLevel}`;
+      const s = this.sprite(`b${b.id}`, () => ({
+        img: this.add.image(b.x, b.y, key).setDisplaySize(64, 64).setOrigin(0.5, 0.6).setDepth(b.y),
+        bar: this.add.graphics().setDepth(9000),
+      }));
+      if (s.img.texture.key !== key) s.img.setTexture(key).setDisplaySize(64, 64);
+      s.bar.clear();
+      if (b.state === 'ruin') {
+        s.img.setAlpha(0.4).setTint(0x9ca3af);
+        s.bar.lineStyle(3, 0x7f1d1d, 0.8).lineBetween(b.x - 22, b.y - 30, b.x + 22, b.y + 10).lineBetween(b.x + 22, b.y - 30, b.x - 22, b.y + 10);
+        continue;
+      }
+      s.img.clearTint();
+      if (b.state === 'building') s.img.setAlpha(0.35 + 0.5 * (b.progress / b.buildTime));
+      else s.img.setAlpha(1);
+      if (b.state === 'building' || b.state === 'upgrading') {
+        drawBar(s.bar, b.x, b.y + 26, 44, b.progress / b.buildTime, 0xca8a04);
+        // scaffolding lines
+        s.bar.lineStyle(1.5, 0x78350f, 0.7).lineBetween(b.x - 24, b.y + 20, b.x - 24, b.y - 30).lineBetween(b.x + 24, b.y + 20, b.x + 24, b.y - 30).lineBetween(b.x - 24, b.y - 5, b.x + 24, b.y - 5);
+      }
+      if (b.hp < b.maxHp) drawBar(s.bar, b.x, b.y - 44, 44, b.hp / b.maxHp, 0x16a34a);
+    }
+
+    for (const so of w.soldiers) {
+      const s = this.sprite(`s${so.id}`, () => ({
+        img: this.add.image(so.x, so.y, 'soldier').setDisplaySize(36, 36).setOrigin(0.5, 0.85),
+        bar: this.add.graphics().setDepth(9000),
+      }));
+      s.img.setPosition(so.x, so.y).setDepth(so.y).setFlipX(so.facing < 0);
+      s.bar.clear();
+      if (so.hp < so.maxHp) drawBar(s.bar, so.x, so.y - 38, 26, so.hp / so.maxHp, 0x2563eb);
+    }
+
     for (const p of w.projectiles) {
       const s = this.sprite(`p${p.id}`, () => ({ img: this.add.image(p.x, p.y, 'projectile').setDisplaySize(26, 26).setDepth(9100) }));
       s.img.setPosition(p.x, p.y).setRotation(p.angle ?? 0);
@@ -314,9 +410,28 @@ export default class GameScene extends Phaser.Scene {
 
     // town hall
     const th = w.townHall;
+    const thKey = `townhall:${th.level}`;
+    if (this.townHall.texture.key !== thKey) this.townHall.setTexture(thKey).setDisplaySize(96, 96);
     this.townHallBar.clear();
     drawBar(this.townHallBar, th.x, th.y - 60, 70, th.hp / th.maxHp, 0x2563eb);
+    if (th.upgrade) drawBar(this.townHallBar, th.x, th.y + 40, 60, th.upgrade.progress / th.upgrade.time, 0xca8a04);
     this.townHall.setAlpha(th.hp > 0 ? 1 : 0.35);
+
+    // selection highlight (+ the tower's range when a tower is selected)
+    this.selectRing.clear();
+    const sel = this.selection;
+    if (sel) {
+      const p = sel.kind === 'townhall' ? th : w.spots.find((s) => s.id === sel.id);
+      if (p) {
+        const r = sel.kind === 'townhall' ? 54 : 34;
+        this.selectRing.lineStyle(3, 0xca8a04, 0.9).strokeCircle(p.x, p.y, r);
+        this.selectRing.lineStyle(1.5, INK, 0.3).strokeCircle(p.x, p.y, 90 + (sel.kind === 'townhall' ? th.radius : 0));
+        const b = sel.kind === 'spot' && w.buildingOn(sel.id);
+        if (b && b.type === 'tower' && b.level > 0) {
+          this.selectRing.lineStyle(2, 0xdc2626, 0.5).strokeCircle(b.x, b.y, w.buildingTypes.tower.levels[b.level - 1].range);
+        }
+      }
+    }
   }
 }
 

@@ -25,6 +25,7 @@ export default function Hud({ hud, onReady, onMode, enemyName, enemyTypes }) {
         {hud.phase === 'wave' && <span>{t('game.enemies_left', { n: hud.enemiesLeft })}</span>}
         <span className="spacer" />
         <span title={t('game.coins')} className="hud-num">🪙 {hud.coins}</span>
+        <span title={t('build.workers_hint')} className="hud-num">👷 {hud.workers}</span>
         <span title={t('game.town_hall')} className="hud-num">
           🏛️ <span className="hud-bar"><span style={{ width: `${thPct}%`, background: '#2563eb' }} /></span> {townHall.hp}
         </span>

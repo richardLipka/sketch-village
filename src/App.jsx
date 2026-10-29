@@ -8,6 +8,7 @@ import MapList from './maps/MapList.jsx';
 import PlaySetup from './game/PlaySetup.jsx';
 import EnemyEditor from './game/EnemyEditor.jsx';
 import { enemyTypesOf } from './config/enemies.js';
+import { buildingTypesOf } from './config/buildings.js';
 
 export default function App() {
   const { t } = useTranslation();
@@ -64,7 +65,7 @@ export default function App() {
         <EnemyEditor enemyTypes={enemyTypesOf(db)} assets={db.assets} onChange={(list) => updateCollection('enemyTypes', list)} />
       )}
 
-      {screen === 'play' && <PlaySetup maps={db.maps} assets={db.assets} enemyTypes={enemyTypesOf(db)} />}
+      {screen === 'play' && <PlaySetup maps={db.maps} assets={db.assets} enemyTypes={enemyTypesOf(db)} buildingTypes={buildingTypesOf(db)} />}
 
       {screen === 'data' && <DataPanel db={db} onReplaceDb={setDb} />}
     </div>

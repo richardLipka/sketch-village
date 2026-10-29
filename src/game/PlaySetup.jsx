@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 const GameView = lazy(() => import('./GameView.jsx'));
 
 // Pick a level (map) and a hero, then play.
-export default function PlaySetup({ maps, assets, enemyTypes }) {
+export default function PlaySetup({ maps, assets, enemyTypes, buildingTypes }) {
   const { t } = useTranslation();
   const playable = maps.filter((m) => m.valid);
   const heroes = assets.filter((a) => a.category === 'hero');
@@ -19,7 +19,7 @@ export default function PlaySetup({ maps, assets, enemyTypes }) {
   if (playing && map) {
     return (
       <Suspense fallback={<p>{t('app.loading')}</p>}>
-        <GameView map={map} hero={hero} assets={assets} enemyTypes={enemyTypes} onExit={() => setPlaying(false)} />
+        <GameView map={map} hero={hero} assets={assets} enemyTypes={enemyTypes} buildingTypes={buildingTypes} onExit={() => setPlaying(false)} />
       </Suspense>
     );
   }

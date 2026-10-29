@@ -1,0 +1,241 @@
+import { describe, it, expect } from 'vitest';
+import { World } from './world.js';
+import { DEFAULT_ENEMY_TYPES } from '../config/enemies.js';
+import { TOWN_HALL_LEVELS, HERO_UPGRADE_COSTS } from '../config/buildings.js';
+
+// Plus-shaped roads (3 cells wide) crossing at the centre; spots next to the roads.
+function makeWorld({ coins = 500, rounds = [{ groups: [] }, { groups: [] }] } = {}) {
+  const cols = 80, rows = 45, cell = 16;
+  const walk = new Uint8Array(cols * rows);
+  for (let x = 0; x < cols; x++) for (const y of [21, 22, 23]) walk[y * cols + x] = 1;
+  for (let y = 0; y < rows; y++) for (const x of [39, 40, 41]) walk[y * cols + x] = 1;
+  const map = {
+    centre: { x: 648, y: 360, radius: 60 },
+    caves: [{ id: 'left', x: 10, y: 360 }, { id: 'top', x: 648, y: 10 }],
+    heroRespawn: { x: 648, y: 420 },
+    spots: [
+      { id: 's1', x: 560, y: 315 }, // near the centre, left
+      { id: 's2', x: 740, y: 315 }, // near the centre, right
+      { id: 's3', x: 300, y: 315 }, // on the left road, far from the hero start
+      { id: 's4', x: 560, y: 405 },
+    ],
+  };
+  const w = new World({
+    map, grid: { cols, rows, cell, walk }, enemyTypes: DEFAULT_ENEMY_TYPES, seed: 7,
+    waves: { startCoins: coins, firstPrep: 10000, prep: 10000, rounds },
+  });
+  return w;
+}
+
+const run = (w, seconds, dt = 1 / 30) => { for (let t = 0; t < seconds && w.phase !== 'lost' && w.phase !== 'won'; t += dt) w.update(dt); };
+const goTo = (w, p) => { w.moveHeroTo(p.x, p.y); run(w, 15); };
+const spot = (w, id) => w.spots.find((s) => s.id === id);
+
+describe('building', () => {
+  it('needs the hero nearby and enough coins', () => {
+    const w = makeWorld({ coins: 25 });
+    expect(w.build('s3', 'house')).toEqual({ ok: false, reason: 'far' });
+    goTo(w, spot(w, 's1'));
+    expect(w.build('s1', 'tower')).toEqual({ ok: false, reason: 'coins' });
+    expect(w.build('s1', 'house')).toEqual({ ok: true });
+    expect(w.coins).toBe(5);
+    expect(w.build('s1', 'house').reason).toBe('occupied');
+  });
+
+  it('a house finishes after its build time and adds a worker', () => {
+    const w = makeWorld();
+    goTo(w, spot(w, 's1'));
+    w.build('s1', 'house');
+    expect(w.workers).toBe(0); // under construction
+    run(w, 9.5);
+    expect(w.buildingOn('s1').state).toBe('building');
+    run(w, 1);
+    expect(w.buildingOn('s1')).toMatchObject({ state: 'ready', level: 1, hp: 80 });
+    expect(w.workers).toBe(1);
+  });
+
+  it('workers speed up construction', () => {
+    const w = makeWorld();
+    goTo(w, spot(w, 's1'));
+    w.build('s1', 'house');
+    run(w, 11);
+    w.build('s4', 'house');
+    run(w, 11);
+    expect(w.workers).toBe(2);
+    goTo(w, spot(w, 's2'));
+    expect(w.build('s2', 'tower').ok).toBe(true); // 12 s base / (1 + 0.15 × 2) ≈ 9.2 s
+    run(w, 9.5);
+    expect(w.buildingOn('s2').state).toBe('ready');
+  });
+
+  it('building upgrades are capped by the Town Hall level', () => {
+    const w = makeWorld();
+    goTo(w, spot(w, 's1'));
+    w.build('s1', 'tower');
+    run(w, 13);
+    expect(w.upgrade('s1').reason).toBe('townhall');
+    goTo(w, w.townHall);
+    expect(w.upgradeTownHall()).toEqual({ ok: true });
+    expect(w.upgradeTownHall().reason).toBe('busy');
+    run(w, TOWN_HALL_LEVELS[1].time + 0.5);
+    expect(w.townHall).toMatchObject({ level: 2, maxHp: 450 });
+    goTo(w, spot(w, 's1'));
+    expect(w.upgrade('s1')).toEqual({ ok: true });
+    expect(w.upgrade('s1').reason).toBe('busy');
+    run(w, 15);
+    expect(w.buildingOn('s1')).toMatchObject({ level: 2, state: 'ready', maxHp: 150 });
+    expect(w.upgrade('s1').reason).toBe('townhall');
+  });
+});
+
+describe('town hall hero upgrades', () => {
+  it('cost coins, need the hero at the Town Hall and its level', () => {
+    const w = makeWorld();
+    goTo(w, spot(w, 's3'));
+    expect(w.upgradeHero('ranged').reason).toBe('far');
+    goTo(w, w.townHall);
+    const before = w.heroStats.ranged.damage;
+    expect(w.upgradeHero('ranged')).toEqual({ ok: true });
+    expect(w.coins).toBe(500 - HERO_UPGRADE_COSTS[0]);
+    expect(w.heroStats.ranged.damage).toBe(before + 2);
+    expect(w.upgradeHero('ranged').reason).toBe('townhall'); // level 2 needs Town Hall 2
+    const d = w.describeTownHall();
+    expect(d.heroUpgrades.find((u) => u.stat === 'ranged')).toMatchObject({ level: 1, cost: HERO_UPGRADE_COSTS[1], reason: 'townhall' });
+  });
+});
+
+describe('towers', () => {
+  it('shoot the enemy in range that is nearest to the centre', () => {
+    const w = makeWorld({ rounds: [{ groups: [{ enemy: 'orc', count: 1, spawn: 'left' }, { enemy: 'goblin', count: 1, spawn: 'left', delay: 6 }] }, { groups: [] }] });
+    w.hero.dead = true; w.hero.respawnAt = 1e9;
+    // build without the hero: place a finished tower directly
+    w.hero.dead = false; goTo(w, spot(w, 's3')); w.build('s3', 'tower'); run(w, 13); w.hero.dead = true; w.hero.respawnAt = 1e9;
+    // record every tower shot together with the correct choice at that moment
+    const tower = w.buildingOn('s3');
+    const shots = [];
+    const shoot = w.shoot.bind(w);
+    w.shoot = (from, target, dmg, owner) => {
+      if (owner === 'tower') {
+        const inRange = w.enemies.filter((e) => Math.hypot(e.x - tower.x, e.y - tower.y) - e.radius <= 180);
+        const best = inRange.reduce((a, b) => (w.toCentre(b) < w.toCentre(a) ? b : a));
+        shots.push({ target: target.id, best: best.id, choices: inRange.length });
+      }
+      shoot(from, target, dmg, owner);
+    };
+    w.callReady();
+    run(w, 40);
+    expect(shots.length).toBeGreaterThan(3);
+    expect(shots.some((s) => s.choices > 1)).toBe(true); // both enemies were in range at least once
+    for (const s of shots) expect(s.target).toBe(s.best);
+  });
+});
+
+describe('castles', () => {
+  it('send up to 3 soldiers that fight ground enemies and respawn', () => {
+    const w = makeWorld({ rounds: [{ groups: [{ enemy: 'goblin', count: 4, interval: 3, spawn: 'left' }] }, { groups: [] }] });
+    goTo(w, spot(w, 's1'));
+    w.build('s1', 'castle');
+    run(w, 16);
+    run(w, 30);
+    expect(w.soldiers).toHaveLength(3);
+    w.hero.dead = true; w.hero.respawnAt = 1e9;
+    w.callReady();
+    run(w, 60);
+    expect(w.enemies.filter((e) => e.type === 'goblin').length).toBe(0); // soldiers + town hall dealt with them
+    expect(w.round).toBe(1);
+  });
+
+  it('soldiers ignore flying enemies', () => {
+    const w = makeWorld({ rounds: [{ groups: [{ enemy: 'bat', count: 1, spawn: 'left' }] }, { groups: [] }] });
+    goTo(w, spot(w, 's1'));
+    w.build('s1', 'castle');
+    run(w, 16);
+    w.hero.dead = true; w.hero.respawnAt = 1e9;
+    w.callReady();
+    run(w, 25);
+    expect(w.soldiers.every((s) => s.target === null)).toBe(true);
+  });
+});
+
+describe('damage, ruins and repair', () => {
+  it('a destroyed building becomes a ruin, loses workers and is rebuilt at level 1', () => {
+    const w = makeWorld();
+    goTo(w, spot(w, 's1'));
+    w.build('s1', 'house');
+    run(w, 11);
+    const b = w.buildingOn('s1');
+    w.damage(b, 1000);
+    expect(b.state).toBe('ruin');
+    expect(w.workers).toBe(0);
+    expect(w.build('s1', 'tower').reason).toBe('occupied'); // a ruin is rebuilt as what it was
+    const coins = w.coins;
+    expect(w.build('s1', 'house')).toEqual({ ok: true });
+    expect(w.coins).toBe(coins - 20);
+    run(w, 11);
+    expect(w.buildingOn('s1')).toMatchObject({ level: 1, state: 'ready' });
+  });
+
+  it('buildings and the Town Hall repair themselves 5 s after the last hit', () => {
+    const w = makeWorld();
+    w.damage(w.townHall, 100);
+    run(w, 4.5);
+    expect(w.townHall.hp).toBe(200);
+    run(w, 6);
+    expect(w.townHall.hp).toBeGreaterThan(200);
+    expect(w.townHall.hp).toBeLessThan(300);
+  });
+
+  it('enemies attack buildings they pass', () => {
+    const w = makeWorld({ rounds: [{ groups: [{ enemy: 'orc', count: 1, spawn: 'left' }] }, { groups: [] }] });
+    goTo(w, spot(w, 's3'));
+    w.build('s3', 'house');
+    run(w, 11);
+    goTo(w, w.townHall);
+    w.hero.dead = true; w.hero.respawnAt = 1e9;
+    w.callReady();
+    run(w, 25);
+    expect(w.buildingOn('s3').hp).toBeLessThan(80);
+  });
+});
+
+describe('hero guarding', () => {
+  it('an idle hero engages a nearby enemy and walks back afterwards', () => {
+    const w = makeWorld({ rounds: [{ groups: [{ enemy: 'goblin', count: 1, spawn: 'left' }] }, { groups: [] }] });
+    goTo(w, { x: 500, y: 360 }); // on the left road
+    const home = { x: w.hero.x, y: w.hero.y };
+    w.callReady();
+    let engaged = false;
+    for (let i = 0; i < 30 * 40 && w.enemies.length + w.queue.length; i++) {
+      w.update(1 / 30);
+      if (w.hero.target) engaged = true;
+    }
+    expect(engaged).toBe(true);
+    expect(w.enemies).toHaveLength(0);
+    run(w, 5);
+    expect(Math.hypot(w.hero.x - home.x, w.hero.y - home.y)).toBeLessThan(8);
+  });
+
+  it('does not chase far away enemies', () => {
+    const w = makeWorld({ rounds: [{ groups: [{ enemy: 'goblin', count: 1, spawn: 'top' }] }, { groups: [] }] });
+    goTo(w, { x: 200, y: 360 }); // far left, the goblin walks down from the top
+    w.callReady();
+    run(w, 8);
+    expect(w.hero.target).toBeNull();
+  });
+});
+
+describe('describeSpot', () => {
+  it('lists build options with reasons, then upgrade info', () => {
+    const w = makeWorld({ coins: 35 });
+    let d = w.describeSpot('s3');
+    expect(d.building).toBeNull();
+    expect(d.options.map((o) => [o.type, o.reason])).toEqual([['house', 'far'], ['tower', 'far'], ['castle', 'far']]);
+    goTo(w, spot(w, 's3'));
+    d = w.describeSpot('s3');
+    expect(d.options.map((o) => o.reason)).toEqual([null, null, 'coins']);
+    w.build('s3', 'tower');
+    d = w.describeSpot('s3');
+    expect(d.building).toMatchObject({ type: 'tower', level: 0, state: 'building' });
+    expect(d.building.progress).toBe(0);
+  });
+});
