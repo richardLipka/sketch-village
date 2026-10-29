@@ -40,6 +40,11 @@ export default function Hud({ hud, onReady, onMode, enemyName, enemyTypes, maxLi
       {preview.length > 0 && (
         <div className="small" style={{ marginTop: 4 }}>
           {t('game.coming')}: {preview.map(([id, n]) => `${n}× ${enemyName(id)}`).join(', ')}
+          {hud.nextCaves?.length > 0 && (
+            <span className="muted"> · {hud.nextCaves.length === hud.caveCount && hud.caveCount > 1
+              ? t('game.from_all_caves')
+              : t('game.from_caves', { list: hud.nextCaves.join(', ') })}</span>
+          )}
           {flyingNext && <b style={{ color: 'var(--danger)' }}> · {t('game.flying_tip')}</b>}
         </div>
       )}

@@ -29,7 +29,7 @@ export function emptyAsset(categoryId) {
 }
 
 // Edit one asset: name, author, its drawing(s) – one per upgrade level – and stats.
-export default function AssetEditor({ asset, isNew, onSave, onDelete, onCancel }) {
+export default function AssetEditor({ asset, isNew, heroRules, onSave, onDelete, onCancel }) {
   const { t } = useTranslation();
   const cat = getCategory(asset.category);
   const [draft, setDraft] = useState(asset);
@@ -77,7 +77,7 @@ export default function AssetEditor({ asset, isNew, onSave, onDelete, onCancel }
 
       {cat.stats === 'hero' && (
         <div style={{ marginTop: 16 }}>
-          <HeroStatsEditor points={draft.stats} onChange={(stats) => set({ stats })} />
+          <HeroStatsEditor points={draft.stats} rules={heroRules} onChange={(stats) => set({ stats })} />
         </div>
       )}
 

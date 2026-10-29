@@ -35,6 +35,27 @@ const GENERAL = [
   ['soldier', 'aggro', 30, 500, 10],
 ];
 
+// hero skill-point table (rules.hero)
+const HERO = [
+  ['hero', 'points', 1, 40, 1],
+  ['hero', 'statMax', 1, 20, 1],
+  ['hero', 'hp', 10, 2000, 10],
+  ['hero', 'meleeDamage', 0, 200, 1],
+  ['hero', 'meleePerPoint', 0, 50, 1],
+  ['hero', 'meleeRange', 20, 120, 5],
+  ['hero', 'meleeCooldown', 0.1, 5, 0.1],
+  ['hero', 'rangedDamage', 0, 200, 1],
+  ['hero', 'rangedPerPoint', 0, 50, 1],
+  ['hero', 'rangedRange', 50, 600, 10],
+  ['hero', 'rangedCooldown', 0.1, 10, 0.1],
+  ['hero', 'rangedCooldownPerPoint', 0, 1, 0.05],
+  ['hero', 'rangedMinCooldown', 0.1, 5, 0.1],
+  ['hero', 'armorPerPoint', 0, 30, 1, true],
+  ['hero', 'armorMax', 0, 95, 5, true],
+  ['hero', 'speed', 20, 400, 5],
+  ['hero', 'speedPerPoint', 0, 60, 1],
+];
+
 const ICON = { house: '🏠', tower: '🗼', castle: '🏰' };
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const round = (v) => Math.round(v * 1000) / 1000;
@@ -142,7 +163,20 @@ export default function RulesEditor({ buildingTypes, rules, onSave }) {
         <p className="small muted">{t('rules.townhall_hint')}</p>
       </div>
 
-      <h2>🦸 {t('rules.hero_costs')}</h2>
+      <h2>🦸 {t('rules.hero')}</h2>
+      <div className="sketch-card" style={{ padding: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '8px 18px' }}>
+          {HERO.map(([g, key, min, max, step, pct]) => (
+            <label key={key} className="row small" style={{ justifyContent: 'space-between', gap: 8 }}>
+              <span>{t(`rules.h_${key}`)}{pct ? ' (%)' : ''}</span>
+              <Num value={getGeneral(g, key)} min={min} max={max} step={step} pct={pct} onChange={(v) => setGeneral(g, key, v)} />
+            </label>
+          ))}
+        </div>
+        <p className="small muted">{t('rules.hero_hint')}</p>
+      </div>
+
+      <h2>🏛️🦸 {t('rules.hero_costs')}</h2>
       <div className="sketch-card" style={{ padding: 12 }}>
         <div className="row small">
           {r.heroUpgradeCosts.map((c, li) => (

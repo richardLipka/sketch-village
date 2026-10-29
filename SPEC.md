@@ -1,6 +1,6 @@
 # Sketch Village – Game Specification
 
-Status: **DRAFT v0.6** – gameplay rules complete; balance draft v1 in §16. · Items marked `TBD` / `Q#` are open and will be filled in over the next steps.
+Status: **v1.0** – M1–M5 implemented and published (https://richardlipka.github.io/sketch-village/); balance v2 in §16. Remaining work and open questions: §14 "Later" and §15 (Q2).
 
 ---
 
@@ -9,8 +9,8 @@ Status: **DRAFT v0.6** – gameplay rules complete; balance draft v1 in §16. ·
 A short, replayable village-defense game for a group of kids who also produce all the art. The kids draw on paper, photograph the drawings, and the drawings become the game. The whole UI looks like it was drawn with pen and pencil on paper.
 
 - Audience: kids **7–11 years**, can read, already know tower-defense games → standard TD conventions (range circles, wave preview, upgrade buttons) are fine.
-- Session length: `TBD (Q2)`
-- Platform: desktop browser (mouse), tablet `TBD (Q3)`
+- Session length: open (Q2); estimate ≈ 20–30 min for 20 rounds with the default waves (not measured with kids yet).
+- Platform: desktop browser (mouse); point-and-click so touch tablets work too (not yet tested on a real tablet).
 - Language: **Czech by default**, every text switchable to **English** (i18next, `cs.json` / `en.json`, switch in menu, choice remembered). No hardcoded strings anywhere, including config-defined names (enemies, buildings, levels carry `{ cs, en }` names).
 
 ## 2. Tech stack
@@ -33,7 +33,7 @@ A short, replayable village-defense game for a group of kids who also produce al
 - **Fully static, no backend.** All data lives in the browser (IndexedDB) and moves between computers only via the JSON save file (§13a).
 - GitHub Actions workflow (`.github/workflows/deploy.yml`): on push to `main` → `npm ci` → `npm test` → `vite build` → deploy `dist/` to Pages.
 - Vite `base` = `/<repo>/` so asset URLs work under the sub-path. No client-side routing that needs server rewrites (use in-app state or hash routes).
-- Optional **bundled default content**: a `public/default-data.json` shipped with the site and loaded on first run, so a fresh browser has a playable map and assets. Updating it = export JSON from the game, commit it to the repo.
+- **Class pack** (bundled default content): `public/default-data.json` shipped with the site is merged on a browser's first run and can be loaded any time (Save & load → Load class pack). Updating it = export JSON from the game, rename, commit it to the repo (steps in README). The shipped file is empty, so a fresh browser gets the built-in sample map.
 - Note: data in IndexedDB is per browser + per origin; kids on different computers must export/import JSON (or the teacher commits a combined file as the new default).
 
 ## 3. Asset Studio (generalized from simple_editable_train)
@@ -114,7 +114,7 @@ One screen with two modes:
 ## 6. Hero (main character)
 
 - Picked before the game from all `hero` assets in the library.
-- **Control: mouse click** on a walkable cell → hero walks along the shortest path (A*). Click on unwalkable area → moves to nearest walkable cell `TBD`.
+- **Control: mouse click** on a walkable cell → hero walks along the shortest path (A*). Click on unwalkable area → moves to the nearest walkable cell.
 - Click on enemy → attack with the currently selected mode (melee: walk to enemy and hit; ranged: shoot if in range, otherwise walk into range).
 - Click on empty building spot (when near) → build menu; click on own building → upgrade / rebuild menu.
 - **Input**: desktop mouse is primary; everything is **point-and-click** (no drag required, no hover-only info, no right-click-only actions), so the same UI works with touch taps. Zoom/pan additionally via wheel/drag on desktop and pinch on touch.
@@ -123,7 +123,7 @@ One screen with two modes:
 - **Combat** – the **player chooses** melee or ranged (HUD toggle button; keyboard shortcut optional).
   - Melee: short range, higher damage, cooldown.
   - Ranged: **unlimited arrows** with a **cooldown**.
-- **Armor** reduces incoming damage: `damageTaken = max(1, damage * (1 - armor * 0.05))` (formula `TBD`, capped e.g. 60 %).
+- **Armor** reduces incoming damage: `damageTaken = max(1, round(damage × (1 − armor)))`, armor = 5 % per point, capped at 60 % (both editable in the Rules editor).
 
 ### 6.1 Hero stats – point distribution
 Each hero has its own stats, set in the **Hero editor** (Asset Studio, next to the drawing):
@@ -145,14 +145,14 @@ export const HERO_STAT_TABLE = {
 
 ### 6.2 Hero upgrades (in game)
 - Bought **for coins in the Town Hall** (click Town Hall when the hero is near → upgrade panel).
-- Upgradeable: **melee power, ranged power (incl. arrow cooldown), armor, speed**. Each has upgrade levels with rising cost (`cost = base * 1.5^level` `TBD`).
+- Upgradeable: **melee power, ranged power (incl. arrow cooldown), armor, speed**. Each upgrade = +1 point in that stat; prices 15 / 30 / 50 (Rules editor). Upgrades are instant.
 - Upgrades last for the current game only; **nothing carries over** to the next game or map.
-- HP is fixed per hero (base HP, not a distributed stat) `TBD`.
+- HP is the same for every hero (base HP, not a distributed stat); the whole hero table (points, per-point values, HP, caps) is editable in the Rules editor (`rules.hero`).
 
 ## 7. Buildings
 
 - The **Town Hall** stands in the village centre from the start. **If the Town Hall is destroyed → game over.**
-- Other buildings are built only on the 10 spots, only when the hero is **near** (radius `TBD`).
+- Other buildings are built only on the 10 spots, only when the hero is **near** (90 px, Rules editor). Any building can be **sold** for 70 % of the coins spent on it.
 - **3 levels per building** (build + 2 upgrades); number of levels is data-driven so it can grow later. Each level has its own kids' drawing (§3.2).
 
 | Type | Purpose | Levels | Notes |
@@ -164,8 +164,8 @@ export const HERO_STAT_TABLE = {
 
 - **Town Hall level gates other buildings**: a building can't be upgraded above the Town Hall's level (TH 1 → buildings max level 1, TH 2 → max 2, TH 3 → max 3). Town Hall upgrades also raise its max HP.
 - **Soldiers**: auto-controlled units, walk on paths, attack the nearest enemy, **significantly weaker than the hero** (e.g. ~20 % of hero HP/damage). **Max 3 alive per castle**; a dead soldier is replaced after the castle's respawn interval. Castle level raises soldier strength (not count). With no enemy around, soldiers walk back and guard next to their castle. Kids draw a `soldier` asset.
-- Every building has **limited HP** and **repairs itself slowly** over time (HP/s per type, maybe only when no enemy is in range `TBD`).
-- **Destroyed** building → rubble on the spot; can be **rebuilt for coins** (rebuild cost = level-1 build cost `TBD`). A rebuilt building starts at **level 1 – upgrades are lost**.
+- Every building has **limited HP** and **repairs itself slowly** (1 % max HP/s, starting 5 s after the last hit).
+- **Destroyed** building → rubble on the spot; can be **rebuilt for coins** (= level-1 build cost) or cleared for free. A rebuilt building starts at **level 1 – upgrades are lost**.
 - All numbers live in `buildingTypes` config (cost, buildTime, hp, regen, damage, range, cooldown, workers, soldiers per level).
 
 ## 8. Economy
@@ -179,8 +179,8 @@ export const HERO_STAT_TABLE = {
 
 - Spawn only from **caves** on map edges, walk along paths towards the **village centre / Town Hall** (flow-field / BFS from centre, shared by all enemies).
 - **On the way they attack everything in range** – buildings, soldiers and the hero. While something is in range they stop and fight; when it is gone they continue to the centre.
-- Target priority when several things are in range: nearest `TBD`.
-- Enemy types defined in config (each linked to an `enemy` asset), editable in game like heroes:
+- Target priority when several things are in range: the nearest.
+- Enemy types defined in config (each linked to an `enemy` asset), editable in game; kids can also **add their own enemy types** (name, colour, flies / shoots / boss, numbers) and delete them – the 7 built-in ones can be changed but not deleted:
 
 ```js
 { id: 'goblin', asset: 'a7', name: { cs: 'Skřet', en: 'Goblin' },
@@ -215,9 +215,10 @@ Waves are data (JSON), editable in an in-game editor and importable.
 - **20 rounds per level** (the default; the count is simply the length of `rounds`).
 - Round flow: preparation → wave → round end (reward) → preparation …
   - HUD always shows **time to next wave** (countdown from `prepTime`).
-  - **Ready button** starts the next wave immediately; calling it early gives **bonus coins** proportional to the remaining time (`bonus = floor(remaining * earlyBonusPerSecond)` `TBD`).
+  - **Ready button** starts the next wave immediately; calling it early gives **bonus coins** `floor(remaining × earlyBonusPerSecond)`.
   - Next-wave preview (which enemies, from which caves) shown next to the Ready button – standard TD convention.
-- Difficulty scaling: optional per-round multiplier on enemy HP/damage `TBD`.
+  - Each round may override its **reward** and the **prep time before it** (wave editor; empty = automatic).
+- Difficulty scaling: enemy HP × `(1 + hpScalePerRound × (round − 1))` (Rules editor).
 
 ## 11. Win / lose
 
@@ -274,18 +275,20 @@ Everything is downloadable as **one JSON file** and importable on another comput
 - Version field + migration function for future format changes.
 - Export can also be per map (map + the assets it uses) `TBD`.
 
-## 13. Project structure (planned)
+## 13. Project structure
 
 ```
 src/
   main.jsx, App.jsx
-  ui/            sketch CSS, Rough.js widgets, fonts
-  assets/        categories.js, library store (IndexedDB), CameraCapture, AssetCropper, SketchPad, bgRemoval.js, imageEncoding.js
-  game/          Phaser scenes (Boot, Game, HUD), hero, enemy, building, projectile
-  logic/         pathGrid.js (bitmap → grid), pathfinding.js, waves.js, economy.js  ← pure, unit-tested
-  config/        default enemies, buildings, waves, levels (JSON)
-  editors/       MapEditor, WaveEditor
+  ui/            sketch.css (CSS wobble instead of Rough.js), LanguageSwitcher, FullscreenButton, Modal
+  assets/        categories.js, CameraCapture, AssetCropper, BackgroundRemover + bgRemoval.js, SketchPad, ImageSlot, AssetEditor, AssetStudio, HeroStatsEditor
+  data/          saveFile.js (JSON + merge), store.js (IndexedDB), defaultData.js (class pack), DataPanel
+  config/        balance, buildings, heroStats, enemies, waves (defaults) + rules.js (edited rules over defaults)
+  logic/         pathGrid, pathfinding, mapModel, waves, world (whole simulation), balanceBot  ← pure, unit-tested
+  maps/          MapList, MapPainter, WaveEditor, mapRuntime (canvas helpers, sample map)
+  game/          PlaySetup, GameView (React ↔ Phaser), GameScene, Hud, BuildPanel, EnemyEditor, RulesEditor, sound.js, tutorial.js
   locales/       cs.json, en.json
+public/default-data.json   class pack (empty by default)
 ```
 
 ## 14. Milestones
@@ -296,7 +299,8 @@ src/
 4. **M4 Buildings & economy** ✅ – build/upgrade on spots when the hero is near (House → workers, Tower → arrows at the enemy nearest the centre, Castle → up to 3 soldiers guarding ~150 px around it, ground enemies only), Town Hall upgrades (HP, building level cap, hero upgrades for coins), worker speed-up, 1 %/s self-repair 5 s after the last hit, ruins rebuilt at level 1; enemies attack buildings and soldiers in range. Build panel explains every disabled button. Idle hero guards a 130 px radius and walks back afterwards. Building numbers in `src/config/buildings.js` (`buildingTypes` collection overrides them; no editor yet).
 4b. **M4 follow-ups** ✅ – **Rules editor** (⚙️ menu): every building level, Town Hall level, hero upgrade price and general number (coins, prep, rewards, refunds, regen, soldiers…) is editable and stored in the `buildingTypes` + `rules` collections, so it travels in the exported JSON. **Selling** a building returns 70 % of everything spent (rules); a ruin can be cleared for free. **Several drawings per building kind**: each building picks one of the kids' drawings at random and keeps it through upgrades. **Simple geometry** placeholders until drawings exist (house = square, tower = triangle, castle = hexagon, town hall = circle, dots = level; enemies circle / diamond = flying / triangle = shooting). **Pencil wobble** toggle (〰️) makes single drawings jitter like a flip-book. **Fullscreen** game layout + fullscreen button (game starts fullscreen). Balance retuned with a bot (`src/logic/balanceBot.js`, `balance.test.js`).
 5. **M5 Polish** ✅ – synthesized sound effects (WebAudio, no files; 🔊/🔇 toggle, throttled hits), first-game tips (7 steps advanced by the player's actions: walk, build, Ready, fight, coins, town hall, bow; 💡 hides / shows again; progress saved), a ready-to-play sample map added on the very first start (geometric shapes until drawings exist), balance pass with the bot. Next: playtest with kids and tune the numbers in the Rules editor.
-6. **Later** – animated sprites (frame sheets photographed from a printed template), longbowmen soldiers that can hit flying enemies, walls.
+5b. **Gaps closed** ✅ – class pack (`public/default-data.json`), kids can add/delete their own enemy types, hero table in the Rules editor (stored heroes are squeezed into new limits), per-round reward and prep time in the wave editor, next-wave preview shows the caves, Czech/English key-parity test, workflow on Node 22.
+6. **Later** – rotating decorations, a "+" mark on reused level drawings, a round-summary card, per-map export, playtests on a real tablet and with kids, animated sprites (frame sheets photographed from a printed template), longbowmen soldiers that can hit flying enemies, walls.
 
 ## 15. Open questions
 

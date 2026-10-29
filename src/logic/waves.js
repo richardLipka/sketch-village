@@ -30,6 +30,12 @@ export function roundSummary(round) {
   return s;
 }
 
+/** 1-based numbers of the caves a round's enemies come out of (for the preview). */
+export function roundCaves(round, caveIds) {
+  const used = new Set(expandRound(round, caveIds).map((s) => caveIds.indexOf(s.cave) + 1));
+  return [...used].sort((a, b) => a - b);
+}
+
 export function roundDuration(round) {
   return Math.max(0, ...round.groups.map((g) => (g.delay ?? 0) + Math.max(0, (g.count ?? 0) - 1) * (g.interval ?? 1)));
 }

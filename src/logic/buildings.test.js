@@ -287,6 +287,27 @@ describe('editable rules', () => {
     expect(w.sell('s1').refund).toBe(20);
   });
 
+  it('hero numbers come from rules.hero; a stored hero is squeezed into the limits', () => {
+    const rules = mergeRules({ hero: { points: 4, statMax: 2, hp: 250, meleePerPoint: 10 } });
+    const w = new World({
+      map: { centre: { x: 648, y: 360 }, caves: [], spots: [] },
+      grid: { cols: 80, rows: 45, cell: 16, walk: new Uint8Array(80 * 45).fill(1) },
+      enemyTypes: DEFAULT_ENEMY_TYPES, rules, heroPoints: { melee: 5, ranged: 5, armor: 0, speed: 0 },
+      waves: { rounds: [{ groups: [] }] },
+    });
+    expect(w.heroPoints).toEqual({ melee: 2, ranged: 2, armor: 0, speed: 0 });
+    expect(w.hero.maxHp).toBe(250);
+    expect(w.heroStats.melee.damage).toBe(10 + 2 * 10);
+  });
+
+  it('rounds can set their own reward and prep time', () => {
+    const w = makeWorld({ coins: 0, rounds: [{ groups: [], reward: 77 }, { groups: [], prep: 7 }, { groups: [] }] });
+    const bonus = w.callReady();
+    w.update(0.1);
+    expect(w.coins - bonus).toBe(77);
+    expect(w.prepLeft).toBeCloseTo(7, 0);
+  });
+
   it('rules are a save-file collection', () => {
     expect(COLLECTIONS).toContain('rules');
     expect(rulesOf({ rules: [] })).toBe(DEFAULT_RULES);

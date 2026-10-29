@@ -5,7 +5,7 @@ import AssetEditor, { emptyAsset } from './AssetEditor.jsx';
 import { newId } from '../data/saveFile.js';
 
 // Library of all drawings, one tab per category.
-export default function AssetStudio({ assets, onChange }) {
+export default function AssetStudio({ assets, heroRules, onChange }) {
   const { t } = useTranslation();
   const [category, setCategory] = useState(() => {
     try { return sessionStorage.getItem('sv:studioTab') || 'hero'; } catch { return 'hero'; }
@@ -72,6 +72,7 @@ export default function AssetStudio({ assets, onChange }) {
         <AssetEditor
           asset={editing.asset}
           isNew={editing.isNew}
+          heroRules={heroRules}
           onSave={save}
           onDelete={remove}
           onCancel={() => setEditing(null)}

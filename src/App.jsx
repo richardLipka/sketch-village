@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { loadDb, saveCollection, saveSettings } from './data/store.js';
+import { loadDb, saveCollection, saveSettings, saveDb } from './data/store.js';
+import { mergeSaveFile } from './data/saveFile.js';
+import { fetchDefaultData } from './data/defaultData.js';
 import AssetStudio from './assets/AssetStudio.jsx';
 import DataPanel from './data/DataPanel.jsx';
 import LanguageSwitcher from './ui/LanguageSwitcher.jsx';
@@ -22,14 +24,16 @@ export default function App() {
 
   useEffect(() => {
     loadDb()
-      .then(async (loaded) => {
-        // very first start: add a ready-to-play sample map (only once, so a
-        // deleted sample doesn't come back)
+      .then(async (first) => {
+        let loaded = first;
+        // very first start: load the class pack shipped with the website, or
+        // add a ready-to-play sample map (only once, so deleted maps don't come back)
         if (!loaded.maps.length && !loaded.settings.starterAdded) {
-          loaded.maps = [starterMap(t('maps.sample_name'))];
+          const pack = await fetchDefaultData();
+          if (pack) loaded = mergeSaveFile(loaded, pack).db;
+          if (!loaded.maps.length) loaded.maps = [starterMap(t('maps.sample_name'))];
           loaded.settings = { ...loaded.settings, starterAdded: true };
-          await saveCollection('maps', loaded.maps);
-          await saveSettings(loaded.settings);
+          await saveDb(loaded);
         }
         setDb(loaded);
       })
@@ -85,11 +89,11 @@ export default function App() {
       )}
 
       {screen === 'studio' && (
-        <AssetStudio assets={db.assets} onChange={(a) => updateCollection('assets', a)} />
+        <AssetStudio assets={db.assets} heroRules={rules.hero} onChange={(a) => updateCollection('assets', a)} />
       )}
 
       {screen === 'maps' && (
-        <MapList maps={db.maps} assets={db.assets} enemyTypes={enemyTypesOf(db)} onChange={(m) => updateCollection('maps', m)} />
+        <MapList maps={db.maps} assets={db.assets} enemyTypes={enemyTypesOf(db)} balance={rules.balance} onChange={(m) => updateCollection('maps', m)} />
       )}
 
       {screen === 'enemies' && (

@@ -18,10 +18,10 @@
 
 import { DEFAULT_BUILDING_TYPES } from '../config/buildings.js';
 import { DEFAULT_RULES } from '../config/rules.js';
-import { heroNumbers, HERO_STATS, DEFAULT_HERO_POINTS } from '../config/heroStats.js';
+import { heroNumbers, clampPoints, HERO_STATS, DEFAULT_HERO_POINTS } from '../config/heroStats.js';
 import { worldToCell, cellCenter, nearestWalkable, isWalkable } from './pathGrid.js';
 import { findPath, smoothPath, flowField } from './pathfinding.js';
-import { expandRound, roundReward, hpScale } from './waves.js';
+import { expandRound, roundReward, roundCaves, hpScale } from './waves.js';
 
 const REPATH_EVERY = 0.4;
 const SEPARATION = 10; // px sideways offset range for ground enemies, so groups don't stack
@@ -82,9 +82,10 @@ export class World {
     this.caveIds = this.caves.map((cv) => cv.id);
     this.spots = (map.spots ?? []).map((s, i) => ({ id: s.id, index: i, x: s.x, y: s.y }));
 
-    this.heroPoints = heroPoints;
+    this.heroRules = rules.hero;
+    this.heroPoints = clampPoints(heroPoints, this.heroRules);
     this.heroUpgrades = Object.fromEntries(HERO_STATS.map((k) => [k, 0]));
-    this.heroStats = heroNumbers(heroPoints);
+    this.heroStats = heroNumbers(this.heroPoints, {}, this.heroRules);
     this.respawnPoint = this.snapToRoad(map.heroRespawn ?? { x: map.centre.x, y: map.centre.y + (map.centre.radius ?? 60) });
     this.hero = {
       kind: 'hero', ...this.respawnPoint, hp: this.heroStats.hp, maxHp: this.heroStats.hp, lives: balance.heroLives,
@@ -207,7 +208,8 @@ export class World {
       this.emit('won');
     } else {
       this.phase = 'prep';
-      this.prepLeft = this.waves.prep ?? this.b.prep;
+      // a round may set its own prep time (wave editor), otherwise the map's / rules'
+      this.prepLeft = this.waves.rounds[this.round].prep ?? this.waves.prep ?? this.b.prep;
     }
   }
 
@@ -391,7 +393,7 @@ export class World {
     if (reason) return { ok: false, reason };
     this.coins -= this.heroCosts[this.heroUpgrades[stat]];
     this.heroUpgrades[stat]++;
-    this.heroStats = heroNumbers(this.heroPoints, this.heroUpgrades);
+    this.heroStats = heroNumbers(this.heroPoints, this.heroUpgrades, this.heroRules);
     this.emit('heroUpgraded', { stat, level: this.heroUpgrades[stat] });
     return { ok: true };
   }
@@ -894,6 +896,8 @@ export class World {
       hero: { hp: Math.max(0, this.hero.hp), maxHp: this.hero.maxHp, lives: this.hero.lives, dead: this.hero.dead, respawnIn: this.hero.dead ? Math.max(0, this.hero.respawnAt - this.time) : 0, mode: this.hero.mode },
       enemiesLeft: this.enemies.length + this.queue.length,
       nextRound: this.phase === 'prep' && next ? next : null,
+      nextCaves: this.phase === 'prep' && next ? roundCaves(next, this.caveIds) : null,
+      caveCount: this.caveIds.length,
     };
   }
 }

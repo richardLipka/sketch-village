@@ -1,6 +1,19 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DEFAULT_ENEMY_TYPES } from '../config/enemies.js';
+import { newId } from '../data/saveFile.js';
+
+// "hsl(h s% l%)" → "#rrggbb" (the colour input only takes hex)
+function hslToHex(hsl) {
+  const [h, s, l] = hsl.match(/[\d.]+/g).map(Number);
+  const a = (s / 100) * Math.min(l / 100, 1 - l / 100);
+  const f = (n) => {
+    const k = (n + h / 30) % 12;
+    const c = l / 100 - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return Math.round(c * 255).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
 
 // Edit enemy types: which drawing each one uses and its numbers (SPEC §9, §16.4).
 // Saves the whole list into the `enemyTypes` collection.
@@ -32,6 +45,30 @@ export default function EnemyEditor({ enemyTypes, assets, onChange }) {
   const setField = (i, f, v) => (f === 'armorPct' ? edit(i, { armor: v / 100 }) : edit(i, { [f]: v }));
 
   const save = () => { onChange(list); setDirty(false); };
+
+  // kids can invent new monsters; the built-in ones can be changed but not deleted
+  // (the default waves use them)
+  const builtIn = (id) => DEFAULT_ENEMY_TYPES.some((d) => d.id === id);
+  const add = () => {
+    const base = DEFAULT_ENEMY_TYPES[0];
+    const n = list.filter((e) => !builtIn(e.id)).length + 1;
+    const label = `${t('enemies.new_name')} ${n}`;
+    const color = `hsl(${Math.floor(Math.random() * 360)} 65% 45%)`;
+    setList((l) => [...l, { ...base, id: newId(), name: { cs: label, en: label }, color: hslToHex(color), asset: undefined, createdAt: now(), updatedAt: now() }]);
+    setDirty(true);
+  };
+  const remove = (i) => {
+    if (!confirm(t('enemies.confirm_delete', { name: list[i].name?.[lang] ?? list[i].id }))) return;
+    setList((l) => l.filter((_, j) => j !== i));
+    setDirty(true);
+  };
+  const setName = (i, v) => {
+    const e = list[i];
+    const other = lang === 'cs' ? 'en' : 'cs';
+    // a new monster gets the same name in both languages until someone translates it
+    const keepOther = e.name?.[other] && e.name[other] !== e.name?.[lang];
+    edit(i, { name: { ...e.name, [lang]: v, ...(keepOther ? {} : { [other]: v }) } });
+  };
   const reset = () => {
     if (!confirm(t('enemies.confirm_reset'))) return;
     setList(DEFAULT_ENEMY_TYPES.map((e) => ({ ...e })));
@@ -44,6 +81,7 @@ export default function EnemyEditor({ enemyTypes, assets, onChange }) {
       <p className="muted small">{t('enemies.hint')}</p>
       <div className="row" style={{ marginBottom: 12 }}>
         <button className="btn primary" onClick={save} disabled={!dirty}>✓ {t('common.save')}</button>
+        <button className="btn" onClick={add}>+ {t('enemies.add')}</button>
         <button className="btn" onClick={reset}>↺ {t('enemies.reset')}</button>
       </div>
 
@@ -56,11 +94,18 @@ export default function EnemyEditor({ enemyTypes, assets, onChange }) {
                 <div className="checker" style={{ width: 64, height: 64, borderRadius: 6, display: 'grid', placeItems: 'center' }}>
                   {pic ? <img src={pic} alt="" style={{ width: 60, height: 60, objectFit: 'contain' }} /> : <span style={{ width: 36, height: 36, borderRadius: '50%', background: e.color, border: '2px solid #111' }} />}
                 </div>
-                <b style={{ fontSize: 24, minWidth: 110 }}>{e.name?.[lang] ?? e.id}</b>
-                <span className="small muted">
-                  {[e.flying && `🪽 ${t('enemies.flying')}`, e.ranged && `🏹 ${t('enemies.ranged')}`, e.boss && `👑 ${t('enemies.boss')}`].filter(Boolean).join(' · ')}
+                <input
+                  value={e.name?.[lang] ?? ''} onChange={(ev) => setName(i, ev.target.value)} aria-label={t('enemies.name')}
+                  style={{ fontSize: 22, width: 150, fontWeight: 'bold' }}
+                />
+                <input type="color" value={e.color ?? '#16a34a'} onChange={(ev) => edit(i, { color: ev.target.value })} title={t('enemies.color')} style={{ width: 40, height: 32 }} />
+                <span className="row small" style={{ gap: 8 }}>
+                  {[['flying', '🪽'], ['ranged', '🏹'], ['boss', '👑']].map(([k, icon]) => (
+                    <label key={k}><input type="checkbox" checked={!!e[k]} onChange={(ev) => edit(i, { [k]: ev.target.checked })} /> {icon} {t(`enemies.${k}`)}</label>
+                  ))}
                 </span>
                 <span className="spacer" />
+                {!builtIn(e.id) && <button className="btn icon danger" onClick={() => remove(i)} title={t('common.delete')}>🗑</button>}
                 <label className="small">{t('enemies.drawing')}
                   <select value={e.asset ?? ''} onChange={(ev) => edit(i, { asset: ev.target.value || undefined })}>
                     <option value="">{t('enemies.no_drawing')}</option>

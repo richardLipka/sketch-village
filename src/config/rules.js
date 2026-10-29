@@ -5,6 +5,7 @@
 
 import { BALANCE } from './balance.js';
 import { BUILD, TOWN_HALL_LEVELS, HERO_UPGRADE_COSTS } from './buildings.js';
+import { HERO_RULES } from './heroStats.js';
 
 export const RULES_ID = 'rules';
 
@@ -14,6 +15,7 @@ export const DEFAULT_RULES = {
   build: { ...BUILD, soldier: { ...BUILD.soldier } },
   townHallLevels: TOWN_HALL_LEVELS.map((l) => ({ ...l })),
   heroUpgradeCosts: [...HERO_UPGRADE_COSTS],
+  hero: { ...HERO_RULES },
 };
 
 /** Defaults overlaid with whatever a stored record defines. */
@@ -27,6 +29,7 @@ export function mergeRules(rec) {
     build: { ...d.build, ...rec.build, soldier: { ...d.build.soldier, ...rec.build?.soldier } },
     townHallLevels: rec.townHallLevels?.length ? rec.townHallLevels : d.townHallLevels,
     heroUpgradeCosts: rec.heroUpgradeCosts?.length ? rec.heroUpgradeCosts : d.heroUpgradeCosts,
+    hero: { ...d.hero, ...rec.hero },
   };
 }
 

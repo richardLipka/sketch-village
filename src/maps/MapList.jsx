@@ -7,7 +7,7 @@ import { emptyMap } from '../logic/mapModel.js';
 import { newId } from '../data/saveFile.js';
 
 // All maps (= levels): create blank or sample, edit, duplicate, delete.
-export default function MapList({ maps, assets, enemyTypes, onChange }) {
+export default function MapList({ maps, assets, enemyTypes, balance, onChange }) {
   const { t } = useTranslation();
   const [editing, setEditing] = useState(null);
   const [wavesFor, setWavesFor] = useState(null);
@@ -39,6 +39,7 @@ export default function MapList({ maps, assets, enemyTypes, onChange }) {
       <WaveEditor
         map={wavesFor}
         enemyTypes={enemyTypes}
+        balance={balance}
         onCancel={() => setWavesFor(null)}
         onSave={(waves) => { save({ ...wavesFor, waves, updatedAt: new Date().toISOString() }); setWavesFor(null); }}
       />

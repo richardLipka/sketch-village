@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { buildSaveFile, parseSaveFile, mergeSaveFile, COLLECTIONS } from './saveFile.js';
 import { saveDb, purgeAll, saveCollection } from './store.js';
 import { CATEGORY_IDS } from '../assets/categories.js';
+import { fetchDefaultData } from './defaultData.js';
 
 // Export everything to one JSON file, merge-import, purge (SPEC §13a).
 export default function DataPanel({ db, onReplaceDb }) {
@@ -21,19 +22,28 @@ export default function DataPanel({ db, onReplaceDb }) {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
 
+  const mergeIn = async (file) => {
+    const { db: next, summary } = mergeSaveFile(db, file);
+    await saveDb(next);
+    onReplaceDb(next);
+    setMessage({ ok: true, text: t('import.done', summary) });
+  };
+
   const doImport = async (e) => {
     const f = e.target.files?.[0];
     e.target.value = '';
     if (!f) return;
     try {
-      const file = parseSaveFile(await f.text());
-      const { db: next, summary } = mergeSaveFile(db, file);
-      await saveDb(next);
-      onReplaceDb(next);
-      setMessage({ ok: true, text: t('import.done', summary) });
+      await mergeIn(parseSaveFile(await f.text()));
     } catch (err) {
       setMessage({ ok: false, text: t(err.message, { defaultValue: t('import.error_generic') }) });
     }
+  };
+
+  const doClassPack = async () => {
+    const pack = await fetchDefaultData();
+    if (pack) await mergeIn(pack);
+    else setMessage({ ok: false, text: t('data.pack_none') });
   };
 
   const doPurgeAll = async () => {
@@ -72,6 +82,16 @@ export default function DataPanel({ db, onReplaceDb }) {
         <p className="small muted">{t('data.import_hint')}</p>
         <button className="btn" onClick={() => fileRef.current.click()}>⬆ {t('data.import')}</button>
         <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={doImport} />
+      </div>
+
+      <div className="sketch-card" style={{ marginBottom: 20 }}>
+        <h2>{t('data.pack_title')}</h2>
+        <p className="small muted">{t('data.pack_hint')}</p>
+        <button className="btn" onClick={doClassPack}>🎒 {t('data.pack_load')}</button>
+        <details className="small" style={{ marginTop: 8 }}>
+          <summary>{t('data.pack_teacher')}</summary>
+          <p className="muted">{t('data.pack_howto')}</p>
+        </details>
       </div>
 
       <div className="sketch-card">

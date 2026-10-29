@@ -1,13 +1,14 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { HERO_POINTS, HERO_STAT_MAX, HERO_STATS, heroNumbers, pointsUsed } from '../config/heroStats.js';
+import { HERO_RULES, HERO_STATS, heroNumbers, pointsUsed } from '../config/heroStats.js';
 
 // Distribute skill points among melee / ranged / armor / speed (SPEC §6.1).
-export default function HeroStatsEditor({ points, onChange }) {
+// Limits and numbers come from the Rules editor (rules.hero).
+export default function HeroStatsEditor({ points, rules = HERO_RULES, onChange }) {
   const { t } = useTranslation();
   const used = pointsUsed(points);
-  const left = HERO_POINTS - used;
-  const n = heroNumbers(points);
+  const left = rules.points - used;
+  const n = heroNumbers(points, {}, rules);
 
   const setStat = (k, v) => {
     const cur = points[k] ?? 0;
@@ -31,7 +32,7 @@ export default function HeroStatsEditor({ points, onChange }) {
         <div className="stat-row" key={k}>
           <span>{t(`hero.stat_${k}`)}</span>
           <span className="dots">
-            {Array.from({ length: HERO_STAT_MAX }, (_, i) => (
+            {Array.from({ length: rules.statMax }, (_, i) => (
               <button
                 key={i}
                 className={`dot ${i < (points[k] ?? 0) ? 'on' : ''}`}
