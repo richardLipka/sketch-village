@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { fetchDefaultData } from './defaultData.js';
 import { roundCaves } from '../logic/waves.js';
 import { clampPoints, HERO_RULES } from '../config/heroStats.js';
-import { itemsFromAssets, allItemsOf, coinTypesOf, DEFAULT_COIN_TYPES } from '../config/weapons.js';
+import { itemsOf as itemsFromAssets, coinTypesOf } from '../config/components.js';
 import cs from '../locales/cs.json';
 import en from '../locales/en.json';
 import empty from '../../public/default-data.json';
@@ -48,16 +48,17 @@ describe('items and coins drawn in the studio', () => {
 
   it('drawn weapons, shields and armor become items with their numbers', () => {
     const items = itemsFromAssets(assets);
-    expect(items.map((i) => i.id)).toEqual(['a1', 'a2', 'a3']);
-    expect(items[0]).toMatchObject({ slot: 'twohand', kind: 'melee', damage: 20, price: 70, asset: 'a1', name: { cs: 'Big hammer', en: 'Big hammer' } });
+    expect(items.map((i) => i.id)).toEqual(['a1', 'a2', 'a3', 'a4']); // a component without a picture is still an item
+    expect(items[0]).toMatchObject({ slot: 'twohand', kind: 'melee', damage: 20, price: 70, image: pic, name: { cs: 'Big hammer', en: 'Big hammer' } });
     expect(items[1]).toMatchObject({ slot: 'shield', armor: 0.12 });
     expect(items[2]).toMatchObject({ slot: 'armor', armor: 0.08 }); // defaults
-    expect(allItemsOf({ assets }).length).toBe(12 + 3);
+    expect(items[3].image).toBeNull();
   });
 
-  it('every coin drawing is a coin type with its value (1 when not set)', () => {
+  it('every coin component is a coin type with its value (circles until drawn)', () => {
     expect(coinTypesOf(assets).map((c) => [c.value, c.key])).toEqual([[10, 'coin:c1'], [1, 'coin:c2']]);
-    expect(coinTypesOf([])).toEqual(DEFAULT_COIN_TYPES);
+    expect(coinTypesOf([{ id: 'x', category: 'coin', images: [], stats: { value: 5 } }])[0].key).toBe('coin5');
+    expect(coinTypesOf([]).map((c) => c.value)).toEqual([1, 5]);
   });
 });
 

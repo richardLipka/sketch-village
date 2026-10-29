@@ -13,7 +13,7 @@
 // `armor` (0..1) of shields and armor is added to the hero's armor.
 // Items drop from enemies in chests (weight `drop`, 0 = never) or are bought in
 // the Town Hall shop (`price`, `shop`, from round `round`). `starter` items are
-// in the backpack at the start. Stored in the `weapons` collection.
+// in the backpack at the start. Kids edit them as components (config/components.js).
 
 export const WEAPON_CLASSES = ['melee', 'ranged', 'magic'];
 export const SLOTS = ['hand', 'twohand', 'shield', 'armor'];
@@ -41,38 +41,10 @@ export function normalizeItem(item) {
   return { ...item, slot: item.kind === 'ranged' ? 'twohand' : 'hand', armor: item.armor ?? 0 };
 }
 
-/** The built-in item list: the kids' edited one, or the defaults. */
-export function weaponsOf(db) {
-  return db.weapons?.length ? db.weapons.map(normalizeItem) : DEFAULT_WEAPONS;
-}
-
-/** Numbers a new drawn item starts with (stored as `stats` on the asset). */
+/** Numbers a new weapon / shield / armor component starts with. */
 export function defaultItemStats(category) {
-  if (category === 'weapon') return { kind: 'melee', hands: 1, damage: 4, range: 0, cooldown: 0, splash: 0, price: 30, shop: true, round: 1, drop: 2 };
-  return { armor: 0.08, price: 25, shop: true, round: 1, drop: 2 };
-}
-
-/** Weapons, shields and armor drawn in the studio, as items. */
-export function itemsFromAssets(assets = []) {
-  return assets.filter((a) => ['weapon', 'shield', 'armor'].includes(a.category) && a.images?.[0]).map((a) => {
-    const s = { ...defaultItemStats(a.category), ...a.stats };
-    const base = { id: a.id, name: { cs: a.name, en: a.name }, asset: a.id, price: s.price, shop: s.shop, round: s.round, drop: s.drop, damage: 0, range: 0, cooldown: 0, splash: 0, armor: 0 };
-    if (a.category !== 'weapon') return { ...base, slot: a.category, armor: s.armor };
-    return { ...base, slot: s.hands === 2 ? 'twohand' : 'hand', kind: s.kind, damage: s.damage, range: s.range, cooldown: s.cooldown, splash: s.splash };
-  });
-}
-
-/** Everything the hero can own in a game: built-in items + drawn ones. */
-export function allItemsOf(db) {
-  return [...weaponsOf(db), ...itemsFromAssets(db.assets)];
-}
-
-// coins: every coin drawing has a value; without drawings a 1 and a 5 coin are drawn as circles
-export const DEFAULT_COIN_TYPES = [{ value: 1, key: 'coin' }, { value: 5, key: 'coin5' }];
-
-export function coinTypesOf(assets = []) {
-  const drawn = assets.filter((a) => a.category === 'coin' && a.images?.[0]).map((a) => ({ value: Math.max(1, a.stats?.value ?? 1), key: `coin:${a.id}`, src: a.images[0] }));
-  return drawn.length ? drawn : DEFAULT_COIN_TYPES;
+  if (category === 'weapon') return { kind: 'melee', hands: 1, damage: 4, range: 0, cooldown: 0, splash: 0, price: 30, shop: true, round: 1, drop: 2, starter: false };
+  return { armor: 0.08, price: 25, shop: true, round: 1, drop: 2, starter: false };
 }
 
 /** Attack numbers of one class with a weapon added (weapon may be null). */

@@ -2,10 +2,11 @@
 // Pure logic – the IndexedDB side lives in store.js.
 
 export const SAVE_FORMAT = 'sketch-village';
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2; // 2: components (data/migrate.js upgrades version 1 files)
 
-// Collections of id-keyed records. Later milestones add their data here and
-// export/import/merge picks them up automatically.
+// Collections of id-keyed records. `assets` holds all components; enemyTypes,
+// buildingTypes and weapons are only read from version-1 files and are turned
+// into components after the import (data/migrate.js).
 export const COLLECTIONS = ['assets', 'maps', 'enemyTypes', 'buildingTypes', 'rules', 'weapons'];
 
 export function newId() {

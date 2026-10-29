@@ -52,7 +52,9 @@ export default function MapPainter({ map: initial, assets, onSave, onCancel }) {
     return !!grid.walk[cy * grid.cols + cx];
   };
   const firstImage = (cat) => assets.find((a) => a.category === cat)?.images.find(Boolean);
-  const townhallImg = firstImage('townhall');
+  // the Town Hall picture: the core building component's drawing, or one of its looks
+  const core = assets.find((a) => a.category === 'building' && a.stats?.core);
+  const townhallImg = [core, ...assets.filter((a) => core && a.stats?.variantOf === core.id)].map((a) => a?.images?.find(Boolean)).find(Boolean);
   const caveImg = firstImage('cave');
 
   const recomputeGrid = useCallback(() => setGrid(gridFromCanvas(baseRef.current, map.palette)), [map.palette]);

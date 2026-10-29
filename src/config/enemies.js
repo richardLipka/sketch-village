@@ -1,5 +1,5 @@
-// Default enemy types (SPEC §16.4). Kids can change them in the enemy editor;
-// the edited list is stored in the `enemyTypes` collection and replaces this one.
+// Default enemy types (SPEC §16.4) – the built-in enemy components; kids change
+// them (and add their own) in the component editor.
 //   armor 0..1 = damage reduction, coins = [min, max] dropped,
 //   ranged = shoots projectiles, flying = ignores roads and melee, boss = big.
 
@@ -12,8 +12,3 @@ export const DEFAULT_ENEMY_TYPES = [
   { id: 'troll', name: { cs: 'Troll', en: 'Troll' }, hp: 400, speed: 22, damage: 25, cooldown: 2.0, range: 40, armor: 0.25, coins: [20, 20], boss: true, color: '#0f766e' },
   { id: 'dragon', name: { cs: 'Drak', en: 'Dragon' }, hp: 300, speed: 32, damage: 20, cooldown: 2.0, range: 120, armor: 0.2, coins: [20, 20], flying: true, boss: true, ranged: true, color: '#dc2626' },
 ];
-
-/** The effective enemy list: the kids' edited one, or the defaults. */
-export function enemyTypesOf(db) {
-  return db.enemyTypes?.length ? db.enemyTypes : DEFAULT_ENEMY_TYPES;
-}

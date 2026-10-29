@@ -1,10 +1,12 @@
-// Game rules that kids/teachers can edit in the Rules editor (SPEC §16).
+// Global game rules edited in the Rules screen – only what does not belong to one
+// component: economy and timing, the hero's point system and upgrade prices,
+// soldier movement, building repair, selling. Everything that belongs to a
+// building, enemy, weapon or coin lives on that component (config/components.js).
 // Stored as one record { id: 'rules', ... } in the `rules` collection, so it is
-// part of the exported JSON and merges like every other record. Missing fields
-// fall back to the defaults below, so old save files keep working.
+// part of the exported JSON; missing fields fall back to the defaults below.
 
 import { BALANCE } from './balance.js';
-import { BUILD, TOWN_HALL_LEVELS, HERO_UPGRADE_COSTS } from './buildings.js';
+import { BUILD, HERO_UPGRADE_COSTS } from './buildings.js';
 import { HERO_RULES } from './heroStats.js';
 import { DEFAULT_UNLOCKS } from './unlocks.js';
 
@@ -14,11 +16,12 @@ export const DEFAULT_RULES = {
   id: RULES_ID,
   balance: { ...BALANCE },
   build: { ...BUILD, soldier: { ...BUILD.soldier } },
-  townHallLevels: TOWN_HALL_LEVELS.map((l) => ({ ...l })),
   heroUpgradeCosts: [...HERO_UPGRADE_COSTS],
   hero: { ...HERO_RULES },
-  unlocks: DEFAULT_UNLOCKS.map((u) => ({ ...u })),
+  unlocks: DEFAULT_UNLOCKS.map((u) => ({ ...u })), // hero upgrades only; buildings have rounds per level
 };
+
+const isHeroUnlock = (u) => u.key?.startsWith('hero:');
 
 /** Defaults overlaid with whatever a stored record defines. */
 export function mergeRules(rec) {
@@ -29,11 +32,9 @@ export function mergeRules(rec) {
     updatedAt: rec.updatedAt,
     balance: { ...d.balance, ...rec.balance },
     build: { ...d.build, ...rec.build, soldier: { ...d.build.soldier, ...rec.build?.soldier } },
-    // per level, so a record saved before a field existed (e.g. Town Hall arrows) gets the default
-    townHallLevels: rec.townHallLevels?.length ? rec.townHallLevels.map((l, i) => ({ ...d.townHallLevels[i], ...l })) : d.townHallLevels,
     heroUpgradeCosts: rec.heroUpgradeCosts?.length ? rec.heroUpgradeCosts : d.heroUpgradeCosts,
     hero: { ...d.hero, ...rec.hero },
-    unlocks: Array.isArray(rec.unlocks) ? rec.unlocks : d.unlocks,
+    unlocks: Array.isArray(rec.unlocks) ? rec.unlocks.filter(isHeroUnlock) : d.unlocks,
   };
 }
 

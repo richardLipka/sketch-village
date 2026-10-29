@@ -1,19 +1,14 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DEFAULT_BUILDING_TYPES } from '../config/buildings.js';
 import { DEFAULT_RULES } from '../config/rules.js';
 import { unlockLabel } from '../config/unlocks.js';
+import NumField from '../assets/NumField.jsx';
 
-// Edit the game rules: building levels, Town Hall levels, hero upgrade prices and
-// general numbers. Saved into the `buildingTypes` and `rules` collections, so
-// everything travels in the exported JSON file.
-
-const BUILDING_FIELDS = {
-  common: [['cost', 0, 999, 1], ['time', 1, 300, 1], ['hp', 1, 9999, 10]],
-  house: [['workers', 0, 10, 1]],
-  tower: [['damage', 0, 500, 1], ['range', 30, 600, 10], ['cooldown', 0.1, 10, 0.05]],
-  castle: [['soldierHp', 1, 999, 5], ['soldierDamage', 0, 200, 1], ['soldierCooldown', 0.1, 10, 0.1], ['soldierRespawn', 1, 120, 1]],
-};
+// Global game rules – only what doesn't belong to one component: the hero's
+// point system and upgrade prices / rounds, economy and timing, building repair
+// and selling, soldier movement. Buildings, enemies, weapons and coins are
+// edited with their pictures in the component editor (studio).
+// Saved as one record in the `rules` collection (part of the exported JSON).
 
 // [group, key, min, max, step, percent?]
 const GENERAL = [
@@ -22,85 +17,47 @@ const GENERAL = [
   ['balance', 'prep', 5, 300, 5],
   ['balance', 'rewardBase', 0, 200, 1],
   ['balance', 'earlyBonusPerSecond', 0, 5, 0.1],
-  ['balance', 'hpScalePerRound', 0, 50, 1, true],
+  ['balance', 'hpScalePerRound', 0, 0.5, 0.01, true],
   ['balance', 'coinLifetime', 5, 300, 5],
   ['balance', 'heroLives', 1, 20, 1],
   ['balance', 'heroRespawnDelay', 0, 120, 1],
-  ['balance', 'heroHealPerSecond', 0, 100, 1],
-  ['balance', 'heroHealRadius', 0, 300, 10],
-  ['balance', 'chestChance', 0, 100, 1, true],
+  ['balance', 'weaponSwitchTime', 0, 10, 0.5],
+  ['balance', 'chestChance', 0, 1, 0.01, true],
   ['balance', 'chestLifetime', 5, 300, 5],
   ['balance', 'chestCoins', 0, 200, 5],
-  ['build', 'sellRefund', 0, 100, 5, true],
-  ['build', 'workerSpeedup', 0, 100, 1, true],
-  ['build', 'regenPerSecond', 0, 20, 0.5, true],
+  ['build', 'sellRefund', 0, 1, 0.05, true],
+  ['build', 'workerSpeedup', 0, 1, 0.01, true],
+  ['build', 'regenPerSecond', 0, 0.2, 0.005, true],
   ['build', 'regenDelay', 0, 60, 1],
   ['build', 'interactRadius', 30, 400, 10],
-  ['soldier', 'max', 0, 10, 1],
   ['soldier', 'speed', 10, 300, 5],
   ['soldier', 'aggro', 30, 500, 10],
 ];
 
 // hero skill-point table (rules.hero)
 const HERO = [
-  ['hero', 'points', 1, 40, 1],
-  ['hero', 'statMax', 1, 20, 1],
-  ['hero', 'hp', 10, 2000, 10],
-  ['hero', 'meleeDamage', 0, 200, 1],
-  ['hero', 'meleePerPoint', 0, 50, 1],
-  ['hero', 'meleeRange', 20, 120, 5],
-  ['hero', 'meleeCooldown', 0.1, 5, 0.1],
-  ['hero', 'rangedDamage', 0, 200, 1],
-  ['hero', 'rangedPerPoint', 0, 50, 1],
-  ['hero', 'rangedRange', 50, 600, 10],
-  ['hero', 'rangedCooldown', 0.1, 10, 0.1],
-  ['hero', 'rangedCooldownPerPoint', 0, 1, 0.05],
-  ['hero', 'rangedMinCooldown', 0.1, 5, 0.1],
-  ['hero', 'armorPerPoint', 0, 30, 1, true],
-  ['hero', 'armorMax', 0, 95, 5, true],
-  ['hero', 'speed', 20, 400, 5],
-  ['hero', 'speedPerPoint', 0, 60, 1],
-  ['hero', 'magicDamage', 0, 200, 1],
-  ['hero', 'magicRange', 50, 600, 10],
-  ['hero', 'magicCooldown', 0.3, 10, 0.1],
+  ['points', 1, 40, 1], ['statMax', 1, 20, 1], ['hp', 10, 2000, 10],
+  ['meleeDamage', 0, 200, 1], ['meleePerPoint', 0, 50, 1], ['meleeRange', 20, 120, 5], ['meleeCooldown', 0.1, 5, 0.1],
+  ['rangedDamage', 0, 200, 1], ['rangedPerPoint', 0, 50, 1], ['rangedRange', 50, 600, 10], ['rangedCooldown', 0.1, 10, 0.1],
+  ['rangedCooldownPerPoint', 0, 1, 0.05], ['rangedMinCooldown', 0.1, 5, 0.1],
+  ['armorPerPoint', 0, 0.3, 0.01, true], ['armorMax', 0, 0.95, 0.05, true],
+  ['speed', 20, 400, 5], ['speedPerPoint', 0, 60, 1],
+  ['magicDamage', 0, 200, 1], ['magicRange', 50, 600, 10], ['magicCooldown', 0.3, 10, 0.1],
 ];
 
-const ICON = { house: '🏠', tower: '🗼', castle: '🏰' };
 const clone = (x) => JSON.parse(JSON.stringify(x));
-const round = (v) => Math.round(v * 1000) / 1000;
+const grid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '8px 18px' };
 
-function Num({ value, onChange, min, max, step, pct, disabled }) {
-  const shown = value === undefined ? '' : pct ? round(value * 100) : value;
-  return (
-    <input
-      type="number" min={min} max={max} step={step} value={shown} disabled={disabled} style={{ width: 76 }}
-      onChange={(e) => {
-        const v = Number(e.target.value);
-        if (e.target.value === '' || Number.isNaN(v)) return;
-        const c = Math.min(max, Math.max(min, v));
-        onChange(pct ? c / 100 : c);
-      }}
-    />
-  );
-}
-
-export default function RulesEditor({ buildingTypes, rules, onSave }) {
-  const { t, i18n } = useTranslation();
-  const [types, setTypes] = useState(() => clone(buildingTypes));
+export default function RulesEditor({ rules, onSave }) {
+  const { t } = useTranslation();
   const [r, setR] = useState(() => clone(rules));
   const [dirty, setDirty] = useState(false);
   const [saved, setSaved] = useState(false);
-  const lang = i18n.language;
 
   const touch = () => { setDirty(true); setSaved(false); };
-  const setLevel = (ti, li, key, v) => {
-    setTypes((ts) => ts.map((tp, i) => (i !== ti ? tp : { ...tp, levels: tp.levels.map((l, j) => (j === li ? { ...l, [key]: v } : l)) })));
-    touch();
-  };
-  const setTh = (li, key, v) => { setR((x) => ({ ...x, townHallLevels: x.townHallLevels.map((l, j) => (j === li ? { ...l, [key]: v } : l)) })); touch(); };
   const setHeroCost = (li, v) => { setR((x) => ({ ...x, heroUpgradeCosts: x.heroUpgradeCosts.map((c, j) => (j === li ? v : c)) })); touch(); };
   const setUnlock = (key, round) => { setR((x) => ({ ...x, unlocks: x.unlocks.map((u) => (u.key === key ? { ...u, round } : u)) })); touch(); };
-  const getGeneral =(g, k) => (g === 'soldier' ? r.build.soldier[k] : r[g][k]);
+  const getGeneral = (g, k) => (g === 'soldier' ? r.build.soldier[k] : r[g][k]);
   const setGeneral = (g, k, v) => {
     setR((x) => (g === 'soldier'
       ? { ...x, build: { ...x.build, soldier: { ...x.build.soldier, [k]: v } } }
@@ -109,19 +66,24 @@ export default function RulesEditor({ buildingTypes, rules, onSave }) {
   };
 
   const save = () => {
-    const now = new Date().toISOString();
-    onSave(types.map((tp) => ({ ...tp, updatedAt: now })), { ...r, updatedAt: now });
+    onSave({ ...r, updatedAt: new Date().toISOString() });
     setDirty(false);
     setSaved(true);
   };
   const reset = () => {
     if (!confirm(t('rules.confirm_reset'))) return;
-    setTypes(clone(DEFAULT_BUILDING_TYPES));
     setR(clone(DEFAULT_RULES));
     touch();
   };
 
-  const levelHead = (n) => Array.from({ length: n }, (_, i) => <th key={i}>{t('rules.level_n', { n: i + 1 })}</th>);
+  const field = (label, value, [min, max, step, pct], onChange) => (
+    <label key={label} className="row small" style={{ justifyContent: 'space-between', gap: 8 }}>
+      <span>{label}</span>
+      <span>
+        <NumField value={value} min={min} max={max} step={step} pct={pct} onChange={onChange} />{pct ? ' %' : ''}
+      </span>
+    </label>
+  );
 
   return (
     <section>
@@ -133,55 +95,18 @@ export default function RulesEditor({ buildingTypes, rules, onSave }) {
         {saved && <span className="small" style={{ color: 'var(--ok, #15803d)' }}>✓ {t('rules.saved')}</span>}
       </div>
 
-      <h2>{t('rules.buildings')}</h2>
-      <div style={{ display: 'grid', gap: 12 }}>
-        {types.map((tp, ti) => (
-          <div key={tp.id} className="sketch-card" style={{ padding: 12, overflowX: 'auto' }}>
-            <b style={{ fontSize: 24 }}>{ICON[tp.id] ?? '🏗️'} {tp.name?.[lang] ?? tp.id}</b>
-            <table className="rules-table">
-              <thead><tr><th />{levelHead(tp.levels.length)}</tr></thead>
-              <tbody>
-                {[...BUILDING_FIELDS.common, ...(BUILDING_FIELDS[tp.id] ?? [])].map(([key, min, max, step]) => (
-                  <tr key={key}>
-                    <td>{t(`rules.f_${key}`)}</td>
-                    {tp.levels.map((l, li) => (
-                      <td key={li}><Num value={l[key]} min={min} max={max} step={step} onChange={(v) => setLevel(ti, li, key, v)} /></td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ))}
-      </div>
-
-      <h2>🏛️ {t('rules.townhall')}</h2>
-      <div className="sketch-card" style={{ padding: 12, overflowX: 'auto' }}>
-        <table className="rules-table">
-          <thead><tr><th />{levelHead(r.townHallLevels.length)}</tr></thead>
-          <tbody>
-            {[['hp', 1, 99999, 50], ['cost', 0, 999, 5], ['time', 1, 300, 1], ['damage', 0, 500, 1], ['range', 0, 600, 10], ['cooldown', 0.1, 10, 0.05]].map(([key, min, max, step]) => (
-              <tr key={key}>
-                <td>{t(`rules.f_${key}`)}</td>
-                {r.townHallLevels.map((l, li) => (
-                  <td key={li}>{li === 0 && (key === 'cost' || key === 'time') ? '—' : <Num value={l[key]} min={min} max={max} step={step} onChange={(v) => setTh(li, key, v)} />}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <p className="small muted">{t('rules.townhall_hint')}</p>
+      <h2>🎲 {t('rules.general')}</h2>
+      <div className="sketch-card" style={{ padding: 12 }}>
+        <div style={grid}>
+          {GENERAL.map(([g, key, ...lim]) => field(t(`rules.g_${g}_${key}`), getGeneral(g, key), lim, (v) => setGeneral(g, key, v)))}
+        </div>
+        <p className="small muted">{t('rules.waves_note')}</p>
       </div>
 
       <h2>🦸 {t('rules.hero')}</h2>
       <div className="sketch-card" style={{ padding: 12 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '8px 18px' }}>
-          {HERO.map(([g, key, min, max, step, pct]) => (
-            <label key={key} className="row small" style={{ justifyContent: 'space-between', gap: 8 }}>
-              <span>{t(`rules.h_${key}`)}{pct ? ' (%)' : ''}</span>
-              <Num value={getGeneral(g, key)} min={min} max={max} step={step} pct={pct} onChange={(v) => setGeneral(g, key, v)} />
-            </label>
-          ))}
+        <div style={grid}>
+          {HERO.map(([key, ...lim]) => field(t(`rules.h_${key}`), r.hero[key], lim, (v) => setGeneral('hero', key, v)))}
         </div>
         <p className="small muted">{t('rules.hero_hint')}</p>
       </div>
@@ -190,36 +115,13 @@ export default function RulesEditor({ buildingTypes, rules, onSave }) {
       <div className="sketch-card" style={{ padding: 12 }}>
         <div className="row small">
           {r.heroUpgradeCosts.map((c, li) => (
-            <label key={li}>{t('rules.level_n', { n: li + 1 })} <Num value={c} min={0} max={999} step={5} onChange={(v) => setHeroCost(li, v)} /> 🪙</label>
+            <label key={li}>{t('rules.level_n', { n: li + 1 })} <NumField value={c} min={0} max={999} step={5} onChange={(v) => setHeroCost(li, v)} /> 🪙</label>
           ))}
         </div>
-        <p className="small muted">{t('rules.hero_costs_hint')}</p>
-      </div>
-
-      <h2>🎁 {t('rules.unlocks')}</h2>
-      <div className="sketch-card" style={{ padding: 12 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '6px 18px' }}>
-          {r.unlocks.map((u) => (
-            <label key={u.key} className="row small" style={{ justifyContent: 'space-between', gap: 8 }}>
-              <span>{unlockLabel(u.key, t)}</span>
-              <span>{t('rules.from_round')} <Num value={u.round} min={1} max={99} step={1} onChange={(v) => setUnlock(u.key, v)} /></span>
-            </label>
-          ))}
+        <div style={{ ...grid, marginTop: 10 }}>
+          {r.unlocks.map((u) => field(`🎁 ${unlockLabel(u.key, t)} – ${t('rules.from_round')}`, u.round, [1, 99, 1], (v) => setUnlock(u.key, v)))}
         </div>
-        <p className="small muted">{t('rules.unlocks_hint')}</p>
-      </div>
-
-      <h2>🎲 {t('rules.general')}</h2>
-      <div className="sketch-card" style={{ padding: 12 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '8px 18px' }}>
-          {GENERAL.map(([g, key, min, max, step, pct]) => (
-            <label key={`${g}.${key}`} className="row small" style={{ justifyContent: 'space-between', gap: 8 }}>
-              <span>{t(`rules.g_${g}_${key}`)}{pct ? ' (%)' : ''}</span>
-              <Num value={getGeneral(g, key)} min={min} max={max} step={step} pct={pct} onChange={(v) => setGeneral(g, key, v)} />
-            </label>
-          ))}
-        </div>
-        <p className="small muted">{t('rules.waves_note')}</p>
+        <p className="small muted">{t('rules.hero_costs_hint')} {t('rules.components_note')}</p>
       </div>
     </section>
   );

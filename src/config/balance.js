@@ -12,8 +12,6 @@ export const BALANCE = {
   coinBlink: 5,
   heroLives: 5,
   heroRespawnDelay: 10, // s; the hero always comes back at the Town Hall
-  heroHealPerSecond: 8, // HP/s while the hero stands at the Town Hall
-  heroHealRadius: 40, // px around the Town Hall edge
   weaponSwitchTime: 2, // s to change the weapon in hand (no attacks meanwhile)
   chestChance: 0.02, // chance an enemy drops a weapon chest (bosses always do)
   chestLifetime: 60, // s before an unpicked chest disappears

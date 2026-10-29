@@ -22,6 +22,7 @@
 //   lost:      Town Hall destroyed
 
 import { DEFAULT_BUILDING_TYPES } from '../config/buildings.js';
+import { hasFeature } from '../config/features.js';
 import { DEFAULT_RULES } from '../config/rules.js';
 import { DEFAULT_WEAPONS, WEAPON_CLASSES, withWeapon, normalizeItem, isWeapon } from '../config/weapons.js';
 import { heroNumbers, clampPoints, HERO_STATS, DEFAULT_HERO_POINTS } from '../config/heroStats.js';
@@ -65,13 +66,20 @@ export class World {
     if (!this.coinTypes.length) this.coinTypes = [{ value: 1, key: 'coin' }];
     this.b = balance;
     this.cfg = rules.build;
-    this.thLevels = rules.townHallLevels;
     this.heroCosts = rules.heroUpgradeCosts;
-    this.unlockAt = Object.fromEntries((rules.unlocks ?? []).map((u) => [u.key, u.round]));
     this.map = map;
     this.grid = grid;
     this.types = Object.fromEntries(enemyTypes.map((t) => [t.id, t]));
-    this.buildingTypes = Object.fromEntries(buildingTypes.map((t) => [t.id, t]));
+    // building types: the `core` one is the Town Hall in the centre, the rest go on spots;
+    // what a building does comes from its features (config/features.js)
+    this.coreType = buildingTypes.find((t) => t.core) ?? DEFAULT_BUILDING_TYPES.find((t) => t.core);
+    this.thLevels = this.coreType.levels;
+    this.buildingTypes = Object.fromEntries(buildingTypes.filter((t) => !t.core).map((t) => [t.id, t]));
+    // unlock rounds: hero upgrades from the rules, buildings from their levels
+    this.unlockAt = Object.fromEntries((rules.unlocks ?? []).filter((u) => u.key.startsWith('hero:')).map((u) => [u.key, u.round]));
+    for (const t of [this.coreType, ...Object.values(this.buildingTypes)]) {
+      t.levels.forEach((l, i) => { if ((l.round ?? 1) > 1) this.unlockAt[`${t.id}:${i + 1}`] = l.round; });
+    }
     this.waves = waves;
     this.rng = mulberry32(seed);
     this.nextId = 1;
@@ -84,7 +92,7 @@ export class World {
 
     const thHp = this.thLevels[0].hp;
     this.townHall = {
-      kind: 'townhall', x: map.centre.x, y: map.centre.y, level: 1, hp: thHp, maxHp: thHp,
+      kind: 'townhall', id: -1, type: this.coreType.id, x: map.centre.x, y: map.centre.y, level: 1, hp: thHp, maxHp: thHp,
       radius: balance.townHallRadius, lastHit: -Infinity, upgrade: null, // { progress, time }
       cooldown: 0, // its arrows
     };
@@ -345,9 +353,16 @@ export class World {
   }
 
   endRound() {
-    const reward = this.waves.rounds[this.round].reward ?? roundReward(this.b, this.round);
+    // the round's reward + what buildings with `income` earn
+    let income = 0;
+    for (const b of this.buildings) {
+      const t = this.buildingTypes[b.type];
+      if (b.level > 0 && b.state !== 'ruin' && hasFeature(t, 'income')) income += t.levels[b.level - 1].income ?? 0;
+    }
+    if (hasFeature(this.coreType, 'income')) income += this.thLevels[this.townHall.level - 1].income ?? 0;
+    const reward = (this.waves.rounds[this.round].reward ?? roundReward(this.b, this.round)) + income;
     this.coins += reward;
-    this.emit('roundEnd', { round: this.round + 1, reward });
+    this.emit('roundEnd', { round: this.round + 1, reward, income });
     this.round++;
     if (this.round >= this.totalRounds) {
       this.phase = 'won';
@@ -366,8 +381,10 @@ export class World {
   get workers() {
     let n = 0;
     for (const b of this.buildings) {
-      if (b.type === 'house' && b.level > 0 && b.state !== 'ruin') n += this.buildingTypes.house.levels[b.level - 1].workers ?? 0;
+      const t = this.buildingTypes[b.type];
+      if (b.level > 0 && b.state !== 'ruin' && hasFeature(t, 'workers')) n += t.levels[b.level - 1].workers ?? 0;
     }
+    if (hasFeature(this.coreType, 'workers')) n += this.thLevels[this.townHall.level - 1].workers ?? 0;
     return n;
   }
 
@@ -421,7 +438,7 @@ export class World {
     const th = this.townHall;
     if (th.upgrade) return 'busy';
     if (th.level >= this.thLevels.length) return 'max';
-    if (!this.unlocked(`townhall:${th.level + 1}`)) return 'locked';
+    if (!this.unlocked(`${th.type}:${th.level + 1}`)) return 'locked';
     if (this.hero.dead) return 'dead';
     if (!this.heroNear(th, th.radius)) return 'far';
     if (this.coins < this.thLevels[th.level].cost) return 'coins';
@@ -470,11 +487,11 @@ export class World {
     const th = this.townHall;
     const next = this.thLevels[th.level];
     return {
-      kind: 'townhall', level: th.level, maxLevel: this.thLevels.length, hp: Math.ceil(th.hp), maxHp: th.maxHp,
+      kind: 'townhall', type: th.type, level: th.level, maxLevel: this.thLevels.length, hp: Math.ceil(th.hp), maxHp: th.maxHp,
       near: this.heroNear(th, th.radius),
       progress: th.upgrade ? th.upgrade.progress / th.upgrade.time : null,
-      upgrade: next ? { toLevel: th.level + 1, cost: next.cost, hp: next.hp, reason: this.townHallUpgradeCheck(), round: this.unlockRound(`townhall:${th.level + 1}`) } : null,
-      arrows: this.thLevels[th.level - 1],
+      upgrade: next ? { toLevel: th.level + 1, cost: next.cost, hp: next.hp, reason: this.townHallUpgradeCheck(), stats: next, round: this.unlockRound(`${th.type}:${th.level + 1}`) } : null,
+      stats: this.thLevels[th.level - 1],
       shop: Object.values(this.weaponTypes).filter((w) => w.shop).map((w) => ({
         id: w.id, kind: w.kind, price: w.price ?? 0, round: w.round ?? 1, reason: this.shopCheck(w.id),
       })),
@@ -566,13 +583,8 @@ export class World {
   updateTownHall(dt) {
     const th = this.townHall;
     this.regen(th, dt);
-    const arrows = this.thLevels[th.level - 1];
-    if (th.hp > 0 && arrows?.damage > 0 && arrows.range > 0) this.towerShoot(th, arrows, dt);
-    // the hero heals while standing at the Town Hall
-    const h = this.hero;
-    if (!h.dead && h.hp < h.maxHp && dist(h, th) <= th.radius + this.b.heroHealRadius) {
-      h.hp = Math.min(h.maxHp, h.hp + this.b.heroHealPerSecond * dt);
-    }
+    // the Town Hall's features work like a building's (arrows, healing the hero…)
+    if (th.hp > 0) this.useFeatures(th, this.coreType, this.thLevels[th.level - 1], dt);
     if (th.upgrade) {
       th.upgrade.progress += dt * this.buildSpeed;
       if (th.upgrade.progress >= th.upgrade.time) {
@@ -602,9 +614,18 @@ export class World {
     }
     this.regen(b, dt);
     if (b.level === 0) return; // nothing works before level 1 is finished
-    const stats = t.levels[b.level - 1];
-    if (b.type === 'tower') this.towerShoot(b, stats, dt);
-    if (b.type === 'castle') this.castleSpawn(b, stats, dt);
+    this.useFeatures(b, t, t.levels[b.level - 1], dt);
+  }
+
+  /** What a ready building (or the Town Hall) does every frame, by its features. */
+  useFeatures(b, type, stats, dt) {
+    if (hasFeature(type, 'shoots') && stats.damage > 0 && stats.range > 0) this.towerShoot(b, stats, dt);
+    if (hasFeature(type, 'soldiers')) this.castleSpawn(b, stats, dt);
+    if (hasFeature(type, 'healHero')) {
+      const h = this.hero;
+      if (!h.dead && h.hp < h.maxHp && dist(h, b) <= (stats.healRange ?? 80)) h.hp = Math.min(h.maxHp, h.hp + (stats.heal ?? 0) * dt);
+    }
+    // workers and income are counted elsewhere (buildSpeed, endRound)
   }
 
   // distance along the road (ground) or straight (flying) to the Town Hall
@@ -631,7 +652,7 @@ export class World {
 
   castleSpawn(b, stats, dt) {
     const mine = this.soldiers.filter((s) => s.castleId === b.id);
-    if (mine.length >= this.cfg.soldier.max) return;
+    if (mine.length >= (stats.soldierCount ?? 3)) return;
     b.spawnTimer -= dt;
     if (b.spawnTimer > 0) return;
     b.spawnTimer = stats.soldierRespawn;
@@ -649,8 +670,8 @@ export class World {
   }
 
   updateSoldier(s, dt) {
-    const castle = this.buildings.find((b) => b.id === s.castleId);
-    if (!castle || castle.state === 'ruin') { s.dead = true; return; }
+    const castle = s.castleId === this.townHall.id ? this.townHall : this.buildings.find((b) => b.id === s.castleId);
+    if (!castle || castle.state === 'ruin' || castle.hp <= 0) { s.dead = true; return; }
     s.cooldown = Math.max(0, s.cooldown - dt);
     const cfg = this.cfg.soldier;
 

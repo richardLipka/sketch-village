@@ -177,7 +177,35 @@ export const HERO_STAT_TABLE = {
 - **Soldiers**: auto-controlled units, walk on paths, attack the nearest enemy, **significantly weaker than the hero** (e.g. ~20 % of hero HP/damage). **Max 3 alive per castle**; a dead soldier is replaced after the castle's respawn interval. Castle level raises soldier strength (not count). With no enemy around, soldiers walk back and guard next to their castle. Kids draw a `soldier` asset.
 - Every building has **limited HP** and **repairs itself slowly** (1 % max HP/s, starting 5 s after the last hit).
 - **Destroyed** building → rubble on the spot; can be **rebuilt for coins** (= level-1 build cost) or cleared for free. A rebuilt building starts at **level 1 – upgrades are lost**.
-- All numbers live in `buildingTypes` config (cost, buildTime, hp, regen, damage, range, cooldown, workers, soldiers per level).
+- **Buildings are data, built from features.** Each building type is a component (§7.1); what it does comes from the features switched on in the studio, so new kinds of buildings are added without code.
+
+### 7.1 Components and features
+
+Every game part is one **component** – a record in `assets` with its pictures *and* all its numbers, edited together in the studio (the general component editor):
+
+| Category | Numbers edited with the pictures |
+|---|---|
+| `building` | features + a table of levels (1–5); or `variantOf: <type>` = just another look of an existing type |
+| `enemy` | hp, speed, damage, cooldown, range, armor, coin drop, flying / ranged / boss, colour |
+| `weapon`, `shield`, `armor` | class, one/two hands, damage / range / cooldown / splash or armor, price, shop round, chest drop weight, starter |
+| `coin` | value |
+| `hero` | skill points (+ drawings per weapon class) |
+
+Built-in components (⭐) ship with the game, can be edited and restored ("Original numbers"), and come back after "Delete all". Kids can duplicate them or create new ones.
+
+Building **features** (`config/features.js`) – each adds its own columns to the level table:
+
+| Feature | Level fields | Effect |
+|---|---|---|
+| 👷 workers | workers | speeds up all construction |
+| 🏹 shoots | damage, range, cooldown | arrows at the enemy nearest to the centre |
+| 🛡️ soldiers | soldierCount, soldierHp, soldierDamage, soldierCooldown, soldierRespawn | keeps up to N soldiers alive |
+| 🪙 income | income | coins at the end of every round |
+| ❤️ healHero | heal, healRange | heals the hero standing nearby |
+
+Every level also has `cost`, `time`, `hp` and `round` (the round from which that level can be built). The **Town Hall** is the building type marked `core` – it uses the same features (default: shoots + healHero) and cannot be deleted. Without a picture a type is drawn as a shape picked from its main feature.
+
+**Rules editor** keeps only what belongs to no single component: economy and timing, selling / repair, soldier movement, the hero point table, hero upgrade prices and their unlock rounds.
 
 ## 8. Economy
 
@@ -191,11 +219,11 @@ export const HERO_STAT_TABLE = {
 - Spawn only from **caves** on map edges, walk along paths towards the **village centre / Town Hall** (flow-field / BFS from centre, shared by all enemies).
 - **On the way they attack everything in range** – buildings, soldiers and the hero. While something is in range they stop and fight; when it is gone they continue to the centre.
 - Target priority when several things are in range: the nearest.
-- Enemy types defined in config (each linked to an `enemy` asset), editable in game; kids can also **add their own enemy types** (name, colour, flies / shoots / boss, numbers) and delete them – the 7 built-in ones can be changed but not deleted:
+- Enemy types are `enemy` components (§7.1): picture and numbers in one record. Kids edit the built-in ones and add their own:
 
 ```js
-{ id: 'goblin', asset: 'a7', name: { cs: 'Skřet', en: 'Goblin' },
-  hp: 30, speed: 40, damage: 5, attackCooldown: 1.0, range: 30, coinDrop: [1, 3] }
+{ id: 'goblin', category: 'enemy', name: { cs: 'Skřet', en: 'Goblin' }, images: ['data:…'], builtIn: true,
+  stats: { hp: 30, speed: 40, damage: 5, attackCooldown: 1.0, range: 30, coinDrop: [1, 3] } }
 ```
   - **Both melee and ranged enemies.** Ranged enemies use the same model with larger `range` + `projectileAsset`; they stop at range and shoot.
   - Enemies may have `armor` too (same formula as hero).
@@ -230,7 +258,7 @@ Waves are data (JSON), editable in an in-game editor and importable.
   - Next-wave preview (which enemies, from which caves) shown next to the Ready button – standard TD convention.
   - Each round may override its **reward** and the **prep time before it** (wave editor; empty = automatic).
 - **Pacing target**: 20 waves of **40–60 s** each with **20 s** to recover between them (first prep 45 s). Spawns are spread over ~25–32 s; slow enemies (orcs, bosses) come first so they don't drag a wave out. `balance.test.js` checks the average length of every wave.
-- **Progression**: something new unlocks after **every** wave (`config/unlocks.js`, editable in the Rules editor): round 1 house + tower → 2 castle → 3 Town Hall 2 → 4 hero bow +1 → 5 tower L2 → 6 sword +1 → 7 house L2 → 8 armor +1 → 9 castle L2 → 10 speed +1 → 11 Town Hall 3 → 12 tower L3 → 13 bow +2 → 14 house L3 → 15 sword +2 → 16 castle L3 → 17 armor +2 → 18 speed +2 → 19 bow +3, sword +3 → 20 armor +3, speed +3. Locked buttons show 🔒 "Available from round N"; new items are announced and listed in the HUD while preparing.
+- **Progression**: something new unlocks after **every** wave (building levels: the `round` of each level in the component editor; hero upgrades: Rules editor): round 1 house + tower → 2 castle → 3 Town Hall 2 → 4 hero bow +1 → 5 tower L2 → 6 sword +1 → 7 house L2 → 8 armor +1 → 9 castle L2 → 10 speed +1 → 11 Town Hall 3 → 12 tower L3 → 13 bow +2 → 14 house L3 → 15 sword +2 → 16 castle L3 → 17 armor +2 → 18 speed +2 → 19 bow +3, sword +3 → 20 armor +3, speed +3. Locked buttons show 🔒 "Available from round N"; new items are announced and listed in the HUD while preparing.
 - Difficulty scaling: enemy HP × `(1 + hpScalePerRound × (round − 1))` (Rules editor).
 
 ## 11. Win / lose
@@ -246,7 +274,7 @@ Waves are data (JSON), editable in an in-game editor and importable.
 3. Hero select
 4. Game (map + HUD + build menu)
 5. Round summary / Victory / Defeat
-6. Editors – **all open to kids**: Map Painter/Editor, Hero editor (stat points), **Wave editor** (rounds, groups, caves, timings), enemy editor. Building-stats editing too. "Reset to defaults" button in each editor so experiments are safe.
+6. Editors – **all open to kids**: Map Painter/Editor, **Wave editor** (rounds, groups, caves, timings), the studio's component editor (pictures + numbers of buildings, enemies, weapons, coins, heroes) and the Rules editor (global rules). "Reset to defaults" button in each editor so experiments are safe.
 
 ## 13a. Save file (one JSON)
 
@@ -258,15 +286,17 @@ Everything is downloadable as **one JSON file** and importable on another comput
 ```json
 {
   "format": "sketch-village",
-  "version": 1,
+  "version": 2,
   "exportedAt": "2026-10-29T12:00:00Z",
   "settings": { "language": "cs" },
   "assets": [
     { "id": "a1", "category": "hero", "name": "Rytíř Kuba", "author": "Kuba", "images": ["data:image/webp;base64,..."], "stats": { "melee": 3, "ranged": 3, "armor": 2, "speed": 2 }, "createdAt": "…", "updatedAt": "…" },
-    { "id": "a2", "category": "tower", "name": "Věž", "author": "Ema", "images": ["data:...", "data:...", null] }
+    { "id": "tower", "category": "building", "name": { "cs": "Věž", "en": "Tower" }, "builtIn": true, "images": ["data:...", "data:...", null],
+      "stats": { "features": ["shoots"], "levels": [ { "cost": 25, "time": 12, "hp": 500, "round": 1, "damage": 8, "range": 180, "cooldown": 1 } ] } },
+    { "id": "a2", "category": "building", "name": "Ema's tower", "images": ["data:..."], "stats": { "variantOf": "tower" } },
+    { "id": "goblin", "category": "enemy", "name": { "cs": "Skřet", "en": "Goblin" }, "images": ["data:..."], "stats": { "hp": 30, "speed": 40, "damage": 5, "coinDrop": [1, 3] } }
   ],
-  "enemyTypes": [ { "id": "goblin", "name": { "cs": "Skřet", "en": "Goblin" }, "asset": "a7", "hp": 30, "speed": 40, "damage": 5, "coinDrop": [1, 3] } ],
-  "buildingTypes": [ { "id": "house", "asset": "a3", "levels": [ { "cost": 10, "buildTime": 8, "hp": 50, "workers": 1 } ] } ],
+  "rules": [ { "id": "rules", "balance": { }, "build": { }, "hero": { }, "heroUpgradeCosts": [15, 30, 50], "unlocks": [ { "key": "hero:ranged:1", "round": 4 } ] } ],
   "maps": [
     {
       "id": "m1", "name": { "cs": "Louka", "en": "Meadow" },
@@ -285,7 +315,7 @@ Everything is downloadable as **one JSON file** and importable on another comput
 ```
 
 - Storage at runtime: IndexedDB; the JSON is the exchange format.
-- Version field + migration function for future format changes.
+- Version field + migration (`data/migrate.js`): version-1 files (separate `enemyTypes`, `buildingTypes`, `weapons`, `rules.townHallLevels`, per-type drawing categories) are converted into components on load and after import.
 - Export can also be per map (map + the assets it uses) `TBD`.
 
 ## 13. Project structure
@@ -294,12 +324,12 @@ Everything is downloadable as **one JSON file** and importable on another comput
 src/
   main.jsx, App.jsx
   ui/            sketch.css (CSS wobble instead of Rough.js), LanguageSwitcher, FullscreenButton, Modal
-  assets/        categories.js, CameraCapture, AssetCropper, BackgroundRemover + bgRemoval.js, SketchPad, ImageSlot, AssetEditor, AssetStudio, HeroStatsEditor
-  data/          saveFile.js (JSON + merge), store.js (IndexedDB), defaultData.js (class pack), DataPanel
-  config/        balance, buildings, heroStats, enemies, waves (defaults) + rules.js (edited rules over defaults)
+  assets/        categories.js, CameraCapture, AssetCropper, BackgroundRemover + bgRemoval.js, SketchPad, ImageSlot, AssetStudio, AssetEditor (component editor), BuildingStatsEditor, EnemyStatsEditor, ItemStatsEditor, HeroStatsEditor, NumField
+  data/          saveFile.js (JSON + merge), migrate.js (v1 → components), store.js (IndexedDB), defaultData.js (class pack), DataPanel
+  config/        components.js (built-in components + derived lists), features.js, balance, buildings, heroStats, enemies, weapons, waves (defaults) + rules.js (global rules over defaults)
   logic/         pathGrid, pathfinding, mapModel, waves, world (whole simulation), balanceBot  ← pure, unit-tested
   maps/          MapList, MapPainter, WaveEditor, mapRuntime (canvas helpers, sample map)
-  game/          PlaySetup, GameView (React ↔ Phaser), GameScene, Hud, BuildPanel, EnemyEditor, RulesEditor, sound.js, tutorial.js
+  game/          PlaySetup, GameView (React ↔ Phaser), GameScene, GameOverlay, BuildPanel, RulesEditor, sound.js, tutorial.js
   locales/       cs.json, en.json
 public/default-data.json   class pack (empty by default)
 ```
@@ -316,6 +346,7 @@ public/default-data.json   class pack (empty by default)
 5c. **Pacing & progression** ✅ – waves retimed to 40–60 s (bot-measured over 8 seeds: averages 40–57 s, all games won, ~6 buildings lost per 8 games, all late), unlock schedule with something new after every wave, dragon speed 25 → 32, bot hunts enemies attacking buildings before collecting coins (like a kid would).
 5d. **v1.1** ✅ – one click builds / upgrades / sells (fixed a bug where the panel's buttons were remounted on every HUD refresh and swallowed the first click; no confirmations); hero respawns after **10 s** at the **Town Hall**, which **heals** a hero standing next to it (8 HP/s) and **shoots arrows** like a weak tower (5 / 8 / 12 dmg by level, editable); maps take **any number of building spots** (1–30), the separate hero-start marker is gone; **weapons** (§6.3); waves re-tuned for the stronger defence (spawn spread ×1.2, enemy HP +5 %/round): bot averages 42–54 s per wave, all games won.
 5e. **v1.2** ✅ – **equipment**: backpack + right hand (weapon), left hand (shield, +armor), body armor; two-handed weapons (bows, battle axe, fire staff) take both hands; the hero starts with a weak wooden sword (in hand) and a short bow; changing weapons takes **2 s** (no attacks meanwhile); the attack buttons pick a weapon of that class. Weapons, shields and armor **drawn in the studio are items** with their numbers set next to the drawing (class, one/two hands, damage, reach, speed, splash / damage absorbed, price, shop round, chest chance); the Weapons editor keeps the built-in ones. **Coins have values**: every coin drawing has its own value; drops are paid in the biggest coins that fit (default 1 and 5 without drawings). **Ready** also advances buildings/upgrades in progress by the skipped prep time. Selling asks "Really?" again; upgrades are one click. **Game controls laid over the map**: coins/workers/Town Hall top left, lives top centre, wave info top right, attack types bottom right with equipment above, tools bottom centre. **Rugged road edges** generated from the map (picture only). Decorations: picture list of every drawing, only on grass. Drawing editor: crop, load from disk, magic-wand strength (all undoable). **Performance**: HUD snapshot sent to React only when it changes (~10× fewer renders), memoized overlay pieces with stable callbacks, the build panel refreshes itself, the Phaser game is no longer recreated by language changes or new callbacks, health bars / rings / scaffolding redrawn only when their value changes, pooled floating texts and effects, Phaser's unused audio disabled.
+5f. **Components** ✅ – every game part is one component (pictures + all numbers) edited in the studio, which became the general component editor (§7.1). Buildings are made from **features** (workers, arrows, soldiers, income, hero healing) with a table of 1–5 levels whose fields follow the features; the Town Hall is the `core` building type with the same features; "another look" components add drawings to an existing type. Enemies, weapons/shields/armor and coins carry their numbers next to their drawings; the separate Enemies and Weapons screens are gone and the Rules editor keeps only global rules. Old data and version-1 save files are migrated automatically. Tests cover new building kinds made only from data (market, well, 4-level tower).
 6. **Later** – rotating decorations, a "+" mark on reused level drawings, a round-summary card, per-map export, playtests on a real tablet and with kids, animated sprites (frame sheets photographed from a printed template), longbowmen soldiers that can hit flying enemies, walls.
 
 ## 15. Open questions

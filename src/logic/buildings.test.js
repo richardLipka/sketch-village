@@ -7,10 +7,12 @@ import { COLLECTIONS } from '../data/saveFile.js';
 import { DEFAULT_UNLOCKS } from '../config/unlocks.js';
 
 // Plus-shaped roads (3 cells wide) crossing at the centre; spots next to the roads.
-// these tests check buildings, not the unlock schedule → everything unlocked
+// these tests check buildings, not the unlock schedule → everything from round 1
 const OPEN = { ...DEFAULT_RULES, unlocks: [] };
+const OPEN_TYPES = DEFAULT_BUILDING_TYPES.map((t) => ({ ...t, levels: t.levels.map((l) => ({ ...l, round: 1 })) }));
+const withType = (id, patch) => OPEN_TYPES.map((t) => (t.id === id ? { ...t, ...patch } : t));
 
-function makeWorld({ coins = 500, rounds = [{ groups: [] }, { groups: [] }], rules = OPEN } = {}) {
+function makeWorld({ coins = 500, rounds = [{ groups: [] }, { groups: [] }], rules = OPEN, buildingTypes = OPEN_TYPES } = {}) {
   const cols = 80, rows = 45, cell = 16;
   const walk = new Uint8Array(cols * rows);
   for (let x = 0; x < cols; x++) for (const y of [21, 22, 23]) walk[y * cols + x] = 1;
@@ -27,7 +29,7 @@ function makeWorld({ coins = 500, rounds = [{ groups: [] }, { groups: [] }], rul
     ],
   };
   const w = new World({
-    map, grid: { cols, rows, cell, walk }, enemyTypes: DEFAULT_ENEMY_TYPES, seed: 7, rules,
+    map, grid: { cols, rows, cell, walk }, enemyTypes: DEFAULT_ENEMY_TYPES, seed: 7, rules, buildingTypes,
     waves: { startCoins: coins, firstPrep: 10000, prep: 10000, rounds },
   });
   return w;
@@ -270,16 +272,17 @@ describe('selling', () => {
   });
 });
 
-describe('editable rules', () => {
-  it('the World uses the given rules instead of the defaults', () => {
+describe('editable rules and components', () => {
+  it('the World uses the given rules and building components instead of the defaults', () => {
     const rules = mergeRules({
       unlocks: [],
-      build: { sellRefund: 0.5, soldier: { max: 1 } },
-      townHallLevels: [{ hp: 999 }, { cost: 1, time: 1, hp: 1500 }],
+      build: { sellRefund: 0.5 },
       heroUpgradeCosts: [3],
     });
     expect(rules.build.soldier.speed).toBe(DEFAULT_RULES.build.soldier.speed); // untouched fields keep defaults
-    const w = makeWorld({ rules });
+    let types = withType('townhall', { levels: [{ hp: 999, cost: 0, time: 0, round: 1 }, { cost: 1, time: 1, hp: 1500, round: 1 }] });
+    types = types.map((t) => (t.id === 'castle' ? { ...t, levels: t.levels.map((l) => ({ ...l, soldierCount: 1 })) } : t));
+    const w = makeWorld({ rules, buildingTypes: types });
     expect(w.townHall).toMatchObject({ hp: 999, maxHp: 999 });
     goTo(w, w.townHall);
     w.upgradeHero('melee');
@@ -319,15 +322,46 @@ describe('editable rules', () => {
   });
 });
 
+describe('new kinds of buildings, made only from data', () => {
+  it('a market (income) pays after each round; a well (healHero) heals; features can be combined', () => {
+    const market = { id: 'market', name: { cs: 'Trh', en: 'Market' }, features: ['income', 'workers'], levels: [{ cost: 10, time: 5, hp: 300, round: 1, income: 7, workers: 2 }] };
+    const well = { id: 'well', name: { cs: 'Studna', en: 'Well' }, features: ['healHero'], levels: [{ cost: 10, time: 5, hp: 300, round: 1, heal: 20, healRange: 100 }] };
+    const w = makeWorld({ coins: 100, rounds: [{ groups: [] }, { groups: [] }], buildingTypes: [...OPEN_TYPES, market, well] });
+    expect(Object.keys(w.describeSpot('s1').options.reduce((o, x) => ({ ...o, [x.type]: 1 }), {}))).toEqual(['house', 'tower', 'castle', 'market', 'well']);
+    goTo(w, spot(w, 's1'));
+    w.build('s1', 'market');
+    w.build('s4', 'well');
+    run(w, 6);
+    expect(w.workers).toBe(2); // features combine: the market also has workers
+    w.hero.hp = 10;
+    run(w, 1);
+    expect(w.hero.hp).toBeGreaterThan(25); // the well heals faster than the Town Hall alone
+    const coins = w.coins;
+    const bonus = w.callReady();
+    w.update(0.01);
+    expect(w.coins - coins - bonus).toBe(w.drainEvents().find((e) => e.type === 'roundEnd').reward);
+    expect(w.coins - coins - bonus).toBe(11 + 7); // round reward + market income
+  });
+
+  it('a type can have more levels, the Town Hall can get other features', () => {
+    const tall = { ...OPEN_TYPES.find((t) => t.id === 'tower'), id: 'tall', levels: [...OPEN_TYPES.find((t) => t.id === 'tower').levels, { cost: 10, time: 1, hp: 2000, round: 1, damage: 50, range: 300, cooldown: 0.5 }] };
+    const types = withType('townhall', { features: ['shoots', 'workers'], levels: OPEN_TYPES[0].levels.map((l) => ({ ...l, workers: 4 })) });
+    const w = makeWorld({ buildingTypes: [...types, tall] });
+    expect(w.workers).toBe(4);
+    expect(w.describeSpot('s1').options.find((o) => o.type === 'tall')).toBeTruthy();
+    expect(w.buildingTypes.tall.levels).toHaveLength(4);
+  });
+});
+
 describe('unlock schedule', () => {
-  it('opens something new after every wave of the default 20', () => {
-    const rounds = new Set(DEFAULT_UNLOCKS.map((u) => u.round));
+  it('opens something new after every wave of the default 20 (building levels + hero upgrades)', () => {
+    const rounds = new Set([...DEFAULT_UNLOCKS.map((u) => u.round), ...DEFAULT_BUILDING_TYPES.flatMap((t) => t.levels.map((l) => l.round))]);
     for (let r = 1; r <= 20; r++) expect(rounds.has(r)).toBe(true);
   });
 
   it('locks items until their round and announces them', () => {
     const empty = Array.from({ length: 4 }, () => ({ groups: [] }));
-    const w = makeWorld({ rules: DEFAULT_RULES, rounds: empty });
+    const w = makeWorld({ rules: DEFAULT_RULES, rounds: empty, buildingTypes: DEFAULT_BUILDING_TYPES });
     goTo(w, spot(w, 's1'));
     expect(w.build('s1', 'castle').reason).toBe('locked');
     expect(w.describeSpot('s1').options.find((o) => o.type === 'castle')).toMatchObject({ reason: 'locked', round: 2 });

@@ -6,7 +6,7 @@ import { enterFullscreen } from '../ui/FullscreenButton.jsx';
 const GameView = lazy(() => import('./GameView.jsx'));
 
 // Pick a level (map) and a hero, then play (fullscreen).
-export default function PlaySetup({ maps, assets, enemyTypes, buildingTypes, rules, weapons, settings, onSettings }) {
+export default function PlaySetup({ maps, assets, enemyTypes, buildings, rules, weapons, settings, onSettings }) {
   const { t } = useTranslation();
   const playable = maps.filter((m) => m.valid);
   const heroes = assets.filter((a) => a.category === 'hero');
@@ -21,7 +21,7 @@ export default function PlaySetup({ maps, assets, enemyTypes, buildingTypes, rul
     return (
       <Suspense fallback={<p>{t('app.loading')}</p>}>
         <GameView
-          map={map} hero={hero} assets={assets} enemyTypes={enemyTypes} buildingTypes={buildingTypes} rules={rules} weapons={weapons}
+          map={map} hero={hero} assets={assets} enemyTypes={enemyTypes} buildings={buildings} rules={rules} weapons={weapons}
           settings={settings} onSettings={onSettings} onExit={() => setPlaying(false)}
         />
       </Suspense>

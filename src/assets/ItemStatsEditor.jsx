@@ -51,6 +51,7 @@ export default function ItemStatsEditor({ category, stats, onChange }) {
         <label className="small"><input type="checkbox" checked={!!stats.shop} onChange={(e) => set('shop')(e.target.checked)} /> 🛒 {t('weapons.in_shop')}</label>
         <Field label={t('weapons.f_round')} value={stats.round} min={1} max={99} step={1} onChange={set('round')} />
         <Field label={t('weapons.f_drop')} value={stats.drop} min={0} max={10} step={1} onChange={set('drop')} />
+        <label className="small"><input type="checkbox" checked={!!stats.starter} onChange={(e) => set('starter')(e.target.checked)} /> 🎒 {t('weapons.starter')}</label>
       </div>
     </div>
   );

@@ -249,6 +249,8 @@ label { display: inline-flex; gap: 8px; align-items: center; }
   .game-screen .build-panel { width: calc(100% - 16px); max-height: 55%; }
 }
 
+.asset-tile .no-pic { font-size: 56px; line-height: 1; padding: 18px 0; }
+
 .decor-picker { padding: 8px 10px; display: grid; gap: 6px; }
 .decor-tile { display: flex; flex-direction: column; align-items: center; width: 84px; min-height: 48px; padding: 4px; border: 2px solid transparent; border-radius: 8px; background: #fffdf7; cursor: pointer; font: inherit; font-size: 14px; color: var(--ink); }
 .decor-tile img { width: 64px; height: 64px; object-fit: contain; }

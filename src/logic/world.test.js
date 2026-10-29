@@ -190,7 +190,7 @@ describe('World – hero', () => {
     const h = w.hero;
     h.hp = 20;
     run(w, 2);
-    expect(h.hp).toBeCloseTo(20 + 2 * w.b.heroHealPerSecond, 0);
+    expect(h.hp).toBeCloseTo(20 + 2 * w.thLevels[0].heal, 0);
     h.x = 200; h.hp = 20; // far away: no healing
     run(w, 2);
     expect(h.hp).toBe(20);

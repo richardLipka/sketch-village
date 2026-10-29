@@ -3,21 +3,21 @@ import { useTranslation } from 'react-i18next';
 import { loadDb, saveCollection, saveSettings, saveDb } from './data/store.js';
 import { mergeSaveFile } from './data/saveFile.js';
 import { fetchDefaultData } from './data/defaultData.js';
+import { migrateDb } from './data/migrate.js';
 import AssetStudio from './assets/AssetStudio.jsx';
 import DataPanel from './data/DataPanel.jsx';
 import LanguageSwitcher from './ui/LanguageSwitcher.jsx';
 import FullscreenButton from './ui/FullscreenButton.jsx';
 import MapList from './maps/MapList.jsx';
 import PlaySetup from './game/PlaySetup.jsx';
-import EnemyEditor from './game/EnemyEditor.jsx';
 import RulesEditor from './game/RulesEditor.jsx';
-import WeaponEditor from './game/WeaponEditor.jsx';
-import { weaponsOf, allItemsOf } from './config/weapons.js';
-import { enemyTypesOf } from './config/enemies.js';
-import { buildingTypesOf } from './config/buildings.js';
 import { rulesOf } from './config/rules.js';
+import { buildingsOf, enemyTypesOf, itemsOf } from './config/components.js';
 import { starterMap } from './maps/mapRuntime.js';
 
+// Screens: menu · components (studio) · maps · rules · play · save & load.
+// Everything the game uses is derived from the components (db.assets) and the
+// global rules, memoized so a running game isn't restarted by unrelated renders.
 export default function App() {
   const { t } = useTranslation();
   const [db, setDb] = useState(null);
@@ -30,24 +30,27 @@ export default function App() {
         let loaded = first;
         // very first start: load the class pack shipped with the website, or
         // add a ready-to-play sample map (only once, so deleted maps don't come back)
-        if (!loaded.maps.length && !loaded.settings.starterAdded) {
+        const fresh = !loaded.maps.length && !loaded.settings.starterAdded;
+        if (fresh) {
           const pack = await fetchDefaultData();
           if (pack) loaded = mergeSaveFile(loaded, pack).db;
           if (!loaded.maps.length) loaded.maps = [starterMap(t('maps.sample_name'))];
           loaded.settings = { ...loaded.settings, starterAdded: true };
-          await saveDb(loaded);
         }
-        setDb(loaded);
+        // data from older versions → components; built-in components on first start
+        const m = migrateDb(loaded);
+        if (fresh || m.changed) await saveDb(m.db);
+        setDb(m.db);
       })
       .catch((e) => setLoadError(String(e)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // stable object, so a running game isn't restarted by unrelated re-renders
-  const storedRules = db?.rules;
+  const storedRules = db?.rules, assets = db?.assets;
   const rules = useMemo(() => rulesOf({ rules: storedRules }), [storedRules]);
-  const storedWeapons = db?.weapons, storedAssets = db?.assets;
-  const items = useMemo(() => allItemsOf({ weapons: storedWeapons, assets: storedAssets }), [storedWeapons, storedAssets]);
+  const buildings = useMemo(() => buildingsOf(assets), [assets]);
+  const enemyTypes = useMemo(() => enemyTypesOf(assets), [assets]);
+  const items = useMemo(() => itemsOf(assets), [assets]);
 
   // Replace one collection in memory and persist it.
   const updateCollection = useCallback(async (name, records) => {
@@ -61,6 +64,13 @@ export default function App() {
       saveSettings(settings);
       return { ...cur, settings };
     });
+  }, []);
+
+  // after an import: merge happened in DataPanel; bring old data into components
+  const replaceDb = useCallback(async (next) => {
+    const m = migrateDb(next);
+    if (m.changed) await saveDb(m.db);
+    setDb(m.db);
   }, []);
 
   if (loadError) return <div className="page error-text">{t('app.load_error')} {loadError}</div>;
@@ -83,10 +93,8 @@ export default function App() {
           <p className="muted">{t('app.subtitle')}</p>
           <div className="sketch-card" style={{ display: 'inline-flex', flexDirection: 'column', gap: 16, padding: 32, marginTop: 24 }}>
             <button className="btn big primary" onClick={() => setScreen('play')}>▶ {t('menu.play')}</button>
-            <button className="btn big" onClick={() => setScreen('studio')}>✏️ {t('menu.studio')}</button>
+            <button className="btn big" onClick={() => setScreen('studio')}>🧩 {t('menu.studio')}</button>
             <button className="btn big" onClick={() => setScreen('maps')}>🗺️ {t('menu.maps')}</button>
-            <button className="btn big" onClick={() => setScreen('enemies')}>👾 {t('menu.enemies')}</button>
-            <button className="btn big" onClick={() => setScreen('weapons')}>🗡️ {t('menu.weapons')}</button>
             <button className="btn big" onClick={() => setScreen('rules')}>⚙️ {t('menu.rules')}</button>
             <button className="btn big" onClick={() => setScreen('data')}>💾 {t('menu.data')}</button>
           </div>
@@ -94,37 +102,23 @@ export default function App() {
       )}
 
       {screen === 'studio' && (
-        <AssetStudio assets={db.assets} heroRules={rules.hero} onChange={(a) => updateCollection('assets', a)} />
+        <AssetStudio assets={db.assets} heroRules={rules.hero} buildingTypes={buildings.types} onChange={(a) => updateCollection('assets', a)} />
       )}
 
       {screen === 'maps' && (
-        <MapList maps={db.maps} assets={db.assets} enemyTypes={enemyTypesOf(db)} balance={rules.balance} onChange={(m) => updateCollection('maps', m)} />
+        <MapList maps={db.maps} assets={db.assets} enemyTypes={enemyTypes} balance={rules.balance} onChange={(m) => updateCollection('maps', m)} />
       )}
 
-      {screen === 'enemies' && (
-        <EnemyEditor enemyTypes={enemyTypesOf(db)} assets={db.assets} onChange={(list) => updateCollection('enemyTypes', list)} />
-      )}
-
-      {screen === 'weapons' && (
-        <WeaponEditor weapons={weaponsOf(db)} assets={db.assets} onChange={(list) => updateCollection('weapons', list)} />
-      )}
-
-      {screen === 'rules' && (
-        <RulesEditor
-          buildingTypes={buildingTypesOf(db)}
-          rules={rules}
-          onSave={(types, rules) => { updateCollection('buildingTypes', types); updateCollection('rules', [rules]); }}
-        />
-      )}
+      {screen === 'rules' && <RulesEditor rules={rules} onSave={(r) => updateCollection('rules', [r])} />}
 
       {screen === 'play' && (
         <PlaySetup
-          maps={db.maps} assets={db.assets} enemyTypes={enemyTypesOf(db)} buildingTypes={buildingTypesOf(db)} rules={rules} weapons={items}
+          maps={db.maps} assets={db.assets} enemyTypes={enemyTypes} buildings={buildings} rules={rules} weapons={items}
           settings={db.settings} onSettings={updateSettings} onExit={() => setScreen('menu')}
         />
       )}
 
-      {screen === 'data' && <DataPanel db={db} onReplaceDb={setDb} />}
+      {screen === 'data' && <DataPanel db={db} onReplaceDb={replaceDb} />}
     </div>
   );
 }

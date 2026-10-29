@@ -10,13 +10,13 @@ import { DEFAULT_HERO_POINTS } from '../config/heroStats.js';
 import { DEFAULT_RULES } from '../config/rules.js';
 import { wavesOf } from '../config/waves.js';
 import { unlockLabel } from '../config/unlocks.js';
-import { DEFAULT_WEAPONS, coinTypesOf, isWeapon } from '../config/weapons.js';
+import { DEFAULT_WEAPONS, isWeapon } from '../config/weapons.js';
+import { coinTypesOf } from '../config/components.js';
 import { World } from '../logic/world.js';
 import { play, setMuted, soundFor } from './sound.js';
 import { TUTORIAL_STEPS, TUTORIAL_DONE, advanceTutorial } from './tutorial.js';
 
 const MESSAGE_MS = 2600;
-const BUILDING_CATS = ['townhall', 'house', 'tower', 'castle'];
 
 // React wrapper: prepares images, grid and the World, runs Phaser and lays the
 // controls over the map (GameOverlay). Fills the whole window.
@@ -27,7 +27,7 @@ const BUILDING_CATS = ['townhall', 'house', 'tower', 'castle'];
 // - the scene sends a HUD snapshot only when a visible value changed;
 // - overlay pieces are memoized with primitive props and stable callbacks;
 // - the build panel refreshes itself (SelectionPanel), not the whole screen.
-export default function GameView({ map, hero, assets, enemyTypes, buildingTypes, weapons = DEFAULT_WEAPONS, rules = DEFAULT_RULES, settings = {}, onSettings, onExit }) {
+export default function GameView({ map, hero, assets, enemyTypes, buildings, weapons = DEFAULT_WEAPONS, rules = DEFAULT_RULES, settings = {}, onSettings, onExit }) {
   const { t, i18n } = useTranslation();
   const hostRef = useRef(null);
   const gameRef = useRef(null);
@@ -47,7 +47,9 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
 
   // latest values for callbacks that the running scene / stable handlers call
   const live = useRef({});
-  live.current = { t, lang: i18n.language, tip, onSettings, weapons, onExit, wobble: !!settings.wobble, muted: !!settings.muted };
+  const lang = i18n.language;
+  const typeName = useCallback((id) => buildings.types.find((ty) => ty.id === id)?.name?.[lang] ?? id, [buildings, lang]);
+  live.current = { t, lang, typeName, tip, onSettings, weapons, onExit, wobble: !!settings.wobble, muted: !!settings.muted };
 
   // messages arriving together (round end + new unlocks) are joined, not replaced
   const say = useCallback((text) => {
@@ -70,8 +72,8 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
 
   // World events shown as a message
   const onEvent = useCallback((e) => {
-    const { t: tr, weapons: items, lang } = live.current;
-    const name = () => tr(`build.type_${e.building}`);
+    const { t: tr, weapons: items, lang, typeName } = live.current;
+    const name = () => typeName(e.building);
     const item = (id) => items.find((w) => w.id === id)?.name?.[lang] ?? id;
     const msg = {
       waveStart: () => tr('game.msg_wave', { n: e.round }),
@@ -87,7 +89,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
       sold: () => tr('build.msg_sold', { name: name(), coins: e.refund }),
       chestOpened: () => (e.weapon ? tr('weapons.msg_found', { name: item(e.weapon) }) : tr('weapons.msg_chest_coins', { coins: e.coins })),
       weaponBought: () => tr('weapons.msg_bought', { name: item(e.weapon) }),
-      unlocked: () => tr('unlock.msg', { list: e.keys.map((k) => unlockLabel(k, tr)).join(', ') }),
+      unlocked: () => tr('unlock.msg', { list: e.keys.map((k) => unlockLabel(k, tr, typeName)).join(', ') }),
       heroUpgraded: () => tr('build.msg_hero_upgraded', { stat: tr(`hero.stat_${e.stat}`), n: e.level }),
     }[e.type];
     const text = msg?.();
@@ -108,17 +110,18 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
       await load('hero', hero?.images[0]);
       // optional hero drawings per weapon class (images[1..3]); missing ones use the default
       for (const [i, k] of ['melee', 'ranged', 'magic'].entries()) await load(`hero:${k}`, hero?.images[i + 1]);
-      // buildings: every drawing of a kind is one variant (a random one is used per
-      // building); one texture per level, a missing level uses the previous drawing
+      // buildings: every look of a type (its own drawings + "another look" components)
+      // is one variant, picked at random per building; one texture per level,
+      // a missing level uses the previous drawing
       const variants = {};
-      for (const cat of BUILDING_CATS) {
-        const drawn = assets.filter((a) => a.category === cat && a.images.some(Boolean));
-        variants[cat] = drawn.length;
-        for (const [v, a] of drawn.entries()) {
-          let last = a.images.find(Boolean);
-          for (let lvl = 1; lvl <= 3; lvl++) {
-            last = a.images[lvl - 1] || last;
-            await load(`${cat}#${v}:${lvl}`, last);
+      for (const type of buildings.types) {
+        const looks = buildings.looks[type.id] ?? [];
+        variants[type.id] = looks.length;
+        for (const [v, images] of looks.entries()) {
+          let last = images.find(Boolean);
+          for (let lvl = 1; lvl <= type.levels.length; lvl++) {
+            last = images[lvl - 1] || last;
+            await load(`${type.id}#${v}:${lvl}`, last);
           }
         }
       }
@@ -128,10 +131,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
       await load('cave', firstImage('cave'));
       await load('projectile', firstImage('projectile'));
       await load('chest', firstImage('chest'));
-      for (const et of enemyTypes) {
-        const a = et.asset && assets.find((x) => x.id === et.asset);
-        if (a) await load(`enemy:${et.id}`, a.images[0]);
-      }
+      for (const et of enemyTypes) await load(`enemy:${et.id}`, et.image);
       for (const d of map.decorations) {
         const a = assets.find((x) => x.id === d.asset);
         if (a && !images[a.id]) await load(a.id, a.images[0]);
@@ -139,7 +139,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
       if (!alive) return;
 
       const world = new World({
-        map, grid, enemyTypes, buildingTypes, rules, weapons, coinTypes,
+        map, grid, enemyTypes, buildingTypes: buildings.types, rules, weapons, coinTypes,
         waves: wavesOf(map, rules.balance),
         heroPoints: hero?.stats ?? DEFAULT_HERO_POINTS,
       });
@@ -155,7 +155,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
         scene: [],
       });
       gameRef.current.scene.add('game', GameScene, true, {
-        world, map, images, variants, enemyTypes, wobble: !!live.current.wobble,
+        world, map, images, variants, enemyTypes, buildingTypes: buildings.types, wobble: !!live.current.wobble,
         onHud: setHud, onEvent, onSelect: setSelection, onAnyEvent: anyEvent,
       });
       // dev-only handle for automated browser testing
@@ -169,7 +169,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
       worldRef.current = null;
     };
     // only things that change the game itself restart it
-  }, [map, hero, assets, enemyTypes, buildingTypes, rules, weapons, restart, onEvent, anyEvent]);
+  }, [map, hero, assets, enemyTypes, buildings, rules, weapons, restart, onEvent, anyEvent]);
 
   const scene = () => gameRef.current?.scene.getScene('game');
   useEffect(() => { const s = scene(); if (s) s.wobble = wobble; }, [wobble, hud === null]);
@@ -259,7 +259,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
             <WaveInfo
               phase={hud.phase} round={hud.round} totalRounds={hud.totalRounds} prepLeft={hud.prepLeft} earlyBonus={hud.earlyBonus}
               enemiesLeft={hud.enemiesLeft} nextRound={hud.nextRound} nextCaves={hud.nextCaves} caveCount={hud.caveCount}
-              newThings={hud.newThings} enemyTypes={enemyTypes} onReady={ready}
+              newThings={hud.newThings} enemyTypes={enemyTypes} typeName={typeName} onReady={ready}
             />
             <Equipment inventoryKey={inventoryKey} right={hud.equipped.right} left={hud.equipped.left} armor={hud.equipped.armor}
               items={weapons} assets={assets} onEquip={onEquip} />
@@ -273,7 +273,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
         {playing && selection && (
           <SelectionPanel
             worldRef={worldRef} selection={selection} version={panelVersion}
-            soldierMax={rules.build.soldier.max} weapons={weapons} assets={assets}
+            types={buildings.types} weapons={weapons} assets={assets}
             onClose={closePanel} onBuild={onBuild} onUpgrade={onUpgrade} onSell={onSell}
             onUpgradeTownHall={onUpgradeTownHall} onUpgradeHero={onUpgradeHero} onBuyWeapon={onBuyWeapon}
           />

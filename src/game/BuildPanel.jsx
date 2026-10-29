@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import WeaponIcon from './WeaponIcon.jsx';
 import { itemLine } from './GameOverlay.jsx';
+import { FEATURES } from '../config/features.js';
 
 // Panel for the selected building spot or the Town Hall (SPEC §7).
 // `info` comes from World.describeSpot / describeTownHall; every option carries a
@@ -13,26 +14,28 @@ import { itemLine } from './GameOverlay.jsx';
 // a new component type on every render would remount the button between
 // mouse-down and mouse-up and swallow the click.
 
-const ICON = { house: '🏠', tower: '🗼', castle: '🏰' };
-
 function Bar({ frac, color }) {
   return <span className="hud-bar" style={{ width: 90 }}><span style={{ width: `${Math.round(frac * 100)}%`, background: color }} /></span>;
 }
 
-export default function BuildPanel({ info, soldierMax = 3, weapons = [], assets = [], onClose, onBuild, onUpgrade, onSell, onUpgradeTownHall, onUpgradeHero, onBuyWeapon }) {
+/** What one level of a building does, feature by feature: "🏹 arrow 9, range 180 … · 👷 +1 workers". */
+export function featureLine(type, s, t) {
+  if (!type || !s) return '';
+  return (type.features ?? []).map((f) => `${FEATURES[f]?.icon ?? ''} ${t(`feature.line_${f}`, s)}`).join(' · ');
+}
+
+const iconOf = (type) => (type?.core ? '🏛️' : FEATURES[type?.features?.[0]]?.icon ?? '🏗️');
+
+export default function BuildPanel({ info, types = [], weapons = [], assets = [], onClose, onBuild, onUpgrade, onSell, onUpgradeTownHall, onUpgradeHero, onBuyWeapon }) {
   const { t, i18n } = useTranslation();
+  const lang = i18n.language;
   const why = (reason, round) => (reason ? t(`build.reason_${reason}`, { n: round }) : null);
   const [confirmSell, setConfirmSell] = useState(false);
   const spotKey = info.kind === 'spot' ? info.id : 'th';
   useEffect(() => setConfirmSell(false), [spotKey]);
-
-  const statLine = (type, s) => {
-    if (!s) return '';
-    if (type === 'house') return t('build.stat_house', { n: s.workers });
-    if (type === 'tower' || type === 'townhall') return t('build.stat_tower', { dmg: s.damage, range: s.range, cd: s.cooldown });
-    if (type === 'castle') return t('build.stat_castle', { n: soldierMax, hp: s.soldierHp, dmg: s.soldierDamage });
-    return '';
-  };
+  const typeOf = (id) => types.find((ty) => ty.id === id);
+  const nameOf = (id) => typeOf(id)?.name?.[lang] ?? id;
+  const statLine = (id, s) => featureLine(typeOf(id), s, t);
 
   const action = ({ key, label, cost, reason, round, onClick, sub }) => (
     <div className="build-option" key={key}>
@@ -46,12 +49,12 @@ export default function BuildPanel({ info, soldierMax = 3, weapons = [], assets 
 
   let body;
   if (info.kind === 'townhall') {
-    const weaponName = (id) => weapons.find((w) => w.id === id)?.name?.[i18n.language] ?? id;
+    const weaponName = (id) => weapons.find((w) => w.id === id)?.name?.[lang] ?? id;
     body = (
       <>
-        <h3>🏛️ {t('build.townhall', { n: info.level })}</h3>
+        <h3>🏛️ {nameOf(info.type)} · {t('build.level', { n: info.level, max: info.maxLevel })}</h3>
         <div className="row small"><Bar frac={info.hp / info.maxHp} color="#2563eb" /> {info.hp}/{info.maxHp}</div>
-        {info.arrows?.damage > 0 && <p className="small muted" style={{ margin: '2px 0' }}>🏹 {statLine('townhall', info.arrows)} · ❤️ {t('build.th_heals')}</p>}
+        {statLine(info.type, info.stats) && <p className="small muted" style={{ margin: '2px 0' }}>{statLine(info.type, info.stats)}</p>}
         {info.progress !== null && <div className="row small">🔨 <Bar frac={info.progress} color="#ca8a04" /></div>}
         {info.upgrade ? action({
           key: 'th', label: `⬆ ${t('build.upgrade_to', { n: info.upgrade.toLevel })}`, cost: info.upgrade.cost, reason: info.upgrade.reason,
@@ -94,14 +97,14 @@ export default function BuildPanel({ info, soldierMax = 3, weapons = [], assets 
     body = (
       <>
         <h3>
-          {b ? `${ICON[b.type]} ${t(`build.type_${b.type}`)} · ${t('build.level', { n: b.level, max: b.maxLevel })}` : t('build.empty_spot', { n: info.index + 1 })}
+          {b ? `${iconOf(typeOf(b.type))} ${nameOf(b.type)} · ${t('build.level', { n: b.level, max: b.maxLevel })}` : t('build.empty_spot', { n: info.index + 1 })}
         </h3>
         {b && b.state !== 'ruin' && <div className="row small"><Bar frac={b.hp / b.maxHp} color="#16a34a" /> {b.hp}/{b.maxHp}</div>}
         {b && b.progress !== null && <div className="row small">🔨 {t(b.state === 'building' ? 'build.building' : 'build.upgrading')} <Bar frac={b.progress} color="#ca8a04" /></div>}
         {b && b.stats && b.state !== 'ruin' && <p className="small muted" style={{ margin: '4px 0' }}>{statLine(b.type, b.stats)}</p>}
         {b && b.state === 'ruin' && <p className="small error-text">{t('build.ruin')}</p>}
         {info.options.map((o) => action({
-          key: o.type, label: `${ICON[o.type]} ${o.rebuild ? t('build.rebuild') : t(`build.type_${o.type}`)}`,
+          key: o.type, label: `${iconOf(typeOf(o.type))} ${o.rebuild ? t('build.rebuild') : nameOf(o.type)}`,
           cost: o.cost, reason: o.reason, round: o.round, sub: statLine(o.type, o.stats), onClick: () => onBuild(o.type),
         }))}
         {info.upgrade && action({

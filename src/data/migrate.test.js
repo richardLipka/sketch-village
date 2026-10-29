@@ -1,0 +1,70 @@
+import { describe, it, expect } from 'vitest';
+import { migrateDb, DATA_VERSION } from './migrate.js';
+import { DEFAULT_COMPONENTS, buildingsOf, enemyTypesOf, itemsOf } from '../config/components.js';
+import { World } from '../logic/world.js';
+
+const pic = 'data:image/png;base64,x';
+const T = '2026-10-29T12:00:00.000Z';
+
+describe('data migration (v1 → components)', () => {
+  it('a fresh browser gets the built-in components once', () => {
+    const { db, changed } = migrateDb({ settings: {}, assets: [] });
+    expect(changed).toBe(true);
+    expect(db.assets.map((a) => a.id)).toEqual(DEFAULT_COMPONENTS.map((c) => c.id));
+    expect(db.settings).toMatchObject({ componentsSeeded: true, dataVersion: DATA_VERSION });
+    // running again changes nothing; deleted built-ins don't come back
+    const again = migrateDb({ ...db, assets: db.assets.filter((a) => a.id !== 'goblin') });
+    expect(again.changed).toBe(false);
+    expect(again.db.assets.some((a) => a.id === 'goblin')).toBe(false);
+  });
+
+  it('old data becomes components, keeping the kids\' edits and drawings', () => {
+    const old = {
+      settings: { starterAdded: true },
+      assets: [
+        { id: 'd1', category: 'tower', name: 'Red tower', images: [pic, null, null] },
+        { id: 'd2', category: 'enemy', name: 'Slime picture', images: [pic] },
+        { id: 'd3', category: 'townhall', name: 'Our hall', images: [pic] },
+      ],
+      buildingTypes: [{ id: 'tower', name: { cs: 'Věž', en: 'Tower' }, levels: [{ cost: 33, time: 12, hp: 500, damage: 9, range: 180, cooldown: 1 }], updatedAt: T }],
+      enemyTypes: [{ id: 'goblin', name: { cs: 'Skřet', en: 'Goblin' }, hp: 99, speed: 45, asset: 'd2', updatedAt: T }],
+      weapons: [{ id: 'sword', name: { cs: 'Meč', en: 'Sword' }, kind: 'melee', damage: 50, price: 1, shop: true, round: 1, drop: 0, updatedAt: T }],
+      rules: [{ id: 'rules', townHallLevels: [{ hp: 777 }], unlocks: [{ key: 'tower:1', round: 4 }, { key: 'hero:melee:1', round: 2 }], updatedAt: T }],
+    };
+    const { db } = migrateDb(old);
+    expect(db.enemyTypes).toEqual([]);
+    expect(db.buildingTypes).toEqual([]);
+    expect(db.weapons).toEqual([]);
+    expect(db.rules[0].townHallLevels).toBeUndefined();
+    expect(db.rules[0].unlocks).toEqual([{ key: 'hero:melee:1', round: 2 }]);
+
+    const { types, looks } = buildingsOf(db.assets);
+    const tower = types.find((t) => t.id === 'tower');
+    expect(tower).toMatchObject({ features: ['shoots'] });
+    expect(tower.levels[0]).toMatchObject({ cost: 33, round: 4 }); // edited cost + old unlock round
+    expect(looks.tower).toHaveLength(1); // the old tower drawing is a look of the tower type
+    expect(types.find((t) => t.core).levels[0].hp).toBe(777);
+    expect(looks.townhall).toHaveLength(1);
+
+    const goblin = enemyTypesOf(db.assets).find((e) => e.id === 'goblin');
+    expect(goblin).toMatchObject({ hp: 99, image: pic });
+    expect(db.assets.some((a) => a.id === 'd2')).toBe(false); // its picture moved into the goblin component
+
+    expect(itemsOf(db.assets).find((i) => i.id === 'sword')).toMatchObject({ damage: 50, price: 1, slot: 'hand' });
+  });
+
+  it('the migrated components play: a World runs with them', () => {
+    const { db } = migrateDb({ settings: {}, assets: [] });
+    const cols = 80, rows = 45;
+    const walk = new Uint8Array(cols * rows).fill(1);
+    const w = new World({
+      map: { centre: { x: 640, y: 360 }, caves: [{ id: 'c', x: 10, y: 360 }], spots: [{ id: 's', x: 600, y: 330 }] },
+      grid: { cols, rows, cell: 16, walk }, enemyTypes: enemyTypesOf(db.assets), buildingTypes: buildingsOf(db.assets).types,
+      weapons: itemsOf(db.assets), waves: { rounds: [{ groups: [{ enemy: 'goblin', count: 2 }] }] },
+    });
+    expect(Object.keys(w.buildingTypes).sort()).toEqual(['castle', 'house', 'tower']);
+    expect(w.coreType.id).toBe('townhall');
+    expect(w.inventory).toEqual(['stick', 'shortbow']);
+    for (let i = 0; i < 300; i++) w.update(1 / 30);
+  });
+});

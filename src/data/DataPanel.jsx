@@ -49,7 +49,8 @@ export default function DataPanel({ db, onReplaceDb }) {
   const doPurgeAll = async () => {
     if (!confirm(t('data.confirm_purge_all'))) return;
     await purgeAll();
-    const next = { ...db };
+    // the built-in components come back (the game needs a Town Hall, enemies…)
+    const next = { ...db, settings: { ...db.settings, componentsSeeded: false } };
     for (const c of COLLECTIONS) next[c] = [];
     onReplaceDb(next);
     setMessage({ ok: true, text: t('data.purged') });
@@ -58,7 +59,10 @@ export default function DataPanel({ db, onReplaceDb }) {
   const doPurgeCategory = async () => {
     if (!purgeCat) return;
     if (!confirm(t('data.confirm_purge_cat', { cat: t(`cat.${purgeCat}`) }))) return;
-    const assets = db.assets.filter((a) => a.category !== purgeCat);
+    // the kids' own components of this kind go; built-in ones only lose their drawings
+    const assets = db.assets
+      .filter((a) => a.category !== purgeCat || a.builtIn)
+      .map((a) => (a.category === purgeCat && a.builtIn ? { ...a, images: [], updatedAt: new Date().toISOString() } : a));
     await saveCollection('assets', assets);
     onReplaceDb({ ...db, assets });
     setMessage({ ok: true, text: t('data.purged') });

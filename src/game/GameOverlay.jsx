@@ -41,7 +41,7 @@ export const Lives = memo(function Lives({ lives, maxLives, hp, maxHp, dead, res
   );
 });
 
-export const WaveInfo = memo(function WaveInfo({ phase, round, totalRounds, prepLeft, earlyBonus, enemiesLeft, nextRound, nextCaves, caveCount, newThings, enemyTypes, onReady }) {
+export const WaveInfo = memo(function WaveInfo({ phase, round, totalRounds, prepLeft, earlyBonus, enemiesLeft, nextRound, nextCaves, caveCount, newThings, enemyTypes, typeName, onReady }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const preview = nextRound ? Object.entries(roundSummary(nextRound)) : [];
@@ -59,7 +59,7 @@ export const WaveInfo = memo(function WaveInfo({ phase, round, totalRounds, prep
           ⚑ {t('game.ready')}{earlyBonus > 0 && ` (+${earlyBonus} 🪙)`}
         </button>
       )}
-      {newThings.length > 0 && <div className="small">🎁 <b>{t('unlock.new')}</b> {newThings.map((k) => unlockLabel(k, t)).join(', ')}</div>}
+      {newThings.length > 0 && <div className="small">🎁 <b>{t('unlock.new')}</b> {newThings.map((k) => unlockLabel(k, t, typeName)).join(', ')}</div>}
       {preview.length > 0 && (
         <div className="small">
           {t('game.coming')}: {preview.map(([id, n]) => `${n}× ${name(id)}`).join(', ')}

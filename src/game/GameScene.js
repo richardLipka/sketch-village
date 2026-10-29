@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { hasFeature, shapeOf } from '../config/features.js';
 
 // Draws the World simulation (src/logic/world.js) and forwards clicks to it.
 // Camera: zoom (wheel, pinch, buttons) and drag-pan, clamped to the map.
@@ -79,7 +80,7 @@ export default class GameScene extends Phaser.Scene {
     for (const c of map.caves) this.add.image(c.x, c.y, 'cave').setDisplaySize(64, 64).setDepth(c.y);
 
     const th = this.world.townHall;
-    this.townHall = this.add.image(th.x, th.y, this.buildingKey('townhall', this.townHallVariant, 1)).setDisplaySize(96, 96).setDepth(th.y);
+    this.townHall = this.add.image(th.x, th.y, this.buildingKey(th.type, this.townHallVariant, 1)).setDisplaySize(96, 96).setDepth(th.y);
     this.townHallBar = this.add.graphics().setDepth(9000);
     this.selectRing = this.add.graphics().setDepth(-300);
     this.selection = null;
@@ -128,25 +129,19 @@ export default class GameScene extends Phaser.Scene {
       g.lineStyle(4, INK).strokeCircle(32, 32, 22);
       g.fillStyle(0xffffff).fillCircle(32, 32, 7);
     });
-    for (let lvl = 1; lvl <= 3; lvl++) {
-      tex(`townhall:${lvl}`, 96, (g) => {
-        g.fillStyle(0xfda4af).fillCircle(48, 48, 40);
-        g.lineStyle(4, INK).strokeCircle(48, 48, 40);
-        dots(g, lvl, 48, 48);
-      });
-      tex(`house:${lvl}`, 64, (g) => {
-        g.fillStyle(0xfde047).fillRect(10, 10, 44, 44);
-        g.lineStyle(3, INK).strokeRect(10, 10, 44, 44);
-        dots(g, lvl, 32, 32);
-      });
-      tex(`tower:${lvl}`, 64, (g) => {
-        poly(g, 32, 36, 28, 3, -Math.PI / 2, 0x93c5fd);
-        dots(g, lvl, 32, 42);
-      });
-      tex(`castle:${lvl}`, 64, (g) => {
-        poly(g, 32, 32, 27, 6, 0, 0xc4b5fd);
-        dots(g, lvl, 32, 32);
-      });
+    // every building type – also new ones the kids made – gets a shape from its
+    // main feature (config/features.js shapeOf) and one texture per level
+    const SHAPES = {
+      circle: (g, lvl) => { g.fillStyle(0xfda4af).fillCircle(48, 48, 40); g.lineStyle(4, INK).strokeCircle(48, 48, 40); dots(g, lvl, 48, 48); },
+      square: (g, lvl) => { g.fillStyle(0xfde047).fillRect(10, 10, 44, 44); g.lineStyle(3, INK).strokeRect(10, 10, 44, 44); dots(g, lvl, 32, 32); },
+      triangle: (g, lvl) => { poly(g, 32, 36, 28, 3, -Math.PI / 2, 0x93c5fd); dots(g, lvl, 32, 42); },
+      hexagon: (g, lvl) => { poly(g, 32, 32, 27, 6, 0, 0xc4b5fd); dots(g, lvl, 32, 32); },
+      diamond: (g, lvl) => { poly(g, 32, 32, 28, 4, 0, 0xfcd34d); dots(g, lvl, 32, 32); },
+      pentagon: (g, lvl) => { poly(g, 32, 33, 27, 5, -Math.PI / 2, 0x86efac); dots(g, lvl, 32, 34); },
+    };
+    for (const type of this.cfg.buildingTypes ?? []) {
+      const shape = shapeOf(type);
+      for (let lvl = 1; lvl <= type.levels.length; lvl++) tex(`${type.id}:${lvl}`, type.core ? 96 : 64, (g) => SHAPES[shape](g, Math.min(lvl, 5)));
     }
     tex('soldier', 48, (g) => {
       g.fillStyle(0x93c5fd).fillRect(12, 12, 24, 24);
@@ -521,7 +516,7 @@ export default class GameScene extends Phaser.Scene {
 
     // town hall
     const th = w.townHall;
-    const thKey = this.buildingKey('townhall', this.townHallVariant, th.level);
+    const thKey = this.buildingKey(th.type, this.townHallVariant, th.level);
     if (this.townHall.texture.key !== thKey) this.townHall.setTexture(thKey).setDisplaySize(96, 96);
     if (this.wobble || this.townHall.angle) this.townHall.setAngle(this.jitter(0.3) * 1.5);
     const thSig = `${Math.round((70 * th.hp) / th.maxHp)}|${th.upgrade ? Math.round((60 * th.upgrade.progress) / th.upgrade.time) : ''}`;
@@ -544,9 +539,10 @@ export default class GameScene extends Phaser.Scene {
       if (p) {
         g.lineStyle(3, 0xca8a04, 0.9).strokeCircle(p.x, p.y, sel.kind === 'townhall' ? 54 : 34);
         g.lineStyle(1.5, INK, 0.3).strokeCircle(p.x, p.y, 90 + (sel.kind === 'townhall' ? th.radius : 0));
-        const arrows = sel.kind === 'townhall' && w.thLevels[th.level - 1];
-        if (arrows?.range) g.lineStyle(2, 0xdc2626, 0.5).strokeCircle(th.x, th.y, arrows.range);
-        if (b && b.type === 'tower' && b.level > 0) g.lineStyle(2, 0xdc2626, 0.5).strokeCircle(b.x, b.y, w.buildingTypes.tower.levels[b.level - 1].range);
+        // the range of anything that shoots (towers, the Town Hall, new kinds)
+        const type = sel.kind === 'townhall' ? w.coreType : b && w.buildingTypes[b.type];
+        const stats = sel.kind === 'townhall' ? w.thLevels[th.level - 1] : b && b.level > 0 && type.levels[b.level - 1];
+        if (hasFeature(type, 'shoots') && stats?.range) g.lineStyle(2, 0xdc2626, 0.5).strokeCircle(p.x, p.y, stats.range);
       }
     }
   }
