@@ -78,6 +78,27 @@ describe('equipment', () => {
     expect(normalizeItem({ id: 'old', kind: 'ranged' }).slot).toBe('twohand');
   });
 
+  it('backpack drag & drop: items go only into their own slot and come off again', () => {
+    const w = makeWorld();
+    for (const id of ['sword', 'axe', 'woodshield', 'leather']) w.addWeapon(id);
+    w.unequip('left'); w.unequip('armor');
+    expect(w.equipTo('leather', 'right').reason).toBe('wrong_slot');
+    expect(w.equipTo('woodshield', 'armor').reason).toBe('wrong_slot');
+    expect(w.equipTo('woodshield', 'left').ok).toBe(true);
+    expect(w.equipTo('leather', 'armor').ok).toBe(true);
+    const armored = w.heroStats.armor;
+    expect(w.unequip('armor').ok).toBe(true);
+    expect(w.heroStats.armor).toBeLessThan(armored); // the change shows in the hero's numbers
+    run(w, 3);
+    expect(w.equipTo('axe', 'left').ok).toBe(true); // two-handed: dropped on either hand, takes both
+    expect(w.equipped).toMatchObject({ right: 'axe', left: null });
+    expect(w.hud().hero.attack).toBeGreaterThan(0);
+    run(w, 3);
+    expect(w.unequip('right').ok).toBe(true); // bare hands
+    expect(w.equipped.right).toBeNull();
+    expect(w.mode).toBe('melee');
+  });
+
   it('magic hurts everything around the target, flying too', () => {
     const w = makeWorld({ rounds: [{ groups: [] }] });
     w.addWeapon('wand');

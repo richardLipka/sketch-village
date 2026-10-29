@@ -166,23 +166,34 @@ describe('World – hero', () => {
     expect(w.coinsOnGround).toHaveLength(0);
   });
 
-  it('loses lives, stays in place, then after the last life respawns at the Town Hall 10 s later', () => {
+  it('every lost life takes the hero away for 10 s, then it comes back at the Town Hall with full health', () => {
     const w = makeWorld({ rounds: [{ groups: [] }] });
     const h = w.hero;
     h.x = 300; h.y = 360;
-    for (let i = 0; i < 4; i++) { h.invuln = 0; w.damage(h, 1000); }
-    expect(h.lives).toBe(1);
-    expect(h.dead).toBe(false);
-    expect([h.x, h.y]).toEqual([300, 360]);
-    h.invuln = 0; w.damage(h, 1000);
+    w.damage(h, 1000);
+    expect(h.lives).toBe(4);
     expect(h.dead).toBe(true);
     run(w, 9);
     expect(h.dead).toBe(true);
     run(w, 1.5);
     expect(h.dead).toBe(false);
-    expect(h.lives).toBe(5);
+    expect(h.lives).toBe(4); // lives don't come back
+    expect(h.hp).toBe(h.maxHp);
     expect([h.x, h.y]).toEqual([w.respawnPoint.x, w.respawnPoint.y]);
     expect(Math.hypot(h.x - w.townHall.x, h.y - w.townHall.y)).toBeLessThan(w.townHall.radius + 30);
+  });
+
+  it('losing the last life loses the game', () => {
+    const w = makeWorld({ rounds: [{ groups: [] }] });
+    const h = w.hero;
+    for (let i = 0; i < 5; i++) {
+      h.invuln = 0; w.damage(h, 1000);
+      if (i < 4) { expect(w.phase).not.toBe('lost'); run(w, 10.5); }
+    }
+    expect(h.lives).toBe(0);
+    expect(w.phase).toBe('lost');
+    expect(w.lostBy).toBe('hero');
+    expect(w.drainEvents().some((e) => e.type === 'lost' && e.reason === 'hero')).toBe(true);
   });
 
   it('the Town Hall heals the hero standing next to it', () => {

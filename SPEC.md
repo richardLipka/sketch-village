@@ -117,9 +117,9 @@ One screen with two modes:
 - **Control: mouse click** on a walkable cell → hero walks along the shortest path (A*). Click on unwalkable area → moves to the nearest walkable cell.
 - Click on enemy → attack with the currently selected mode (melee: walk to enemy and hit; ranged: shoot if in range, otherwise walk into range).
 - Click on empty building spot (when near) → build menu; click on own building → upgrade / rebuild menu.
-- **Input**: desktop mouse is primary; everything is **point-and-click** (no drag required, no hover-only info, no right-click-only actions), so the same UI works with touch taps. Zoom/pan additionally via wheel/drag on desktop and pinch on touch.
-- **Lives: 5.** Each life is an HP bar. When HP hits 0, one life is lost and the hero **stays where it is** with full HP (short invulnerability blink, ~1.5 s).
-- **When all 5 lives are lost**: hero disappears for **30 s** (visible countdown), the village is defended only by towers and soldiers, then the hero **respawns at the map's hero respawn point** (placed in the map editor, default = town hall) with 5 lives.
+- **Input**: desktop mouse is primary; everything works by **point-and-click / tap** (no hover-only info, no right-click-only actions); the backpack also supports drag & drop with mouse or finger, with tap-then-tap as the alternative. Zoom/pan additionally via wheel/drag on desktop and pinch on touch.
+- **Lives: 5.** Each life is an HP bar. When HP hits 0, one life is lost: the hero **disappears for 10 s** (visible countdown, Rules editor `heroRespawnDelay`), the village is defended only by towers and soldiers, then the hero comes back **at the Town Hall** with full HP. Lives don't come back.
+- **When all 5 lives are lost, the game is lost.** The Town Hall heals a hero standing next to it, so walking back to heal when hurt is part of the game (the balance bot does this; a bot that never heals loses every game).
 - **Combat** – the **player chooses** melee or ranged (HUD toggle button; keyboard shortcut optional).
   - Melee: short range, higher damage, cooldown.
   - Ranged: **unlimited arrows** with a **cooldown**.
@@ -154,7 +154,7 @@ export const HERO_STAT_TABLE = {
   - **melee** – hits one enemy next to the hero, can't reach flying enemies;
   - **ranged** – shoots an arrow at one enemy;
   - **magic** – shoots a spell that damages **every enemy around the target** (splash radius from the weapon), flying ones too. Only usable with a magic weapon.
-- A weapon **adds** its damage / reach / cooldown (and splash for magic) to the hero's attack of that class. The **backpack** (🎒, key I) lists all weapons; one click equips one per class. A newly found weapon is equipped automatically when that class has none.
+- A weapon **adds** its damage / reach / cooldown (and splash for magic) to the hero's attack of that class. The **backpack** (🎒) shows three slots – **right hand** (weapon), **left hand** (shield; covered by a two-handed weapon) and **armor** – with the hero's resulting attack / reach / armor under them, and every other item below. Items are **dragged onto their slot** (or tapped, then the slot tapped); a wrong slot is refused with an explanation; dragging a worn item back into the backpack takes it off (no weapon = bare hands). The attack buttons still pick a weapon of their class into the right hand. A found shield or armor goes on at once when its slot is free.
 - Getting weapons: enemies sometimes drop a **chest** (2 %, bosses always; picked up by walking over it, vanishes after 60 s; holds a weapon the hero doesn't have yet, or coins when it has all), or buy them in the **Town Hall shop** (price, available from a round).
 - **Weapon editor** (🗡️ menu): name, class, drawing (studio category *Weapons*), numbers, price, shop yes/no, from which round, chest chance; add / delete / defaults. Stored in the `weapons` collection (exported). Six defaults: sword, axe, long bow, crossbow, magic wand, fire staff.
 - **Hero drawings per class**: a hero has a default drawing plus optional drawings holding a sword / bow / magic; the game shows the one for the current attack class (missing → default). Ready for animated sprites later.
@@ -264,7 +264,7 @@ Waves are data (JSON), editable in an in-game editor and importable.
 ## 11. Win / lose
 
 - **Win**: survive all **20 rounds** of the level.
-- **Lose**: the **Town Hall is destroyed**. Hero death never loses the game by itself.
+- **Lose**: the **Town Hall is destroyed**, or the **hero has lost all 5 lives**. The end screen says which.
 - End screen: simple **Victory / Defeat** drawing with the round reached. **No score, no stars.**
 
 ## 12. Screens
@@ -347,6 +347,7 @@ public/default-data.json   class pack (empty by default)
 5d. **v1.1** ✅ – one click builds / upgrades / sells (fixed a bug where the panel's buttons were remounted on every HUD refresh and swallowed the first click; no confirmations); hero respawns after **10 s** at the **Town Hall**, which **heals** a hero standing next to it (8 HP/s) and **shoots arrows** like a weak tower (5 / 8 / 12 dmg by level, editable); maps take **any number of building spots** (1–30), the separate hero-start marker is gone; **weapons** (§6.3); waves re-tuned for the stronger defence (spawn spread ×1.2, enemy HP +5 %/round): bot averages 42–54 s per wave, all games won.
 5e. **v1.2** ✅ – **equipment**: backpack + right hand (weapon), left hand (shield, +armor), body armor; two-handed weapons (bows, battle axe, fire staff) take both hands; the hero starts with a weak wooden sword (in hand) and a short bow; changing weapons takes **2 s** (no attacks meanwhile); the attack buttons pick a weapon of that class. Weapons, shields and armor **drawn in the studio are items** with their numbers set next to the drawing (class, one/two hands, damage, reach, speed, splash / damage absorbed, price, shop round, chest chance); the Weapons editor keeps the built-in ones. **Coins have values**: every coin drawing has its own value; drops are paid in the biggest coins that fit (default 1 and 5 without drawings). **Ready** also advances buildings/upgrades in progress by the skipped prep time. Selling asks "Really?" again; upgrades are one click. **Game controls laid over the map**: coins/workers/Town Hall top left, lives top centre, wave info top right, attack types bottom right with equipment above, tools bottom centre. **Rugged road edges** generated from the map (picture only). Decorations: picture list of every drawing, only on grass. Drawing editor: crop, load from disk, magic-wand strength (all undoable). **Performance**: HUD snapshot sent to React only when it changes (~10× fewer renders), memoized overlay pieces with stable callbacks, the build panel refreshes itself, the Phaser game is no longer recreated by language changes or new callbacks, health bars / rings / scaffolding redrawn only when their value changes, pooled floating texts and effects, Phaser's unused audio disabled.
 5f. **Components** ✅ – every game part is one component (pictures + all numbers) edited in the studio, which became the general component editor (§7.1). Buildings are made from **features** (workers, arrows, soldiers, income, hero healing) with a table of 1–5 levels whose fields follow the features; the Town Hall is the `core` building type with the same features; "another look" components add drawings to an existing type. Enemies, weapons/shields/armor and coins carry their numbers next to their drawings; the separate Enemies and Weapons screens are gone and the Rules editor keeps only global rules. Old data and version-1 save files are migrated automatically. Tests cover new building kinds made only from data (market, well, 4-level tower).
+5g. **Lives & backpack** ✅ – every lost life sends the hero away for 10 s and back to the Town Hall; losing all 5 loses the game (the end screen says why). The bot now walks back to heal below 40 % HP and still wins every seed without losing a life; the same bot without healing loses every seed (new test). Small retune: dragon 280 HP / speed 36, rounds 14–15 spawns. **Backpack** rebuilt: three slots (right hand, left hand, armor) with the hero's attack / reach / armor shown live, items dragged onto slots with mouse or finger (or tap item → tap slot), wrong slots refused, worn items dragged back to take them off.
 6. **Later** – rotating decorations, a "+" mark on reused level drawings, a round-summary card, per-map export, playtests on a real tablet and with kids, animated sprites (frame sheets photographed from a printed template), longbowmen soldiers that can hit flying enemies, walls.
 
 ## 15. Open questions
@@ -361,7 +362,7 @@ public/default-data.json   class pack (empty by default)
 | Q6 | Green vs yellow meaning? | Yellow = path (walkable), green = grass (blocked); maps painted in app; enemies spawn from edge caves |
 | Q7 | How are the 10 spots defined? | Fixed around centre, marked in map editor |
 | Q8 | Melee vs ranged selection | Player chooses |
-| Q9 | Hero lives | 5; after all lost → 30 s absence, respawn at respawn point |
+| Q9 | Hero lives | 5; every lost life → 10 s absence, back at the Town Hall; all lost → game over |
 | Q10 | Ranged ammo limited? | Unlimited arrows, cooldown, upgradeable |
 | Q11 | Per-hero stats? | Yes, editable in game |
 | Q12 | Upgrade levels | 3 levels (build + 2 upgrades), drawing per level, data-driven |
@@ -371,9 +372,9 @@ public/default-data.json   class pack (empty by default)
 | Q16 | What enemies attack | Walk to centre, attack everything in range on the way |
 | Q17 | Round flow | Ready button, early-call bonus, countdown shown |
 | Q18 | Rounds per level | 20 |
-| Q19 | Lose condition | Town Hall destroyed |
+| Q19 | Lose condition | Town Hall destroyed, or all hero lives lost |
 | Q20 | Editors for kids or for teacher only? | Kids can edit maps |
-| Q21 | Losing one life | Hero stays in place with fewer lives |
+| Q21 | Losing one life | Hero is away 10 s, then back at the Town Hall with full HP |
 | Q22 | Starting buildings | Town Hall only |
 | Q23 | Import: merge or replace? | Merge; purge on demand |
 | Q24 | Decoration stamps from kids' drawings on the map? | Yes, decoration layer |
@@ -419,7 +420,7 @@ All values become the **defaults** in `src/config/` and are editable in the in-g
 | Worker speed-up | `buildTime = base / (1 + 0.15 × workers)` | 6 workers → 1.9× faster, 15 → 3.25× |
 | Building regen | 1 % max HP / s, starts 5 s after last hit | |
 | Enemy scaling | HP × `(1 + 0.04 × (round − 1))` | round 20 = ×1.76 |
-| Hero respawn delay | 30 s (all lives lost) | |
+| Hero respawn delay | 10 s (every lost life) | |
 | Hit invulnerability | 1.5 s after losing a life | |
 | Build/interaction radius | 90 px from spot / Town Hall | |
 

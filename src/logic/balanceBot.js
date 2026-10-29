@@ -54,14 +54,15 @@ const PLAN = [
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
 /** Play one game; returns per-round stats and the result. */
-export function playGame({ rules = DEFAULT_RULES, buildingTypes = DEFAULT_BUILDING_TYPES, seed = 1, plan = PLAN, onTick } = {}) {
+// careful = goes back to the Town Hall to heal when hurt; a careless bot runs out of lives
+export function playGame({ rules = DEFAULT_RULES, buildingTypes = DEFAULT_BUILDING_TYPES, seed = 1, plan = PLAN, careful = true, onTick } = {}) {
   const { map, grid } = testMap();
   const w = new World({ map, grid, enemyTypes: DEFAULT_ENEMY_TYPES, buildingTypes, rules, waves: defaultWaves(rules.balance), seed });
   w.setMode('ranged');
   const home = { x: w.townHall.x, y: w.townHall.y + 50 };
   const stats = [];
   let cur = { destroyed: 0, minTownHall: w.townHall.hp, livesLost: 0 };
-  let think = 0, rebuilds = [];
+  let think = 0, rebuilds = [], healing = false;
   const done = plan.map(() => false);
   // the first plan step that isn't done and isn't locked / waiting (it may still cost too much)
   const nextStep = () => {
@@ -105,6 +106,15 @@ export function playGame({ rules = DEFAULT_RULES, buildingTypes = DEFAULT_BUILDI
     if (think > 0 || w.hero.dead) continue;
     think = 0.5;
     const h = w.hero;
+    // 0) every lost life counts: when hurt, walk back to the Town Hall and heal up
+    if (careful && h.hp < h.maxHp * 0.4) healing = true;
+    if (healing) {
+      if (h.hp >= h.maxHp * 0.8) healing = false;
+      else {
+        if (dist(h, home) > 30 && !h.path.length) w.moveHeroTo(home.x, home.y);
+        continue;
+      }
+    }
     const danger = w.enemies.some((e) => dist(e, h) < 160);
     // 1) rebuild ruins first, then follow the plan
     const idx = rebuilds.length ? -1 : nextStep();

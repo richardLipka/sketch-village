@@ -80,8 +80,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
       roundEnd: () => tr('game.msg_round_end', { n: e.round, coins: e.reward }),
       bonus: () => tr('game.msg_bonus', { coins: e.amount }),
       cantHit: () => tr('game.msg_cant_hit'),
-      heroLostLife: () => (e.lives > 0 ? tr('game.msg_life', { n: e.lives }) : null),
-      heroDown: () => tr('game.msg_hero_down', { s: e.respawnIn }),
+      heroDown: () => tr('game.msg_hero_down', { s: e.respawnIn, n: e.lives }),
       heroRespawn: () => tr('game.msg_hero_back'),
       built: () => tr('build.msg_built', { name: name() }),
       upgraded: () => (e.townHall ? tr('build.msg_th_upgraded', { n: e.level }) : tr('build.msg_upgraded', { name: name(), n: e.level })),
@@ -216,12 +215,16 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
   const onUpgradeTownHall = useCallback(() => act((w) => w.upgradeTownHall()), [act]);
   const onUpgradeHero = useCallback((stat) => act((w) => w.upgradeHero(stat)), [act]);
   const onBuyWeapon = useCallback((id) => act((w) => w.buyWeapon(id)), [act]);
-  const onEquip = useCallback((id) => {
+  // backpack: drop an item on a slot / drag a worn one back into the bag
+  const equipAct = useCallback((fn) => {
     const w = worldRef.current;
-    const r = w?.equip(id);
+    if (!w) return;
+    const r = fn(w);
     if (r && !r.ok) say(live.current.t(`weapons.reason_${r.reason}`));
-    if (w) setHud(w.hud());
+    setHud(w.hud());
   }, [say]);
+  const onEquipTo = useCallback((id, slot) => equipAct((w) => w.equipTo(id, slot)), [equipAct]);
+  const onUnequip = useCallback((slot) => equipAct((w) => w.unequip(slot)), [equipAct]);
   const closePanel = useCallback(() => { setSelection(null); const s = scene(); if (s) s.selection = null; }, []);
 
   // keyboard: 1/2/3 = attack type, I = backpack, space = ready, P = pause
@@ -262,7 +265,8 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
               newThings={hud.newThings} enemyTypes={enemyTypes} typeName={typeName} onReady={ready}
             />
             <Equipment inventoryKey={inventoryKey} right={hud.equipped.right} left={hud.equipped.left} armor={hud.equipped.armor}
-              items={weapons} assets={assets} onEquip={onEquip} />
+              attack={hud.hero.attack} reach={hud.hero.reach} armorPct={hud.hero.armor}
+              items={weapons} assets={assets} onEquipTo={onEquipTo} onUnequip={onUnequip} />
             <AttackBar mode={hud.hero.mode} hasMelee={has.melee} hasRanged={has.ranged} hasMagic={has.magic} switching={hud.hero.switching} onMode={setMode} />
           </>
         )}
@@ -282,7 +286,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
         {hud && !playing && (
           <div className="game-over">
             <div className="sketch-card" style={{ textAlign: 'center' }}>
-              <h1>{hud.phase === 'won' ? `🏆 ${t('game.won')}` : `💥 ${t('game.lost')}`}</h1>
+              <h1>{hud.phase === 'won' ? `🏆 ${t('game.won')}` : `💥 ${t(hud.lostBy === 'hero' ? 'game.lost_hero' : 'game.lost')}`}</h1>
               <p>{t('game.reached', { n: hud.round, total: hud.totalRounds })}</p>
               <div className="row" style={{ justifyContent: 'center' }}>
                 <button className="btn primary" onClick={() => { setPaused(false); setSpeed(1); setRestart((n) => n + 1); }}>↺ {t('game.again')}</button>

@@ -224,8 +224,21 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 .btn.attack .switching { position: absolute; left: 0; bottom: 0; height: 6px; background: var(--danger); }
 .eq-row { gap: 0.3em; }
 .game-screen .btn.eq-slot { width: max(48px, calc(2.4 * var(--u))); height: max(48px, calc(2.4 * var(--u))); padding: 0; display: grid; place-items: center; font-size: 1.1em; background: #fffdf7; }
-.backpack { width: min(19em, 80vw); max-height: 50vh; overflow: auto; padding: 0.4em 0.5em; }
-.weapon-row { display: flex; align-items: center; gap: 0.4em; width: 100%; text-align: left; margin: 0.2em 0; padding: 0.15em 0.4em; font-size: 0.9em; }
+.backpack { width: min(24em, calc(100vw - 32px)); max-height: 62vh; overflow: auto; padding: 0.4em 0.6em; user-select: none; }
+.eq-slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4em; margin: 0.3em 0; }
+.eq-big, .eq-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15em; text-align: center;
+  border: 2px dashed #b8ad94; border-radius: 10px; background: #fffdf7; padding: 0.3em 0.2em; min-height: 48px; touch-action: none; cursor: grab; }
+.eq-big { min-height: 5.6em; border-style: solid; border-color: var(--ink, #1f2a44); }
+.eq-big .eq-label { line-height: 1.1; }
+.eq-empty { font-size: 2em; line-height: 1.2; opacity: 0.45; }
+.eq-name { line-height: 1.1; word-break: break-word; }
+.eq-big.drop-ok, .eq-bag.drop-ok { background: #dcfce7; border-color: #16a34a; box-shadow: 0 0 0 3px #86efac; }
+.eq-big.drop-no { opacity: 0.45; }
+.eq-big.picked, .eq-item.picked { background: #fef3c7; border-color: #d97706; }
+.eq-stats { text-align: center; margin: 0.2em 0 0.4em; font-weight: 600; }
+.eq-bag { display: grid; grid-template-columns: repeat(auto-fill, minmax(6.2em, 1fr)); gap: 0.4em; padding: 0.4em; border: 2px dashed #d6cdb6; border-radius: 12px; min-height: 4em; }
+.eq-bag > p { grid-column: 1 / -1; margin: 0.3em; }
+.eq-ghost { position: fixed; z-index: 100; pointer-events: none; transform: translate(-50%, -60%) rotate(-6deg); filter: drop-shadow(0 4px 6px rgba(0,0,0,.3)); }
 .game-screen .game-msg { top: calc(16px + 2.4em); }
 .game-screen .coach { right: auto; left: 50%; bottom: calc(16px + max(56px, calc(2.9 * var(--u)))); transform: translateX(-50%) rotate(0.6deg); max-width: min(26em, 60%); font-size: 0.95em; }
 .game-screen .build-panel { left: 8px; bottom: 8px; width: min(17em, 60%); max-height: calc(100% - 3.6em); font-size: 0.9em; }

@@ -88,20 +88,86 @@ export const AttackBar = memo(function AttackBar({ mode, hasMelee, hasRanged, ha
   );
 });
 
-// Equipment: right hand, left hand (shield) and armor; the backpack lists every
-// item and one click puts it on.
-export const Equipment = memo(function Equipment({ inventoryKey, right, left, armor, items, assets, onEquip }) {
+// which equipment slot an item goes into
+const slotFor = (w) => (isWeapon(w) ? 'right' : w?.slot === 'shield' ? 'left' : 'armor');
+const SLOTS = [['right', '✋', 'weapons.right_hand'], ['left', SLOT_ICON.shield, 'weapons.left_hand'], ['armor', SLOT_ICON.armor, 'weapons.slot_armor']];
+
+// Equipment: the strip above the attack buttons shows what is worn; it opens
+// the backpack: three slots (right hand, left hand, armor) and the items. An
+// item is dragged onto its slot (mouse or finger) – or tapped, then the slot
+// tapped; a worn item dragged back into the backpack comes off. The hero's
+// numbers under the slots change with every move.
+export const Equipment = memo(function Equipment({ inventoryKey, right, left, armor, attack, reach, armorPct, items, assets, onEquipTo, onUnequip }) {
   const { t, i18n } = useTranslation();
-  const [open, setOpen] = useState(null); // null | 'all' | 'weapon' | 'shield' | 'armor'
+  const [open, setOpen] = useState(false);
+  const [drag, setDrag] = useState(null); // { id, from, x, y } while dragging
+  const [picked, setPicked] = useState(null); // { id, from } after a tap
   const lang = i18n.language;
   const byId = (id) => items.find((w) => w.id === id);
   const owned = inventoryKey ? inventoryKey.split(',').map(byId).filter(Boolean) : [];
+  const worn = { right, left, armor };
   const twoHanded = byId(right)?.slot === 'twohand';
-  const shown = owned.filter((w) => open === 'all' || (open === 'weapon' ? isWeapon(w) : w.slot === open));
-  const worn = (w) => w.id === right || w.id === left || w.id === armor;
+  const inBag = owned.filter((w) => w.id !== right && w.id !== left && w.id !== armor);
+  const moving = drag ?? picked;
+  const target = moving && moving.from === 'bag' ? slotFor(byId(moving.id)) : null;
+  const name = (w) => w?.name?.[lang] ?? w?.id;
 
-  const slot = (key, id, icon, label) => (
-    <button key={key} className={`btn eq-slot ${open === key ? 'active' : ''}`} onClick={() => setOpen(open === key ? null : key)} title={label}>
+  const drop = (id, from, to) => {
+    setPicked(null);
+    if (!to || to === from) return;
+    if (to === 'bag') onUnequip(from);
+    else onEquipTo(id, to);
+  };
+  const tap = (id, from) => {
+    if (picked && from !== 'bag' && picked.from === 'bag') return drop(picked.id, 'bag', from); // bag item → slot
+    if (picked && picked.id === id) return setPicked(null);
+    setPicked(id ? { id, from } : null);
+  };
+  // pointer drag that works with a finger too; a short press is a tap
+  const startDrag = (e, id, from) => {
+    if (!id || (e.button ?? 0) > 0) return;
+    e.preventDefault();
+    const sx = e.clientX, sy = e.clientY;
+    let moved = false;
+    const move = (ev) => {
+      if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 8) return;
+      moved = true;
+      setDrag({ id, from, x: ev.clientX, y: ev.clientY });
+    };
+    const end = (ev) => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', end);
+      window.removeEventListener('pointercancel', end);
+      setDrag(null);
+      if (ev.type === 'pointercancel') return;
+      if (!moved) return tap(id, from);
+      const to = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('[data-drop]')?.dataset.drop;
+      drop(id, from, to);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+  };
+  const tapBag = () => { if (picked && picked.from !== 'bag') drop(picked.id, picked.from, 'bag'); };
+
+  const slotBox = ([key, icon, label]) => {
+    const id = key === 'left' && twoHanded ? null : worn[key];
+    const w = byId(id);
+    const cls = ['eq-big', target === key && 'drop-ok', target && target !== key && 'drop-no', picked?.from === key && 'picked'].filter(Boolean).join(' ');
+    return (
+      <div key={key} className={cls} data-drop={key} title={t(label)}
+        onPointerDown={(e) => (w ? startDrag(e, id, key) : undefined)}
+        onClick={() => (!w ? tap(null, key) : undefined)}>
+        <span className="small muted eq-label">{t(label)}</span>
+        {w ? <WeaponIcon weapon={w} assets={assets} size="2.4em" />
+          : key === 'left' && twoHanded ? <span className="eq-empty">↔</span> : <span className="eq-empty muted">{icon}</span>}
+        <span className="small eq-name">{w ? name(w) : key === 'left' && twoHanded ? t('weapons.two_hands') : '—'}</span>
+      </div>
+    );
+  };
+
+  const stripSlot = (key, id, icon, label) => (
+    <button key={key} className="btn eq-slot" onClick={() => setOpen(!open)} title={label}>
       {id ? <WeaponIcon weapon={byId(id)} assets={assets} size="1.5em" /> : <span className="muted">{icon}</span>}
     </button>
   );
@@ -110,25 +176,40 @@ export const Equipment = memo(function Equipment({ inventoryKey, right, left, ar
     <div className="ov ov-br-eq">
       {open && (
         <div className="backpack sketch-card" onPointerDown={(e) => e.stopPropagation()}>
-          <b>🎒 {t('weapons.inventory')}</b>
-          {!shown.length && <p className="small muted">{t('weapons.empty')}</p>}
-          {shown.map((w) => (
-            <button key={w.id} className={`btn weapon-row ${worn(w) ? 'active' : ''}`} onClick={() => onEquip(w.id)}
-              disabled={w.slot === 'shield' && twoHanded}>
-              <WeaponIcon weapon={w} assets={assets} size="1.3em" />
-              <span>{w.name?.[lang] ?? w.id}</span>
-              <span className="small muted">{itemLine(w, t)}</span>
-              {worn(w) && <span className="small">✓</span>}
-            </button>
-          ))}
+          <div className="row" style={{ justifyContent: 'space-between' }}>
+            <b>🎒 {t('weapons.inventory')}</b>
+            <button className="btn icon" onClick={() => { setOpen(false); setPicked(null); }} title={t('common.done')}>✕</button>
+          </div>
+          <div className="eq-slots">{SLOTS.map(slotBox)}</div>
+          <div className="small eq-stats">
+            {CLASS_ICON[isWeapon(byId(right)) ? byId(right).kind : 'melee']} {t('weapons.stat_attack', { v: attack })} · {t('weapons.stat_reach', { v: reach })} · 🛡️ {t('weapons.stat_armor', { v: armorPct })}
+          </div>
+          <div className={`eq-bag ${moving && moving.from !== 'bag' ? 'drop-ok' : ''}`} data-drop="bag" onClick={tapBag}>
+            {!owned.length && <p className="small muted">{t('weapons.empty')}</p>}
+            {owned.length > 0 && !inBag.length && <p className="small muted">{t('weapons.bag_empty')}</p>}
+            {inBag.map((w) => (
+              <div key={w.id} className={`eq-item ${picked?.id === w.id ? 'picked' : ''}`} onPointerDown={(e) => startDrag(e, w.id, 'bag')}
+                onClick={(e) => e.stopPropagation()} title={itemLine(w, t)}>
+                <WeaponIcon weapon={w} assets={assets} size="2em" />
+                <span className="small eq-name">{name(w)}</span>
+                <span className="small muted">{itemLine(w, t)}</span>
+              </div>
+            ))}
+          </div>
+          <p className="small muted" style={{ margin: '4px 0 0' }}>{t('weapons.drag_hint')}</p>
+        </div>
+      )}
+      {drag && (
+        <div className="eq-ghost" style={{ left: drag.x, top: drag.y }}>
+          <WeaponIcon weapon={byId(drag.id)} assets={assets} size="2.4em" />
         </div>
       )}
       <div className="row eq-row">
-        {slot('weapon', right, '✋', t('weapons.right_hand'))}
-        {twoHanded ? <span className="btn eq-slot muted" title={t('weapons.two_hands')}>↔</span> : slot('shield', left, SLOT_ICON.shield, t('weapons.left_hand'))}
-        {slot('armor', armor, SLOT_ICON.armor, t('weapons.slot_armor'))}
-        <button className={`btn eq-slot ${open === 'all' ? 'active' : ''}`} onClick={() => setOpen(open === 'all' ? null : 'all')} title={`${t('weapons.inventory')} (I)`}>
-          🎒<span className="small">{owned.length}</span>
+        {stripSlot('right', right, '✋', t('weapons.right_hand'))}
+        {twoHanded ? <span className="btn eq-slot muted" title={t('weapons.two_hands')}>↔</span> : stripSlot('left', left, SLOT_ICON.shield, t('weapons.left_hand'))}
+        {stripSlot('armor', armor, SLOT_ICON.armor, t('weapons.slot_armor'))}
+        <button className={`btn eq-slot ${open ? 'active' : ''}`} onClick={() => { setOpen(!open); setPicked(null); }} title={`${t('weapons.inventory')} (I)`}>
+          🎒<span className="small">{inBag.length}</span>
         </button>
       </div>
     </div>

@@ -7,7 +7,7 @@
 //              straight; on the way they attack anything in range (hero, soldiers,
 //              buildings, Town Hall)
 //   hero:      walks on roads, melee / ranged / magic (player's choice; magic needs
-//              a magic weapon), 5 lives, 10 s absence after the last one, then back
+//              a magic weapon), 5 lives; every lost life = 10 s absence, then back
 //              at the Town Hall, which also heals it; auto-attacks what is in range
 //   equipment: backpack + right hand (weapon → attack class), left hand (shield)
 //              and body armor; two-handed weapons take both hands; changing
@@ -19,7 +19,7 @@
 //              centre, castles send up to 3 soldiers; slow self-repair; destroyed
 //              → ruin, rebuild at level 1. Town Hall level caps building levels
 //              and hero upgrades.
-//   lost:      Town Hall destroyed
+//   lost:      Town Hall destroyed, or the hero lost all lives
 
 import { DEFAULT_BUILDING_TYPES } from '../config/buildings.js';
 import { hasFeature } from '../config/features.js';
@@ -247,6 +247,41 @@ export class World {
     }
     this.recalcHero();
     this.emit('equipped', { weapon: id });
+    return { ok: true };
+  }
+
+  /** Which equipment slot an item belongs in: 'right' (weapons), 'left' (shields) or 'armor'. */
+  slotOf(id) {
+    const w = this.weaponTypes[id];
+    if (!w) return null;
+    return isWeapon(w) ? 'right' : w.slot === 'shield' ? 'left' : 'armor';
+  }
+
+  /**
+   * Backpack drag & drop: put an item into a given slot. A two-handed weapon
+   * dropped on the left hand goes to the right one (it takes both anyway).
+   */
+  equipTo(id, slot) {
+    if (!this.inventory.includes(id)) return { ok: false, reason: 'unknown' };
+    const want = this.slotOf(id);
+    if (slot === 'left' && this.weaponTypes[id].slot === 'twohand') slot = 'right';
+    if (slot !== want) return { ok: false, reason: 'wrong_slot' };
+    if (this.equipped[slot] === id) return { ok: true };
+    return this.equip(id);
+  }
+
+  /** Take an item off back into the backpack (the hero fights with bare hands without a weapon). */
+  unequip(slot) {
+    const e = this.equipped;
+    if (!(slot in e)) return { ok: false, reason: 'unknown' };
+    if (!e[slot]) return { ok: true };
+    if (slot === 'right') {
+      if (this.hero.switching > 0) return { ok: false, reason: 'switching' };
+      this.hero.target = null;
+    }
+    e[slot] = null;
+    this.recalcHero();
+    this.emit('equipped', { weapon: null });
     return { ok: true };
   }
 
@@ -819,7 +854,8 @@ export class World {
         this.emit('hit', { kind: 'townhall', x: target.x, y: target.y, amount });
         if (target.hp === 0) {
           this.phase = 'lost';
-          this.emit('lost');
+          this.lostBy = 'townhall';
+          this.emit('lost', { reason: 'townhall' });
         }
         return;
       }
@@ -887,20 +923,24 @@ export class World {
     this.emit('enemyDied', { id: e.id, x: e.x, y: e.y, coins: n });
   }
 
+  /** Every lost life takes the hero away for a while (back at the Town Hall); the last one loses the game. */
   loseLife() {
     const h = this.hero;
     h.lives--;
+    h.hp = 0;
+    h.dead = true;
+    h.path = [];
+    h.target = null;
+    h.guard = null;
     this.emit('heroLostLife', { lives: h.lives });
-    if (h.lives > 0) {
-      h.hp = h.maxHp;
-      h.invuln = this.b.hitInvulnerability;
-    } else {
-      h.dead = true;
-      h.path = [];
-      h.target = null;
-      h.respawnAt = this.time + this.b.heroRespawnDelay;
-      this.emit('heroDown', { respawnIn: this.b.heroRespawnDelay });
+    if (h.lives <= 0) {
+      this.phase = 'lost';
+      this.lostBy = 'hero';
+      this.emit('lost', { reason: 'hero' });
+      return;
     }
+    h.respawnAt = this.time + this.b.heroRespawnDelay;
+    this.emit('heroDown', { respawnIn: this.b.heroRespawnDelay, lives: h.lives });
   }
 
   // ---------------- projectiles ----------------
@@ -997,7 +1037,7 @@ export class World {
     const h = this.hero;
     if (h.dead) {
       if (this.time >= h.respawnAt) {
-        Object.assign(h, { ...this.respawnPoint, dead: false, hp: h.maxHp, lives: this.b.heroLives, invuln: this.b.hitInvulnerability, path: [], guard: null, target: null });
+        Object.assign(h, { ...this.respawnPoint, dead: false, hp: h.maxHp, invuln: this.b.hitInvulnerability, path: [], guard: null, target: null });
         this.emit('heroRespawn');
       }
       return;
@@ -1102,6 +1142,7 @@ export class World {
     const h = this.hero;
     return {
       phase: this.phase,
+      lostBy: this.lostBy ?? null,
       round: Math.min(this.round + 1, this.totalRounds),
       totalRounds: this.totalRounds,
       prepLeft: Math.ceil(Math.max(0, this.prepLeft)),
@@ -1113,6 +1154,10 @@ export class World {
         hp: Math.max(0, Math.ceil(h.hp)), maxHp: h.maxHp, lives: h.lives, dead: h.dead,
         respawnIn: h.dead ? Math.ceil(Math.max(0, h.respawnAt - this.time)) : 0, mode: h.mode,
         switching: Math.ceil(h.switching * 10) / 10,
+        // what the equipment adds up to, shown in the backpack
+        attack: Math.round(this.heroStats[h.mode]?.damage ?? 0),
+        reach: Math.round(this.heroStats[h.mode]?.range ?? 0),
+        armor: Math.round(this.heroStats.armor * 100),
       },
       inventory: [...this.inventory],
       equipped: { ...this.equipped },

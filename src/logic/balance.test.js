@@ -11,7 +11,7 @@ describe('balance (bot plays 20 rounds)', () => {
 
   if (process.env.SV_BALANCE) {
     for (const [i, g] of games.entries()) {
-      console.log(`seed ${SEEDS[i]}: ${g.result} at round ${g.round}, plan steps ${g.planDone}`);
+      console.log(`seed ${SEEDS[i]}: ${g.result} at round ${g.round}, plan steps ${g.planDone}, lives lost ${g.stats.reduce((n, s) => n + s.livesLost, 0)}, waves ${g.stats.map((s) => Math.round(s.waveLength)).join(' ')}`);
       console.table(g.stats.map((s) => ({ r: s.round, lost: s.destroyed, th: Math.round(s.minTownHall), lives: s.livesLost, len: Math.round(s.waveLength), coins: s.coins, got: s.picked, gone: s.expired, bld: s.buildings })));
     }
   }
@@ -40,6 +40,14 @@ describe('balance (bot plays 20 rounds)', () => {
     for (const g of games) {
       // the unlock event follows the round-end record, so stats[k] holds what opened for round k + 1
       for (const s of g.stats.slice(1, 20)) expect(s.unlocked?.length, `for round ${s.round}`).toBeGreaterThan(0);
+    }
+  });
+
+  it('lives matter: a hero that never goes back to heal runs out of lives', () => {
+    const careless = SEEDS.map((seed) => playGame({ seed, careful: false }));
+    for (const g of careless) {
+      expect(g.result).toBe('lost');
+      expect(g.world.lostBy).toBe('hero');
     }
   });
 
