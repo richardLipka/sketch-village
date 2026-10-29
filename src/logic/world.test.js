@@ -4,6 +4,7 @@ import { World } from './world.js';
 import { defaultWaves } from '../config/waves.js';
 import { DEFAULT_ENEMY_TYPES } from '../config/enemies.js';
 import { BALANCE } from '../config/balance.js';
+import { placeCave } from './mapModel.js';
 
 describe('expandRound', () => {
   it('spreads over caves and orders by time', () => {
@@ -61,6 +62,22 @@ function makeWorld(waves, opts = {}) {
 }
 
 const run = (w, seconds, dt = 1 / 30) => { for (let t = 0; t < seconds && w.phase !== 'lost' && w.phase !== 'won'; t += dt) w.update(dt); };
+
+describe('World – caves anywhere', () => {
+  it('enemies from a cave in the middle of the map step onto its road and walk to the village', () => {
+    const { map, grid } = testMap();
+    const cave = { id: 'mid', ...placeCave(grid, { x: 250, y: 300 }) }; // beside the left road, far from the edge
+    const w = makeWorld({ rounds: [{ groups: [{ enemy: 'goblin', count: 1, spawn: 'mid' }] }] }, { map: { ...map, caves: [cave] }, grid });
+    w.callReady();
+    run(w, 0.5);
+    const e = w.enemies[0];
+    expect(Math.hypot(e.x - cave.x, e.y - cave.y)).toBeLessThan(48); // came out right next to the cave…
+    expect(e.y).toBeGreaterThan(330); // …on the road
+    const before = Math.hypot(e.x - map.centre.x, e.y - map.centre.y);
+    run(w, 4);
+    expect(Math.hypot(e.x - map.centre.x, e.y - map.centre.y)).toBeLessThan(before - 80);
+  });
+});
 
 describe('World – rounds', () => {
   it('counts down the prep time, then starts the wave', () => {

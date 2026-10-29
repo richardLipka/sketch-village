@@ -99,7 +99,7 @@ From `richardLipka/simple_editable_train`:
 - **Village centre** – the target of enemies (one point/area in the middle).
 - **10 building spots** at **fixed positions around the village centre**, **close to the path** (on grass, next to yellow), marked by hand in the map editor. The hero builds standing on the nearest path cell. Editor warns if a spot is farther than `maxSpotDistance` from a path.
 - **Buildings do not block paths** – enemies walk past and attack what is in range. A blocking **Wall** building may be added later (would require re-computing the flow field when built/destroyed; the pathfinding module is designed for that).
-- **Several caves per map**, all on map edges. **Enemies spawn only from caves**; caves are just spawn points. A cave is a spawn object placed in the editor on the map border, where a yellow path reaches the edge. Each cave has an id/name (used in the wave config, e.g. `"spawn": "cave-north"`) and is drawn with a `cave` asset (new asset category, kids draw it). Editor validates that every cave connects by path to the village centre.
+- **Several caves per map**, **anywhere on the map** – at the border or in the middle. **Enemies spawn only from caves**; caves are just spawn points. A click with the cave tool puts the cave on the grass **right beside the nearest road** (on the side of the click, touching the road), so it is clear which way its enemies walk; a click with no road within 96 px places nothing and says why, and dragging a cave keeps it next to a road. Validation: every cave is within 48 px of a road that leads to the village, and not closer than 160 px to the Town Hall. Each cave has an id/name (used in the wave config, e.g. `"spawn": "cave-north"`) and is drawn with a `cave` asset (new asset category, kids draw it). Editor validates that every cave connects by path to the village centre.
 
 ### 5.1 Map Painter & Map Editor (in app)
 One screen with two modes:
@@ -216,7 +216,7 @@ Every level also has `cost`, `time`, `hp` and `round` (the round from which that
 
 ## 9. Enemies
 
-- Spawn only from **caves** on map edges, walk along paths towards the **village centre / Town Hall** (flow-field / BFS from centre, shared by all enemies).
+- Spawn only from **caves** (anywhere beside a road), step onto the cave's road and walk along paths towards the **village centre / Town Hall** (flow-field / BFS from centre, shared by all enemies).
 - **On the way they attack everything in range** – buildings, soldiers and the hero. While something is in range they stop and fight; when it is gone they continue to the centre.
 - Target priority when several things are in range: the nearest.
 - Enemy types are `enemy` components (§7.1): picture and numbers in one record. Kids edit the built-in ones and add their own:
@@ -379,7 +379,7 @@ public/default-data.json   class pack (empty by default)
 | Q23 | Import: merge or replace? | Merge; purge on demand |
 | Q24 | Decoration stamps from kids' drawings on the map? | Yes, decoration layer |
 | Q25 | Spots vs path | Spots close to the path; hero builds from the path |
-| Q26 | Caves | Several caves on map edges; just spawn points (closing caves not planned) |
+| Q26 | Caves | Several caves anywhere on the map, always right beside a road; just spawn points (closing caves not planned) |
 | Q27 | Do buildings block paths? | No; a blocking **Wall** building may be added later |
 | Q28 | How is the hero upgraded? | Coins in Town Hall: melee, ranged, armor, speed |
 | Q29 | Limit on hero stats? | Skill points distributed among characteristics |

@@ -1,14 +1,14 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { mapCanvas, gridFromCanvas } from './mapRuntime.js';
-import { validateMap, MAX_SPOTS, CENTRE_RADIUS, EDGE_MARGIN } from '../logic/mapModel.js';
+import { validateMap, placeCave, MAX_SPOTS, CENTRE_RADIUS } from '../logic/mapModel.js';
 import { floodFill, hexToRgba } from '../assets/pixelOps.js';
 import { loadImage } from '../assets/imageEncoding.js';
 import { newId } from '../data/saveFile.js';
 
 // Map Painter & Map Editor (SPEC §5.1).
 //   Paint – yellow road brush, grass brush (erases road), decoration pencil, bucket fill.
-//   Place – town hall (village centre), any number of building spots, caves on the edge, decorations.
+//   Place – town hall (village centre), any number of building spots, caves anywhere beside a road, decorations.
 // Everything is point-and-click; markers can also be dragged.
 
 const DECOR_COLORS = ['#1f2937', '#78350f', '#166534', '#2563eb', '#dc2626', '#ffffff'];
@@ -176,13 +176,8 @@ export default function MapPainter({ map: initial, assets, onSave, onCancel }) {
   };
   const update = (patch) => setMap((m) => ({ ...m, ...patch }));
 
-  // Snap a cave to the nearest map border.
-  const snapToEdge = ({ x, y }) => {
-    const m = EDGE_MARGIN / 2;
-    const d = [x, W - x, y, H - y];
-    const k = d.indexOf(Math.min(...d));
-    return [{ x: m, y }, { x: W - m, y }, { x, y: m }, { x, y: H - m }][k];
-  };
+  // A cave goes anywhere, right beside the nearest road (null = no road near).
+  const caveAt = (p) => (grid ? placeCave(grid, p, { width: W, height: H }) : null);
 
   // Find a draggable marker under the point.
   const hitTest = (p) => {
@@ -200,7 +195,8 @@ export default function MapPainter({ map: initial, assets, onSave, onCancel }) {
     if (hit.kind === 'centre') update({ centre: { ...map.centre, x: p.x, y: p.y } });
     else {
       const list = [...map[hit.kind]];
-      const pos = hit.kind === 'caves' ? snapToEdge(p) : p;
+      const pos = hit.kind === 'caves' ? caveAt(p) : p;
+      if (!pos) return; // dragged away from every road: the cave stays where it was
       list[hit.i] = { ...list[hit.i], ...pos };
       update({ [hit.kind]: list });
     }
@@ -253,7 +249,12 @@ export default function MapPainter({ map: initial, assets, onSave, onCancel }) {
     pushUndo();
     if (placeTool === 'centre') update({ centre: { x: p.x, y: p.y, radius: CENTRE_RADIUS } });
     else if (placeTool === 'spot' && map.spots.length < MAX_SPOTS) update({ spots: [...map.spots, { id: newId(), ...p }] });
-    else if (placeTool === 'cave') update({ caves: [...map.caves, { id: newId(), ...snapToEdge(p) }] });
+    else if (placeTool === 'cave') {
+      const pos = caveAt(p);
+      if (!pos) { undo.current.pop(); setPlaceMsg(t('maps.cave_need_road')); return; }
+      setPlaceMsg(null);
+      update({ caves: [...map.caves, { id: newId(), ...pos }] });
+    }
     else if (placeTool === 'decoration' && decorAsset) {
       if (onRoad(p)) { setPlaceMsg(t('maps.decor_on_road')); return; }
       setPlaceMsg(null);
@@ -328,7 +329,7 @@ export default function MapPainter({ map: initial, assets, onSave, onCancel }) {
         ) : (
           <>
             {PLACE_TOOLS.map(([id, icon]) => (
-              <button key={id} className={`btn icon ${placeTool === id ? 'active' : ''}`} onClick={() => setPlaceTool(id)}>
+              <button key={id} className={`btn icon ${placeTool === id ? 'active' : ''}`} onClick={() => { setPlaceTool(id); setPlaceMsg(null); }}>
                 {icon} {t(`maps.place_${id}`)}{id === 'spot' ? ` (${map.spots.length})` : ''}
               </button>
             ))}
@@ -353,11 +354,13 @@ export default function MapPainter({ map: initial, assets, onSave, onCancel }) {
             </div>
           ))}
           <label className="small">{t('maps.decor_size')} <input type="range" min={0.5} max={3} step={0.1} value={decorScale} onChange={(e) => setDecorScale(+e.target.value)} /></label>
-          {placeMsg && <span className="small error-text"> {placeMsg}</span>}
         </div>
       )}
 
-      <p className="small muted" style={{ margin: '0 0 6px' }}>{t(mode === 'paint' ? `maps.hint_${tool}` : `maps.hint_place_${placeTool}`)}</p>
+      <p className="small muted" style={{ margin: '0 0 6px' }}>
+        {t(mode === 'paint' ? `maps.hint_${tool}` : `maps.hint_place_${placeTool}`)}
+        {mode === 'place' && placeMsg && <b className="error-text"> {placeMsg}</b>}
+      </p>
 
       <div style={{ position: 'relative', width: '100%', aspectRatio: `${W} / ${H}`, border: '2.5px solid var(--ink)', borderRadius: 6, overflow: 'hidden' }}>
         <canvas ref={baseRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />

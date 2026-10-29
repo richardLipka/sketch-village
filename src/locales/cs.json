@@ -207,7 +207,8 @@
     "hint_fill": "Vybarvi plochu jednou barvou.",
     "hint_place_centre": "Klikni, kam postavit radnici. Musí být u cesty.",
     "hint_place_spot": "Klikni vedle cesty – sem se budou stavět budovy. Míst může být, kolik chceš.",
-    "hint_place_cave": "Klikni u okraje mapy, kde končí cesta. Jeskyně se přichytí k okraji.",
+    "hint_place_cave": "Klikni vedle cesty – kdekoli na mapě. Jeskyně se postaví hned k cestě, aby nepřátelé věděli, kudy jít.",
+    "cave_need_road": "Jeskyně musí být u cesty – klikni blíž k nějaké.",
     "hint_place_respawn": "Klikni, kde se hrdina objeví.",
     "hint_place_decoration": "Vyber obrázek (stromy, hory…) a klikej na zelenou trávu. Táhnutím ho posuneš.",
     "hint_place_erase": "Klikni na věc, kterou chceš odebrat.",
@@ -220,7 +221,7 @@
     "problem_spot_count": "Umísti aspoň {{want}} místo na stavbu.",
     "problem_spot_far": "Místo {{n}} je moc daleko od cesty.",
     "problem_no_caves": "Přidej aspoň jednu jeskyni.",
-    "problem_cave_not_edge": "Jeskyně {{n}} musí být na okraji mapy.",
+    "problem_cave_too_close": "Jeskyně {{n}} je moc blízko radnice.",
     "problem_cave_off_path": "Jeskyně {{n}} není u cesty.",
     "problem_cave_not_connected": "Z jeskyně {{n}} nevede cesta k radnici.",
     "problem_respawn_off_path": "Start hrdiny musí být u cesty."

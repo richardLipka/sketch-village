@@ -207,7 +207,8 @@
     "hint_fill": "Fill an area with one colour.",
     "hint_place_centre": "Click where the town hall stands. It must be next to a road.",
     "hint_place_spot": "Click next to a road – buildings will go here. Place as many as you like.",
-    "hint_place_cave": "Click near the map edge where a road ends. The cave snaps to the edge.",
+    "hint_place_cave": "Click next to a road – anywhere on the map. The cave sits right beside the road, so its enemies know where to go.",
+    "cave_need_road": "A cave must be next to a road – click closer to one.",
     "hint_place_respawn": "Click where the hero appears.",
     "hint_place_decoration": "Pick a picture (trees, mountains…) and click on the green grass. Drag to move.",
     "hint_place_erase": "Click the thing you want to remove.",
@@ -220,7 +221,7 @@
     "problem_spot_count": "Place at least {{want}} building spot.",
     "problem_spot_far": "Spot {{n}} is too far from a road.",
     "problem_no_caves": "Add at least one cave.",
-    "problem_cave_not_edge": "Cave {{n}} must be on the map edge.",
+    "problem_cave_too_close": "Cave {{n}} is too close to the town hall.",
     "problem_cave_off_path": "Cave {{n}} is not next to a road.",
     "problem_cave_not_connected": "No road leads from cave {{n}} to the town hall.",
     "problem_respawn_off_path": "The hero start must be next to a road."
