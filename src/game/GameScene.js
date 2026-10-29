@@ -259,18 +259,22 @@ export default class GameScene extends Phaser.Scene {
     }
     if (w.isTownHallAt(x, y)) {
       this.select({ kind: 'townhall' });
+      this.cfg.onAnyEvent?.({ type: 'selectTownHall' });
       if (!w.heroNear(w.townHall, w.townHall.radius)) w.moveHeroTo(w.townHall.x, w.townHall.y);
       return;
     }
     const spot = w.spotAt(x, y);
     if (spot) {
       this.select({ kind: 'spot', id: spot.id });
-      if (!w.heroNear(spot)) w.moveHeroTo(spot.x, spot.y);
+      if (!w.heroNear(spot) && w.moveHeroTo(spot.x, spot.y)) this.cfg.onAnyEvent?.({ type: 'heroMoved' });
       return;
     }
     this.select(null);
     const end = w.moveHeroTo(x, y);
-    if (end) this.flashMarker(end.x, end.y, '✕');
+    if (end) {
+      this.flashMarker(end.x, end.y, '✕');
+      this.cfg.onAnyEvent?.({ type: 'heroMoved' });
+    }
   }
 
   select(sel) {
@@ -303,6 +307,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   onEvent(e) {
+    this.cfg.onAnyEvent?.(e); // sounds + tutorial
     if (e.type === 'hit' && e.amount) this.floatText(e.x, e.y - 24, `-${e.amount}`, e.kind === 'enemy' ? '#1e3a8a' : '#b91c1c');
     if (e.type === 'enemyDied') this.puff(e.x, e.y);
     if (e.type === 'coinPicked') this.floatText(e.x, e.y - 16, '+1', '#a16207');

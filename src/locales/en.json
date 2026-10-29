@@ -212,6 +212,8 @@
     "pause": "Pause (P)",
     "speed": "Game speed",
     "wobble": "Pencil wobble – drawings move a little",
+    "sound_on": "Sound on",
+    "sound_off": "Sound off",
     "paused": "Paused",
     "resume": "Resume",
     "won": "Village saved!",
@@ -313,6 +315,17 @@
     "cave_n": "cave {{n}}",
     "add_group": "Add group",
     "add_round": "Add round"
+  },
+  "tips": {
+    "walk": "Click the yellow road – your hero walks there.",
+    "build": "Click a dashed square next to the road to build. Start with a tower – it shoots arrows!",
+    "ready": "Ready? Press ⚑ Ready to call the wave early – you get bonus coins.",
+    "fight": "Click an enemy to attack it. ⚔️ sword is strong, 🏹 bow shoots from far away.",
+    "coins": "Enemies drop coins. Walk over them before they vanish!",
+    "townhall": "Click the town hall: upgrade it and make your hero stronger.",
+    "bow": "Flying enemies can only be hit with the bow – press 🏹 or key 2.",
+    "skip": "Hide tips",
+    "restart": "Show tips again"
   },
   "rules": {
     "title": "Game rules",

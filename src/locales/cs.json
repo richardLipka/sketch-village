@@ -212,6 +212,8 @@
     "pause": "Pauza (P)",
     "speed": "Rychlost hry",
     "wobble": "Kreslené chvění – obrázky se trochu hýbou",
+    "sound_on": "Zapnout zvuk",
+    "sound_off": "Vypnout zvuk",
     "paused": "Pauza",
     "resume": "Pokračovat",
     "won": "Vesnice ubráněna!",
@@ -313,6 +315,17 @@
     "cave_n": "jeskyně {{n}}",
     "add_group": "Přidat skupinu",
     "add_round": "Přidat kolo"
+  },
+  "tips": {
+    "walk": "Klikni na žlutou cestu – hrdina tam dojde.",
+    "build": "Klikni na čárkovaný čtverec u cesty a postav budovu. Začni věží – střílí šípy!",
+    "ready": "Připraven? Zmáčkni ⚑ Připraven a vlna přijde dřív – dostaneš bonusové mince.",
+    "fight": "Klikni na nepřítele a hrdina zaútočí. ⚔️ meč je silný, 🏹 luk střílí zdaleka.",
+    "coins": "Z nepřátel padají mince. Dojdi pro ně, než zmizí!",
+    "townhall": "Klikni na radnici: vylepšíš ji a posílíš hrdinu.",
+    "bow": "Létající nepřátele trefí jen luk – zmáčkni 🏹 nebo klávesu 2.",
+    "skip": "Skrýt rady",
+    "restart": "Ukázat rady znovu"
   },
   "rules": {
     "title": "Pravidla hry",

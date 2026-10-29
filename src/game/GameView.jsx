@@ -11,6 +11,8 @@ import { DEFAULT_HERO_POINTS } from '../config/heroStats.js';
 import { DEFAULT_RULES } from '../config/rules.js';
 import { wavesOf } from '../config/waves.js';
 import { World } from '../logic/world.js';
+import { play, setMuted, soundFor } from './sound.js';
+import { TUTORIAL_STEPS, TUTORIAL_DONE, advanceTutorial } from './tutorial.js';
 
 const MESSAGE_MS = 2600;
 const BUILDING_CATS = ['townhall', 'house', 'tower', 'castle'];
@@ -30,6 +32,18 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
   const [restart, setRestart] = useState(0);
   const [selection, setSelection] = useState(null);
   const wobble = !!settings.wobble;
+  const muted = !!settings.muted;
+  const tip = settings.tutorialStep ?? 0;
+  useEffect(() => setMuted(muted), [muted]);
+
+  // every World event (and a few UI ones): sound + tutorial progress. Kept in a
+  // ref so the running scene always calls the latest version.
+  const anyEvent = useRef(null);
+  anyEvent.current = (e) => {
+    play(soundFor(e));
+    const next = advanceTutorial(tip, e);
+    if (next !== tip) onSettings?.({ tutorialStep: next });
+  };
 
   const say = useCallback((text) => {
     setMessage({ text, at: Date.now() });
@@ -117,7 +131,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
       });
       gameRef.current.scene.add('game', GameScene, true, {
         world, map, images, variants, enemyTypes, wobble: !!settings.wobble,
-        onHud: setHud, onEvent, onSelect: setSelection,
+        onHud: setHud, onEvent, onSelect: setSelection, onAnyEvent: (e) => anyEvent.current(e),
       });
       // dev-only handle for automated browser testing
       if (import.meta.env.DEV) window.__sv = { game: gameRef.current, world };
@@ -137,11 +151,18 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
   useEffect(() => { const s = scene(); if (s) s.wobble = wobble; }, [wobble, hud === null]);
 
   const zoom = (f) => scene()?.zoomBy(f);
-  const setMode = (m) => { worldRef.current?.setMode(m); setHud((h) => h && { ...h, hero: { ...h.hero, mode: m } }); };
+  const setMode = (m) => {
+    worldRef.current?.setMode(m);
+    setHud((h) => h && { ...h, hero: { ...h.hero, mode: m } });
+    if (m === 'ranged') anyEvent.current({ type: 'modeRanged' });
+  };
   const ready = () => worldRef.current?.callReady();
   const changeSpeed = () => { const s = speed === 1 ? 2 : 1; setSpeed(s); if (scene()) scene().speed = s; };
   const togglePause = () => { const p = !paused; setPaused(p); if (scene()) scene().paused = p; };
   const toggleWobble = () => onSettings?.({ wobble: !wobble });
+  const toggleMute = () => { onSettings?.({ muted: !muted }); if (muted) { setMuted(false); play('click'); } };
+  const restartTips = () => onSettings?.({ tutorialStep: 0 });
+  const skipTips = () => onSettings?.({ tutorialStep: TUTORIAL_DONE });
 
   // keyboard: 1 = melee, 2 = ranged, space = ready, P = pause
   useEffect(() => {
@@ -177,6 +198,8 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
         <b>{map.name}</b>
         {hero && <span className="muted">· {hero.name}</span>}
         <span className="spacer" />
+        <button className={`btn icon ${tip < TUTORIAL_DONE ? 'active' : ''}`} onClick={tip < TUTORIAL_DONE ? skipTips : restartTips} title={t(tip < TUTORIAL_DONE ? 'tips.skip' : 'tips.restart')}>💡</button>
+        <button className="btn icon" onClick={toggleMute} title={t(muted ? 'game.sound_on' : 'game.sound_off')}>{muted ? '🔇' : '🔊'}</button>
         <button className={`btn icon ${wobble ? 'active' : ''}`} onClick={toggleWobble} title={t('game.wobble')}>〰️</button>
         <button className={`btn icon ${paused ? 'active' : ''}`} onClick={togglePause} title={t('game.pause')}>{paused ? '▶' : '⏸'}</button>
         <button className={`btn icon ${speed === 2 ? 'active' : ''}`} onClick={changeSpeed} title={t('game.speed')}>{speed}×</button>
@@ -192,6 +215,14 @@ export default function GameView({ map, hero, assets, enemyTypes, buildingTypes,
       <div className="game-stage">
         <div ref={hostRef} className="game-host" />
         {message && <div className="game-msg sketch-card" key={message.at}>{message.text}</div>}
+        {hud && tip < TUTORIAL_DONE && hud.phase !== 'won' && hud.phase !== 'lost' && (
+          <div className="coach sketch-card" key={tip}>
+            <span className="coach-icon">💡</span>
+            <span>{t(`tips.${TUTORIAL_STEPS[tip].id}`)}</span>
+            <span className="small muted coach-count">{tip + 1}/{TUTORIAL_DONE}</span>
+            <button className="btn icon" onClick={skipTips} title={t('tips.skip')}>✕</button>
+          </div>
+        )}
         {panel && hud && hud.phase !== 'won' && hud.phase !== 'lost' && (
           <BuildPanel
             info={panel}

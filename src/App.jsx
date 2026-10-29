@@ -12,6 +12,7 @@ import RulesEditor from './game/RulesEditor.jsx';
 import { enemyTypesOf } from './config/enemies.js';
 import { buildingTypesOf } from './config/buildings.js';
 import { rulesOf } from './config/rules.js';
+import { starterMap } from './maps/mapRuntime.js';
 
 export default function App() {
   const { t } = useTranslation();
@@ -20,7 +21,20 @@ export default function App() {
   const [loadError, setLoadError] = useState(null);
 
   useEffect(() => {
-    loadDb().then(setDb).catch((e) => setLoadError(String(e)));
+    loadDb()
+      .then(async (loaded) => {
+        // very first start: add a ready-to-play sample map (only once, so a
+        // deleted sample doesn't come back)
+        if (!loaded.maps.length && !loaded.settings.starterAdded) {
+          loaded.maps = [starterMap(t('maps.sample_name'))];
+          loaded.settings = { ...loaded.settings, starterAdded: true };
+          await saveCollection('maps', loaded.maps);
+          await saveSettings(loaded.settings);
+        }
+        setDb(loaded);
+      })
+      .catch((e) => setLoadError(String(e)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // stable object, so a running game isn't restarted by unrelated re-renders

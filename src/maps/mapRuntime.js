@@ -2,7 +2,7 @@
 
 import { makeCanvas, loadImage } from '../assets/imageEncoding.js';
 import { buildGrid } from '../logic/pathGrid.js';
-import { CENTRE_RADIUS } from '../logic/mapModel.js';
+import { CENTRE_RADIUS, emptyMap, validateMap } from '../logic/mapModel.js';
 import { newId } from '../data/saveFile.js';
 
 export function gridFromCanvas(canvas, palette) {
@@ -23,6 +23,18 @@ export async function mapCanvas(map) {
     ctx.fillRect(0, 0, width, height);
   }
   return c;
+}
+
+/**
+ * A finished, validated sample map – added on the very first start so kids can
+ * play right away (with geometric shapes until they draw their own pictures).
+ */
+export function starterMap(name) {
+  const m = emptyMap(name);
+  const canvas = drawSampleMap(m);
+  m.background = canvas.toDataURL('image/png');
+  m.valid = validateMap(m, gridFromCanvas(canvas, m.palette)).ok;
+  return m;
 }
 
 // Rough hand-drawn road: a polyline with a little wobble.
