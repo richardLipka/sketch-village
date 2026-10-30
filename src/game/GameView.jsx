@@ -13,7 +13,7 @@ import Modal from '../ui/Modal.jsx';
 import { useDevice } from '../ui/device.js';
 import AnimPreview from '../assets/AnimPreview.jsx';
 import { legendText } from '../config/legends.js';
-import { Resources, Lives, WaveInfo, AttackBar, Equipment, Toolbar, Coach, RoundSummary } from './GameOverlay.jsx';
+import { Resources, Lives, WaveInfo, AttackBar, Equipment, Toolbar, Coach, RoundSummary, gameKey } from './GameOverlay.jsx';
 import { difficultyOf } from '../config/difficulty.js';
 import { DEFAULT_HERO_POINTS } from '../config/heroStats.js';
 import { DEFAULT_RULES } from '../config/rules.js';
@@ -340,10 +340,11 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
   const onUnequip = useCallback((slot) => equipAct((w) => w.unequip(slot)), [equipAct]);
   const closePanel = useCallback(() => { setSelection(null); const s = scene(); if (s) s.selection = null; }, []);
 
-  // keyboard: 1/2/3 = attack type, I = backpack, space = ready, P = pause
+  // keyboard: 1/2/3 = attack type, I = backpack (GameOverlay), space = ready, P = pause;
+  // not while typing or while a dialog is open (P must not resume the game behind the chronicle)
   useEffect(() => {
     const onKey = (e) => {
-      if (e.target.tagName === 'INPUT') return;
+      if (!gameKey(e)) return;
       if (e.key === '1') setMode('melee');
       else if (e.key === '2') setMode('ranged');
       else if (e.key === '3') setMode('magic');

@@ -119,3 +119,29 @@ test('sharing one map downloads a file with just that map and what it uses', asy
   expect(file.assets.every((a) => a.category === 'enemy' || a.category === 'decoration' || a.category === 'texture')).toBe(true);
   expect(file.assets.length).toBeGreaterThan(0); // the enemies of its waves
 });
+
+test('keyboard: I opens and closes the backpack; no shortcuts behind an open dialog', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'keyboard shortcuts are for the PC');
+  const errors = watchErrors(page);
+  await openMenu(page);
+  await startGame(page);
+  await expect(page.getByTitle('Batoh (I)')).toBeVisible(); // the controls are there
+  await page.keyboard.press('i');
+  await expect(page.locator('.backpack')).toBeVisible();
+  await page.keyboard.press('I');
+  await expect(page.locator('.backpack')).toBeHidden();
+
+  // the chronicle pauses the game; P behind it must not resume it, I must not open the backpack
+  const pause = page.getByTitle('Pauza (P)');
+  await page.getByTitle(/Kronika/).first().click();
+  await expect(page.locator('.modal')).toBeVisible();
+  await page.keyboard.press('p');
+  await page.keyboard.press('i');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.modal')).toHaveCount(0);
+  await expect(page.locator('.backpack')).toBeHidden();
+  await expect(pause).not.toHaveClass(/active/); // closing the chronicle resumed it, as before
+  await page.keyboard.press('p');
+  await expect(pause).toHaveClass(/active/);
+  expect(errors).toEqual([]);
+});

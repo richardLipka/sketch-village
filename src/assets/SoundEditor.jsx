@@ -49,7 +49,9 @@ function SoundRow({ kind, sound, onChange }) {
     return () => { alive = false; };
   }, [sound?.data, t]);
 
-  useEffect(() => () => recRef.current?.stop(), []);
+  // closing the editor stops a recording (and one still waiting for the microphone)
+  const alive = useRef(true);
+  useEffect(() => () => { alive.current = false; recRef.current?.stop(); }, []);
 
   // a new recording or file: cut the silence around it at once
   const take = async (data) => {
@@ -71,6 +73,7 @@ function SoundRow({ kind, sound, onChange }) {
       setError(t('sounds.no_mic'));
       return;
     }
+    if (!alive.current) { stream.getTracks().forEach((tr) => tr.stop()); return; }
     const mime = recorderMime();
     const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
     const chunks = [];
@@ -86,7 +89,7 @@ function SoundRow({ kind, sound, onChange }) {
       stream.getTracks().forEach((tr) => tr.stop());
       recRef.current = null;
       setRecording(null);
-      if (chunks.length) await take(await blobToDataUrl(new Blob(chunks, { type: rec.mimeType || mime || 'audio/webm' })));
+      if (chunks.length && alive.current) await take(await blobToDataUrl(new Blob(chunks, { type: rec.mimeType || mime || 'audio/webm' })));
     };
     recRef.current = rec;
     setRecording(0);

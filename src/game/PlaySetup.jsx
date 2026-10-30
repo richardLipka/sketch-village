@@ -2,6 +2,7 @@ import React, { useState, Suspense, lazy } from 'react';
 import { useTranslation } from 'react-i18next';
 import Screen from '../ui/Screen.jsx';
 import { enterFullscreen } from '../ui/FullscreenButton.jsx';
+import { compName } from '../config/components.js';
 import { DIFFICULTIES, DIFFICULTY_IDS, DEFAULT_DIFFICULTY } from '../config/difficulty.js';
 
 // Phaser is big – load it only when a game starts.
@@ -9,7 +10,7 @@ const GameView = lazy(() => import('./GameView.jsx'));
 
 // Pick a level (map), a hero and how hard it should be, then play (fullscreen).
 export default function PlaySetup({ maps, assets, enemyTypes, buildings, rules, weapons, themes = [], settings, onSettings }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const playable = maps.filter((m) => m.valid);
   const heroes = assets.filter((a) => a.category === 'hero');
   const [mapId, setMapId] = useState(playable[0]?.id ?? null);
@@ -35,7 +36,7 @@ export default function PlaySetup({ maps, assets, enemyTypes, buildings, rules, 
     <Screen title={t('play.title')} head={
       <div className="row">
         <button className="btn big primary" disabled={!map} onClick={() => { enterFullscreen(); setPlaying(true); }}>▶ {t('play.start')}</button>
-        {map && <span className="muted">{map.name}{hero ? ` · ${hero.name}` : ''}</span>}
+        {map && <span className="muted">{map.name}{hero ? ` · ${compName(hero, i18n.language)}` : ''}</span>}
       </div>
     }>
 
@@ -55,8 +56,8 @@ export default function PlaySetup({ maps, assets, enemyTypes, buildings, rules, 
       <div className="grid" style={{ marginBottom: 24 }}>
         {heroes.map((h) => (
           <div key={h.id} className="asset-tile" style={h.id === heroId ? { background: 'var(--hl-yellow)' } : undefined} onClick={() => setHeroId(h.id)}>
-            <img src={h.images[0]} alt={h.name} />
-            <div className="name">{h.name}</div>
+            <img src={h.images[0]} alt={compName(h, i18n.language)} />
+            <div className="name">{compName(h, i18n.language)}</div>
             <div className="author">{h.author && `✎ ${h.author}`}</div>
           </div>
         ))}

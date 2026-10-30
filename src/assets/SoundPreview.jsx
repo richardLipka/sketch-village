@@ -17,21 +17,24 @@ export default function SoundPreview({ sounds }) {
   const [now, setNow] = useState(0);
   const timers = useRef([]);
   const frame = useRef(0);
+  const runId = useRef(0); // a newer start (or closing the editor) cancels a start still loading its sounds
 
   const stop = () => {
     timers.current.forEach(clearTimeout);
     timers.current = [];
     cancelAnimationFrame(frame.current);
   };
-  useEffect(() => stop, []);
+  useEffect(() => () => { runId.current++; stop(); }, []);
 
   const start = async () => {
     stop();
+    const mine = ++runId.current;
     const lengths = {};
     for (const kind of SOUND_KINDS) {
       const secs = await loadClip(`preview:${kind}`, sounds[kind]);
       if (secs) lengths[kind] = secs;
     }
+    if (mine !== runId.current) return; // closed or started again meanwhile
     const wave = previewWave(lengths);
     const began = performance.now();
     for (const e of wave.events) {

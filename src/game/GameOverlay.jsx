@@ -92,6 +92,9 @@ export const AttackBar = memo(function AttackBar({ mode, hasMelee, hasRanged, ha
 /** Clicks into the game while the backpack is open; one more closes it. */
 export const OUTSIDE_CLICKS = 2;
 
+/** A key press meant for the game – not typed into a field, no dialog (chronicle…) open. */
+export const gameKey = (e) => !e.target?.closest?.('input, textarea, select, [contenteditable]') && !document.querySelector('.modal-back');
+
 const slotFor = (w) => (isWeapon(w) ? 'right' : w?.slot === 'shield' ? 'left' : 'armor');
 const SLOTS = [['right', '✋', 'weapons.right_hand'], ['left', SLOT_ICON.shield, 'weapons.left_hand'], ['armor', SLOT_ICON.armor, 'weapons.slot_armor']];
 
@@ -118,6 +121,14 @@ export const Equipment = memo(function Equipment({ inventoryKey, right, left, ar
     window.addEventListener('pointerdown', onDown, true);
     return () => window.removeEventListener('pointerdown', onDown, true);
   }, [open]);
+  // I opens / closes the backpack (as its button says)
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.key === 'i' || e.key === 'I') && gameKey(e)) { setOpen((o) => !o); setPicked(null); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   const [drag, setDrag] = useState(null); // { id, from, x, y } while dragging
   const [picked, setPicked] = useState(null); // { id, from } after a tap
   const lang = i18n.language;

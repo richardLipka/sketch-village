@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { compName } from '../config/components.js';
 import { mapCanvas, gridFromCanvas, ruggedRoads } from './mapRuntime.js';
 import { BUILT_IN_IDS, builtInTexture, terrainColours, texturedCanvas, textureSwatch } from './textures.js';
 import { themeName } from '../config/themes.js';
@@ -75,8 +76,8 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
   // textures to choose from: built-in ones and the kids' texture components
   const textureChoices = useMemo(() => [
     ...BUILT_IN_IDS.map((id) => ({ id, name: t(`maps.tex_${id}`), swatch: textureSwatch(builtInTexture(id, 64)) })),
-    ...assets.filter((a) => a.category === 'texture' && a.images?.[0]).map((a) => ({ id: a.id, name: typeof a.name === 'string' ? a.name : a.name?.cs, swatch: a.images[0], mine: true })),
-  ], [assets, t]);
+    ...assets.filter((a) => a.category === 'texture' && a.images?.[0]).map((a) => ({ id: a.id, name: compName(a, i18n.language), swatch: a.images[0], mine: true })),
+  ], [assets, t, i18n.language]);
 
   // the preview: what the game will show (rugged road edges + textures); redrawn after changes
   useEffect(() => {
@@ -425,9 +426,9 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
               <div className="small muted">{t(label)}</div>
               <div className="row" style={{ gap: 6 }}>
                 {list.map((d) => (
-                  <button key={d.id} className={`decor-tile ${decorAsset === d.id ? 'on' : ''}`} onClick={() => setDecorAsset(d.id)} title={d.name}>
-                    <img src={d.images[0]} alt={d.name} />
-                    <span>{d.name}</span>
+                  <button key={d.id} className={`decor-tile ${decorAsset === d.id ? 'on' : ''}`} onClick={() => setDecorAsset(d.id)} title={compName(d, i18n.language)}>
+                    <img src={d.images[0]} alt="" />
+                    <span>{compName(d, i18n.language)}</span>
                   </button>
                 ))}
               </div>
