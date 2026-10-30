@@ -108,18 +108,36 @@ export class Combat {
 
   // owner: 'tower' (also the Town Hall), 'hero', 'magic' (hero spell), 'enemy',
   // 'stone' (catapult - flies to a spot on the ground, see lob)
-  shoot(from, target, damage, owner, splash = 0) {
+  // look = the projectile component drawn for it (null = the default arrow)
+  shoot(from, target, damage, owner, splash = 0, look = null) {
     this.projectiles.push({
       id: this.nextId++, owner, x: from.x, y: from.y - (owner === 'tower' ? 30 : 0),
-      target, damage, splash, speed: this.b.projectileSpeed * (owner === 'magic' ? 0.7 : 1),
+      target, damage, splash, look, speed: this.b.projectileSpeed * (owner === 'magic' ? 0.7 : 1),
     });
   }
 
+  /** Everyone defending (hero, soldiers, buildings, Town Hall) within `radius` of `at`, except `skip`. */
+  defendersAround(at, radius, skip = null) {
+    const out = [];
+    const near = (o, r = 0) => o !== skip && dist(o, at) <= radius + r;
+    if (!this.hero.dead && near(this.hero, 12)) out.push(this.hero);
+    for (const s of this.soldiers) if (!s.dead && near(s, s.radius)) out.push(s);
+    for (const b of this.buildings) if (b.state !== 'ruin' && b.level > 0 && near(b, b.radius)) out.push(b);
+    if (near(this.townHall, this.townHall.radius)) out.push(this.townHall);
+    return out;
+  }
+
+  /** An enemy's area damage: everyone defending around the hit gets hurt too. */
+  enemySplash(at, radius, damage, skip = null) {
+    for (const d of this.defendersAround(at, radius, skip)) this.damage(d, damage);
+    this.emit('splash', { x: at.x, y: at.y, radius, owner: 'enemy' });
+  }
+
   /** A catapult stone: flies in an arc to a spot and hurts walking enemies around it. */
-  lob(from, spot, damage, splash) {
+  lob(from, spot, damage, splash, look = null) {
     const target = { kind: 'ground', x: spot.x, y: spot.y };
     this.projectiles.push({
-      id: this.nextId++, owner: 'stone', x: from.x, y: from.y - 20, sx: from.x, sy: from.y - 20,
+      id: this.nextId++, owner: 'stone', x: from.x, y: from.y - 20, sx: from.x, sy: from.y - 20, look,
       total: Math.max(1, dist(from, spot)), target, damage, splash, groundOnly: true, speed: this.b.projectileSpeed * 0.55,
     });
     this.emit('lob', { x: from.x, y: from.y });
@@ -143,7 +161,11 @@ export class Combat {
       const step = p.speed * dt;
       if (dist(p, t) <= step) {
         p.done = true;
-        if (p.splash > 0) {
+        if (p.splash > 0 && p.owner === 'enemy') {
+          // an enemy's area shot hurts every defender around where it lands
+          this.damage(t, p.damage);
+          this.enemySplash(t, p.splash, p.damage, t);
+        } else if (p.splash > 0) {
           // a spell hurts every enemy around the target, flying ones too; a stone only walking ones
           for (const e of [...this.enemies]) {
             if (p.groundOnly && e.flying) continue;

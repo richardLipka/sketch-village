@@ -1,5 +1,7 @@
 import React, { useState, Suspense, lazy } from 'react';
 import { useTranslation } from 'react-i18next';
+import SearchBox from '../ui/SearchBox.jsx';
+import { matchesQuery, searchTexts } from '../ui/search.js';
 import Screen from '../ui/Screen.jsx';
 import { enterFullscreen } from '../ui/FullscreenButton.jsx';
 import { compName } from '../config/components.js';
@@ -16,6 +18,7 @@ export default function PlaySetup({ maps, assets, enemyTypes, buildings, rules, 
   const [mapId, setMapId] = useState(playable[0]?.id ?? null);
   const [heroId, setHeroId] = useState(heroes[0]?.id ?? null);
   const [playing, setPlaying] = useState(false);
+  const [query, setQuery] = useState(''); // filters maps and heroes
 
   const map = playable.find((m) => m.id === mapId);
   const hero = heroes.find((h) => h.id === heroId) ?? null;
@@ -36,6 +39,7 @@ export default function PlaySetup({ maps, assets, enemyTypes, buildings, rules, 
     <Screen title={t('play.title')} head={
       <div className="row">
         <button className="btn big primary" disabled={!map} onClick={() => { enterFullscreen(); setPlaying(true); }}>▶ {t('play.start')}</button>
+        <SearchBox value={query} onChange={setQuery} />
         {map && <span className="muted">{map.name}{hero ? ` · ${compName(hero, i18n.language)}` : ''}</span>}
       </div>
     }>
@@ -43,7 +47,7 @@ export default function PlaySetup({ maps, assets, enemyTypes, buildings, rules, 
       <h2>{t('play.pick_map')}</h2>
       {playable.length === 0 && <p className="muted">{t('play.no_maps')}</p>}
       <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', marginBottom: 24 }}>
-        {playable.map((m) => (
+        {playable.filter((m) => m.id === mapId || matchesQuery(query, ...searchTexts(m))).map((m) => (
           <div key={m.id} className="asset-tile" style={m.id === mapId ? { background: 'var(--hl-yellow)' } : undefined} onClick={() => setMapId(m.id)}>
             <img src={m.background} alt="" style={{ maxWidth: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: 4 }} />
             <div className="name">{themes.find((th) => th.id === m.theme)?.icon} {m.name}</div>
@@ -54,7 +58,7 @@ export default function PlaySetup({ maps, assets, enemyTypes, buildings, rules, 
       <h2>{t('play.pick_hero')}</h2>
       {heroes.length === 0 && <p className="muted">{t('play.no_heroes')}</p>}
       <div className="grid" style={{ marginBottom: 24 }}>
-        {heroes.map((h) => (
+        {heroes.filter((h) => h.id === heroId || matchesQuery(query, ...searchTexts(h))).map((h) => (
           <div key={h.id} className="asset-tile" style={h.id === heroId ? { background: 'var(--hl-yellow)' } : undefined} onClick={() => setHeroId(h.id)}>
             <img src={h.images[0]} alt={compName(h, i18n.language)} />
             <div className="name">{compName(h, i18n.language)}</div>

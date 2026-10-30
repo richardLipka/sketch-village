@@ -1,5 +1,5 @@
 import Phaser from './phaser.js';
-import { hasFeature, shapeOf } from '../config/features.js';
+import { hasFeature, shapeOf, buildingScale } from '../config/features.js';
 import { frameAt } from '../assets/animation.js';
 
 // Draws the World simulation (src/logic/world.js) and forwards clicks to it.
@@ -10,6 +10,8 @@ const CLICK_SLOP = 8; // px of pointer movement still counted as a click
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 3;
 const MAX_DT = 0.05; // s – avoid huge jumps after a tab switch
+const BUILDING_SIZE = 64; // px at scale 1 (features.js buildingScale: +20 %, +10 % per level)
+const TOWN_HALL_SIZE = 96;
 const HUD_EVERY = 150; // ms
 
 const hexNum = (hex) => parseInt(hex.replace('#', ''), 16);
@@ -81,6 +83,13 @@ export default class GameScene extends Phaser.Scene {
     return n ? `${type}#${Math.floor(variant * n) % n}:${level}` : `${type}:${level}`;
   }
 
+  /** The texture (and animation base) of a soldier: its kind's, or the default soldier. */
+  soldierBase(so) {
+    if (!so.look) return 'soldier';
+    const key = so.lookIsEnemy ? `enemy:${so.look}` : `soldier:${so.look}`;
+    return this.textures.exists(key) ? key : 'soldier';
+  }
+
   // -1..1, changes ~5× per second, different per thing (seed); 0 when wobble is off
   jitter(seed) {
     if (!this.wobble) return 0;
@@ -117,7 +126,7 @@ export default class GameScene extends Phaser.Scene {
     for (const c of map.caves) this.add.image(c.x, c.y, 'cave').setDisplaySize(64, 64).setDepth(c.y);
 
     const th = this.world.townHall;
-    this.townHall = this.add.image(th.x, th.y, this.buildingKey(th.type, this.townHallVariant, 1)).setDisplaySize(96, 96).setDepth(th.y);
+    this.townHall = this.add.image(th.x, th.y, this.buildingKey(th.type, this.townHallVariant, 1)).setDisplaySize(TOWN_HALL_SIZE * buildingScale(1), TOWN_HALL_SIZE * buildingScale(1)).setDepth(th.y);
     this.townHallBar = this.add.graphics().setDepth(9000);
     this.selectRing = this.add.graphics().setDepth(-300);
     this.selection = null;
@@ -386,7 +395,7 @@ export default class GameScene extends Phaser.Scene {
       if (e.id === this.world.townHall.id) { const th = this.world.townHall; this.playOnce(this.townHallAnim, this.lookOf(this.buildingKey(th.type, this.townHallVariant, th.level)), ['attack', 'reload']); }
       else { const sp = this.sprites.get(`b${e.id}`); if (sp) this.playOnce(sp, sp.base, ['attack', 'reload']); }
     }
-    if (e.type === 'splash') this.splash(e.x, e.y, e.radius, e.owner === 'stone' ? 0x78716c : 0xa855f7);
+    if (e.type === 'splash') this.splash(e.x, e.y, e.radius, e.owner === 'stone' ? 0x78716c : e.owner === 'enemy' ? 0xdc2626 : 0xa855f7);
     if (e.type === 'summon') { this.splash(e.x, e.y, 36, 0x4c1d95); this.floatText(e.x, e.y - 36, `+${e.count}`, '#4c1d95'); }
     if (e.type === 'chestOpened') this.floatText(e.x, e.y - 24, e.weapon ? '🎁' : `+${e.coins}`, '#7c3aed');
     if (e.type === 'sold') { this.puff(e.x, e.y); if (e.refund) this.floatText(e.x, e.y - 30, `+${e.refund}`, '#a16207'); }
@@ -490,14 +499,15 @@ export default class GameScene extends Phaser.Scene {
       // show the drawing of the level being built (or the current one), at least level 1
       const shownLevel = Math.max(1, b.state === 'building' || b.state === 'upgrading' ? b.level + 1 : b.level);
       const still = this.buildingKey(b.type, b.variant ?? 0, shownLevel);
+      // buildings stand still (the wobble is for characters); 20 % bigger, +10 % per level
+      const size = BUILDING_SIZE * buildingScale(shownLevel), k = size / BUILDING_SIZE;
       const s = this.sprite(`b${b.id}`, () => ({
-        img: this.add.image(b.x, b.y, still).setDisplaySize(64, 64).setOrigin(0.5, 0.6).setDepth(b.y),
+        img: this.add.image(b.x, b.y, still).setDisplaySize(size, size).setOrigin(0.5, 0.6).setDepth(b.y),
         bar: this.add.graphics().setDepth(9000).setPosition(b.x, b.y),
       }));
       s.base = this.lookOf(still);
       const key = (b.state === 'ready' && this.animKey(s, s.base, false)) || still;
-      if (s.img.texture.key !== key) s.img.setTexture(key).setDisplaySize(64, 64);
-      if (this.wobble || s.img.angle) s.img.setAngle(this.jitter(b.id) * 2);
+      if (s.img.texture.key !== key || s.size !== size) { s.img.setTexture(key).setDisplaySize(size, size); s.size = size; s.sig = null; }
       const busy = b.state === 'building' || b.state === 'upgrading';
       if (b.state === 'ruin') { s.img.setAlpha(0.4).setTint(0x9ca3af); } else {
         s.img.clearTint();
@@ -509,22 +519,24 @@ export default class GameScene extends Phaser.Scene {
       s.sig = sig;
       const g = s.bar.clear();
       if (b.state === 'ruin') {
-        g.lineStyle(3, 0x7f1d1d, 0.8).lineBetween(-22, -30, 22, 10).lineBetween(22, -30, -22, 10);
+        g.lineStyle(3, 0x7f1d1d, 0.8).lineBetween(-22 * k, -30 * k, 22 * k, 10 * k).lineBetween(22 * k, -30 * k, -22 * k, 10 * k);
         continue;
       }
       if (busy) {
-        drawBar(g, 0, 26, 44, b.progress / b.buildTime, 0xca8a04);
-        g.lineStyle(1.5, 0x78350f, 0.7).lineBetween(-24, 20, -24, -30).lineBetween(24, 20, 24, -30).lineBetween(-24, -5, 24, -5);
+        drawBar(g, 0, 26 * k, 44, b.progress / b.buildTime, 0xca8a04);
+        g.lineStyle(1.5, 0x78350f, 0.7).lineBetween(-24 * k, 20 * k, -24 * k, -30 * k).lineBetween(24 * k, 20 * k, 24 * k, -30 * k).lineBetween(-24 * k, -5 * k, 24 * k, -5 * k);
       }
-      if (b.hp < b.maxHp) drawBar(g, 0, -44, 44, b.hp / b.maxHp, 0x16a34a);
+      if (b.hp < b.maxHp) drawBar(g, 0, -44 * k, 44, b.hp / b.maxHp, 0x16a34a);
     }
 
     for (const so of w.soldiers) {
+      // who the castle sends out: a drawn soldier, an enemy on our side (soldier-sized) or the default soldier
+      const base = this.soldierBase(so);
       const s = this.sprite(`s${so.id}`, () => ({
-        img: this.add.image(so.x, so.y, 'soldier').setDisplaySize(36, 36).setOrigin(0.5, 0.85),
+        img: this.add.image(so.x, so.y, base).setDisplaySize(36, 36).setOrigin(0.5, 0.85),
         bar: this.add.graphics().setDepth(9000),
       }));
-      const soKey = this.animKey(s, 'soldier', so.path.length > 0) ?? 'soldier';
+      const soKey = this.animKey(s, base, so.path.length > 0) ?? base;
       if (s.img.texture.key !== soKey) s.img.setTexture(soKey).setDisplaySize(36, 36);
       s.img.setPosition(so.x, so.y).setDepth(so.y).setFlipX(so.facing < 0).setAngle(this.jitter(so.id) * 3);
       if (so.hp < so.maxHp) this.bar(s.bar, so.x, so.y - 38, 26, so.hp / so.maxHp, 0x2563eb);
@@ -532,10 +544,12 @@ export default class GameScene extends Phaser.Scene {
     }
 
     for (const p of w.projectiles) {
-      const key = p.owner === 'magic' ? 'magic' : p.owner === 'stone' ? 'stone' : 'projectile';
+      // a projectile drawn in the studio when the shooter picked one, else arrow / spell / stone
+      const drawn = p.look && this.textures.exists(`proj:${p.look}`) ? `proj:${p.look}` : null;
+      const key = drawn ?? (p.owner === 'magic' ? 'magic' : p.owner === 'stone' ? 'stone' : 'projectile');
       const s = this.sprite(`p${p.id}`, () => ({ img: this.add.image(p.x, p.y, key).setDisplaySize(key === 'stone' ? 22 : 26, key === 'stone' ? 22 : 26).setDepth(9100) }));
-      if (key === 'stone') {
-        // a stone flies in an arc: highest half way
+      if (p.owner === 'stone') {
+        // a thrown stone (or the catapult's own projectile) flies in an arc: highest half way
         const k = Math.min(1, Math.hypot(p.x - p.sx, p.y - p.sy) / p.total);
         s.img.setPosition(p.x, p.y - Math.sin(k * Math.PI) * Math.min(120, p.total * 0.45)).setRotation(this.time.now / 120);
       } else {
@@ -592,14 +606,14 @@ export default class GameScene extends Phaser.Scene {
     const th = w.townHall;
     const thStill = this.buildingKey(th.type, this.townHallVariant, th.level);
     const thKey = (th.hp > 0 && this.animKey(this.townHallAnim, this.lookOf(thStill), false)) || thStill;
-    if (this.townHall.texture.key !== thKey) this.townHall.setTexture(thKey).setDisplaySize(96, 96);
-    if (this.wobble || this.townHall.angle) this.townHall.setAngle(this.jitter(0.3) * 1.5);
+    const thSize = TOWN_HALL_SIZE * buildingScale(th.level), tk = thSize / TOWN_HALL_SIZE;
+    if (this.townHall.texture.key !== thKey || this.townHall.size !== thSize) { this.townHall.setTexture(thKey).setDisplaySize(thSize, thSize); this.townHall.size = thSize; this.townHallBar.sig = null; }
     const thSig = `${Math.round((70 * th.hp) / th.maxHp)}|${th.upgrade ? Math.round((60 * th.upgrade.progress) / th.upgrade.time) : ''}`;
     if (this.townHallBar.sig !== thSig) {
       this.townHallBar.sig = thSig;
       this.townHallBar.clear();
-      drawBar(this.townHallBar, th.x, th.y - 60, 70, th.hp / th.maxHp, 0x2563eb);
-      if (th.upgrade) drawBar(this.townHallBar, th.x, th.y + 40, 60, th.upgrade.progress / th.upgrade.time, 0xca8a04);
+      drawBar(this.townHallBar, th.x, th.y - 60 * tk, 70, th.hp / th.maxHp, 0x2563eb);
+      if (th.upgrade) drawBar(this.townHallBar, th.x, th.y + 40 * tk, 60, th.upgrade.progress / th.upgrade.time, 0xca8a04);
       this.townHall.setAlpha(th.hp > 0 ? 1 : 0.35);
     }
 

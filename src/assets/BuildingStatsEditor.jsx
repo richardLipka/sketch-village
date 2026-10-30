@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import NumField from './NumField.jsx';
+import ProjectilePick from './ProjectilePick.jsx';
 import { FEATURES, FEATURE_IDS, LEVEL_FIELDS, newLevel } from '../config/features.js';
 
 // Properties of a building component, next to its pictures (one per level):
@@ -8,11 +9,13 @@ import { FEATURES, FEATURE_IDS, LEVEL_FIELDS, newLevel } from '../config/feature
 //    soldiers, income, healing…) and the numbers of every level,
 //  - or "another look" of an existing type: only pictures, the game picks one of
 //    the looks at random for each building of that type.
+// A shooting / throwing building picks its projectile; a castle picks, per level,
+// who its soldiers are – a drawn soldier or any enemy (shown soldier-sized).
 // The core building (Town Hall) is always its own type and keeps its first level free.
 
 export const MAX_LEVELS = 5;
 
-export default function BuildingStatsEditor({ id, stats, types, onChange }) {
+export default function BuildingStatsEditor({ id, stats, types, projectiles = [], soldierChoices = { soldiers: [], enemies: [] }, onChange }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const core = !!stats.core;
@@ -76,6 +79,10 @@ export default function BuildingStatsEditor({ id, stats, types, onChange }) {
         ))}
       </div>
 
+      {(features.includes('shoots') || features.includes('lobs')) && (
+        <div style={{ marginTop: 8 }}><ProjectilePick value={stats.projectile} projectiles={projectiles} onChange={(projectile) => onChange({ ...stats, projectile })} /></div>
+      )}
+
       <h3 style={{ margin: '10px 0 4px' }}>{t('component.levels')}</h3>
       <div style={{ overflowX: 'auto' }}>
         <table className="rules-table">
@@ -98,6 +105,22 @@ export default function BuildingStatsEditor({ id, stats, types, onChange }) {
                 ))}
               </tr>
             ))}
+            {features.includes('soldiers') && (
+              <tr>
+                <td>{FEATURES.soldiers.icon} {t('feature.f_soldierKind')}</td>
+                {levels.map((l, i) => (
+                  <td key={i}>
+                    <select value={l.soldierKind ?? ''} onChange={(e) => setLevel(i, 'soldierKind', e.target.value || null)} aria-label={t('feature.f_soldierKind')}>
+                      <option value="">💂 {t('feature.soldier_default')}</option>
+                      {soldierChoices.soldiers.length > 0 && (
+                        <optgroup label={t('cat.soldier')}>{soldierChoices.soldiers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>
+                      )}
+                      <optgroup label={t('cat.enemy')}>{soldierChoices.enemies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>
+                    </select>
+                  </td>
+                ))}
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

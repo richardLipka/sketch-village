@@ -130,6 +130,10 @@ Enemies can have their own recorded sounds (`categories.js` → `sounds`; `asset
 - **Notch and rounded corners** (iPhone held sideways, home bar): the page reaches the screen edges (`viewport-fit=cover`), and everything with a control keeps to the **safe area** – the game screen, the full-screen backpack and shop, menus, dialogs and notes are padded by `env(safe-area-inset-*)` (as `--sa-t/r/b/l` in `sketch.css`, so the browser tests can pretend a notch). The map keeps its full height; on the notch side a strip of paper shows.
 - A browser test (§15a) checks the phone layout with a pretend notch on every run: all game buttons ≥ 44 px, inside the safe area, none on top of another, no sideways scrolling.
 
+## 4b. GUI icons (editable)
+
+The icons on the game's controls are components too – studio category **Icons** (`config/uiIcons.js`, `ui/UiIcon.jsx`): heart (life), lost life, coins, workers, Town Hall, wave now, melee / ranged / magic attack, backpack, chronicle. They are a **fixed built-in set** (no ➕, no delete, no copy); each shows its emoji until a kid draws it (photo, upload, paste, draw – like any picture), then the game shows the drawing at the emoji's size (hearts: one per life).
+
 ## 5. Map = Level
 
 - **Each map is one level.** New maps can be added at any time (map editor), each map carries its own spots, spawns, centre and wave config. Level select screen lists all maps.
@@ -175,8 +179,8 @@ One screen with two modes:
 
 ### 6.1 Hero stats – point distribution
 Each hero has its own stats, set in the **Hero editor** (Asset Studio, next to the drawing):
-- 4 characteristics: **Melee power**, **Ranged power**, **Armor**, **Speed**.
-- Every hero starts from the same base and gets **N skill points** (e.g. 10, config) to **distribute** among them (min/max per stat, e.g. 0–5). Kids can't make an all-max hero.
+- 5 characteristics: **Melee power**, **Ranged power**, **Armor**, **Speed**, **Magic** (stronger spells – with a magic weapon; +3 damage per point, `magicPerPoint` in the Rules editor; also a Town Hall upgrade, unlocked in rounds 9 / 16 / 20 – added to rules saved before magic existed).
+- Every hero starts from the same base and gets **N skill points** (12, config; 10 before magic – older heroes get 2 free points) to **distribute** among them (min/max per stat, e.g. 0–5). Kids can't make an all-max hero.
 - Each point maps to concrete values via a config table:
 
 ```js
@@ -220,11 +224,15 @@ export const HERO_STAT_TABLE = {
 | **Town Hall** | centre, game over when destroyed; sells hero upgrades | 3 | pre-built, not on a spot; upgrade = more HP + **unlocks next building level** |
 | **House** | adds **workers** | 3 | `workers` per level |
 | **Tower** | shoots **arrows** at the enemy **in range nearest to the village centre** | 3 | damage, range, cooldown per level |
-| **Castle** | periodically sends **soldiers** that attack the nearest enemy | 3 | soldier count / spawn interval / soldier stats per level |
+| **Castle** | periodically sends **soldiers** that attack the nearest enemy | 3 | soldier count / spawn interval / soldier stats **and who the soldiers are** per level |
 
 - **Town Hall level gates other buildings**: a building can't be upgraded above the Town Hall's level (TH 1 → buildings max level 1, TH 2 → max 2, TH 3 → max 3). Town Hall upgrades also raise its max HP.
 - **Soldiers**: auto-controlled units, walk on paths, attack the nearest enemy, **significantly weaker than the hero** (e.g. ~20 % of hero HP/damage). **Max 3 alive per castle**; a dead soldier is replaced after the castle's respawn interval. Castle level raises soldier strength (not count). **Patrol**: soldiers guard the road around their castle up to its **patrol distance** (`soldierPatrol`, per level: 160 / 180 / 200 px). They fight walking enemies inside it, never follow one beyond it, and then go back to their own starting point. With nothing to fight they patrol: walk to a spot on the road inside the distance, look around, and walk back. Kids draw a `soldier` component (with optional walking / attack animations).
-- Every building has **limited HP** and **repairs itself slowly** (1 % max HP/s, starting 5 s after the last hit).
+- **Who the soldiers are**, per castle level (`soldierKind`, "Who fights" in the level table): the default soldier, a **drawn soldier** (studio → Soldiers) or **any enemy** fighting on our side. An enemy is drawn **soldier-sized** (36 px) with its own animations; a shooting enemy shoots (its range, its projectile, its area damage). When the castle is **upgraded, the soldiers already out there are upgraded too** – the new kind and numbers, their health in the same proportion.
+- **Projectiles**: a shooting or throwing building (tower, catapult, Town Hall…), a shooting enemy and a shooting soldier fly the **projectile chosen for them** – any projectile drawn in the studio (category ➶ Projectiles); with none chosen the default **arrow** (the catapult: its stone arc).
+- **Area damage**: the `shoots` feature has `splash` (px; 0 = a single target, so the built-in towers are unchanged) – a new kind of tower can hurt every enemy around the hit. Enemies have `splash` too: their hit (melee or shot) also hurts every defender – hero, soldiers, buildings, Town Hall – that close.
+- **In the game** buildings **stand still** (the pencil wobble moves only characters) and are drawn **20 % bigger, +10 % per level** (`buildingScale`: 1.2 × (1 + 0.1 × (level − 1)); the Town Hall too); health bars and scaffolding follow the size.
+- Every building has **limited HP** (lowered by 20 % for all difficulties in data version 4 – stored buildings, kids' own too, are scaled once) and **repairs itself slowly** (1 % max HP/s, starting 5 s after the last hit).
 - **Destroyed** building → rubble on the spot; can be **rebuilt for coins** (= level-1 build cost) or cleared for free. A rebuilt building starts at **level 1 – upgrades are lost**.
 - **Buildings are data, built from features.** Each building type is a component (§7.1); what it does comes from the features switched on in the studio, so new kinds of buildings are added without code.
 
@@ -235,7 +243,7 @@ Every game part is one **component** – a record in `assets` with its pictures 
 | Category | Numbers edited with the pictures |
 |---|---|
 | `building` | features + a table of levels (1–5); or `variantOf: <type>` = just another look of an existing type |
-| `enemy` | hp, speed, damage, cooldown, range, armor, coin drop, flying / ranged / boss, size, colour, **minions** (which enemies it calls, how many at once, how often, at most alive, more when it dies) |
+| `enemy` | hp, speed, damage, cooldown, range, **area damage**, armor, coin drop, flying / ranged / boss, **projectile** (when shooting), size, colour, **minions** (which enemies it calls, how many at once, how often, at most alive, more when it dies) |
 | `weapon`, `shield`, `armor` | class, one/two hands, damage / range / cooldown / splash or armor, price, shop round, chest drop weight, starter |
 | `coin` | value |
 | `hero` | skill points (+ drawings per weapon class) |
@@ -332,7 +340,7 @@ The wave editor has **🤖 Let the robot try**: the balance bot (`logic/balanceB
 
 ### 11a. Difficulty
 
-Chosen on the Play screen before the game (remembered, travels with the save file's settings): **🐣 Easy** – monsters 70 % health, 85 % speed, 70 % hits, 125 % start coins, 2 extra lives; **⚔️ Normal** – the numbers from the studio; **🔥 Hard** – 135 % health, 112 % speed, 115 % hits, 85 % start coins (`config/difficulty.js`; the World multiplies, the components stay as they are). Checked with the bot (5 seeds): easy – the careful bot loses nothing, a careless one (never heals) reaches round 18–20 instead of 14–17; hard – the careful bot loses ~10 buildings instead of ~1 and still wins most games.
+Chosen on the Play screen before the game (remembered, travels with the save file's settings): **🐣 Easy** – monsters 70 % health, 85 % speed, 70 % hits, 125 % start coins, 2 extra lives; **⚔️ Normal** – the numbers from the studio; **🔥 Hard** – 130 % health, 112 % speed, normal hits, 85 % start coins (`config/difficulty.js`; the World multiplies, the components stay as they are). Checked with the bot (5 seeds): easy – the careful bot loses nothing, a careless one (never heals) reaches round 18–20 instead of 14–17; hard – the careful bot loses ~13 buildings instead of ~1 and still wins most games (retuned after building HP −20 %: hard's hits from 115 % to 100 %, health 135 → 130 %; round 20's goblins come every 1.3 s instead of 1.4 s).
 
 ## 12. Screens
 
@@ -343,6 +351,11 @@ Chosen on the Play screen before the game (remembered, travels with the save fil
 5. **Round summary card** after each wave (top centre, 9 s or tap): monsters defeated, coins picked up, the reward (+ income), how long the wave took, buildings / lives lost or "nothing lost!", and what's new next round. The World sends these numbers with `roundEnd` (`stats`). Then Victory / Defeat.
 6. Editors – **all open to kids**: Map Painter/Editor, **Wave editor** (rounds, groups, caves, timings), the studio's component editor (pictures + numbers of buildings, enemies, weapons, coins, heroes) and the Rules editor (global rules). "Reset to defaults" button in each editor so experiments are safe.
 7. **Chronicle** (📖) – every monster with its picture as big as in the component editor (160 px; the walking animation when it has one, the game's shape when nobody has drawn it), its **legend** (a short story) and a **hint for the player**, plus what it can do (health, speed, attack, flying, shooting, boss, which minions it calls). In the menu: all monsters, filtered by theme. **In the game** (📖 on the toolbar; the game pauses while it is open): the monsters of this map's waves and their minions, the ones not met yet faded. When a monster appears for the first time in a game, a short note shows its name and hint with "Read in the chronicle". Legends are written in the component editor (enemies: `legend = { story, hint }`, one text per language for the built-in monsters, one text for the kids' own); all built-in monsters come with a legend in Czech and English.
+
+### 12b. Searching lists, phone lists
+
+- Every list has a **🔍 search** (`ui/search.js`, `SearchBox`) by **name and description**: the studio (per category), maps, the chronicle (menu and game) and the play screen (maps and heroes; the chosen ones stay). It ignores capitals and Czech accents ("skret" finds Skřet), every word must match, and it looks at the names in both languages, the **description** (a new field of every component and map, in the editor), the author and a monster's legend. The number found is shown.
+- On a **phone** (`device-phone` on the page) every list shows **one thing per line** – picture left, name and details beside it, its button on the right – one under another in the scrolling list (studio, maps, play, chronicle with smaller pictures).
 
 ### 12a. Fixed heads, scrolling content
 
@@ -441,6 +454,7 @@ e2e/                       Playwright browser tests (§15a)
 5f. **Components** ✅ – every game part is one component (pictures + all numbers) edited in the studio, which became the general component editor (§7.1). Buildings are made from **features** (workers, arrows, soldiers, income, hero healing) with a table of 1–5 levels whose fields follow the features; the Town Hall is the `core` building type with the same features; "another look" components add drawings to an existing type. Enemies, weapons/shields/armor and coins carry their numbers next to their drawings; the separate Enemies and Weapons screens are gone and the Rules editor keeps only global rules. Old data and version-1 save files are migrated automatically. Tests cover new building kinds made only from data (market, well, 4-level tower).
 5g. **Lives & backpack** ✅ – every lost life sends the hero away for 10 s and back to the Town Hall; losing all 5 loses the game (the end screen says why). The bot now walks back to heal below 40 % HP and still wins every seed without losing a life; the same bot without healing loses every seed (new test). Small retune: dragon 280 HP / speed 36, rounds 14–15 spawns. **Backpack** rebuilt: three slots (right hand, left hand, armor) with the hero's attack / reach / armor shown live, items dragged onto slots with mouse or finger (or tap item → tap slot), wrong slots refused, worn items dragged back to take them off.
 5h. **Summoners, catapult, themes, terrain** ✅ – enemies can **call minions** (any enemies, several kinds mixed; how many, how often, at most alive, more on death; minions never summon): new built-ins **necromancer** → skeletons, **spider queen** → spiderlings (more when she dies), plus skeleton and spiderling. New building feature **lobs** and built-in **catapult** (rounds 6 / 10 / 15): area damage to walking enemies. **Themes** (§7.2) with an editor; maps have a theme. **Terrain textures** in the map editor with preview (§5.1). Waves: spider queen in rounds 8 and 19, necromancers in 12 and 17; necromancer tuned to 90 HP / every 8 s; the bot builds a catapult – all seeds won, waves 40–60 s. Architecture: building features run from a behaviour table, one spawn path for caves and summoners, ground-target projectiles, built-ins seeded by id.
+5s. **Soldiers, projectiles, area damage, icons, search** ✅ – castle soldier kind per level (drawn soldiers or enemies, soldier-sized), upgraded with the castle; projectile choice for every shooter (default arrow); area damage for shooting buildings (new field, existing buildings unchanged) and enemies; buildings still and bigger per level; building HP −20 % (data version 4; balance retuned); hero Magic attribute; editable GUI icons (§4b); list search and one-per-line phone lists (§12b). Fixed: the in-game toolbar wrapped at half the screen and hid the tips behind it.
 5r. **Bug sweep** ✅ – a smoke crawl (every studio category and editor, map painter, waves, chronicle, rules, a game clicked all over, PC and phone) and a panel audit found: the I key for the backpack (advertised on its button) did nothing; game shortcuts worked behind an open dialog (P behind the chronicle left the game paused after closing it); the sound preview could still play after the editor was closed while it was loading; a recording could start after the editor was closed while waiting for the microphone; hero / decoration / texture names now always shown in the current language.
 5q. **Fixed heads, backpack closing** ✅ – heads of screens, dialogs, shop and backpack stay while only their content scrolls (§12a); the backpack closes after more than two clicks into the game (§6.3).
 5p. **Animation frames as panels** ✅ – the animation is built as a row of frame panels made with the picture tools (draw over the faded previous frame, photo, upload, paste, crop), with copy / move / remove on the selected frame; a strip can still be opened and is cut into panels (§3.2a). Fixed: the alignment view no longer crashes right after a frame is added.
@@ -462,6 +476,7 @@ e2e/                       Playwright browser tests (§15a)
 - backup reminder: appears for 3-day-old changes, "Later" hides it across a reload, "Download backup" downloads a valid save file and clears it;
 - studio: an animation built from frame panels (draw, copy last, trace over the faded previous frame, paste → crop, only the selected frame shows tools, move, copy, remove, kept after saving); a picture from the clipboard goes to cropping; Ctrl+V on the drawing pad; the paste box says when there is no picture; a sound recorded with Chrome's fake microphone is trimmed, kept after saving, and a game with it runs; ▶ shows a playhead and "hear it as in the game" plays the mini wave and reports what was heard; Escape closes only the top dialog;
 - smoke: every studio category and its editor, a new enemy without a picture, themes, map painter modes, a new map, waves, chronicle filters, odd numbers in the rules, a game clicked all over with every shortcut – no error or warning (PC and phone);
+- features: list search (studio, a new description, chronicle); phone lists one per line and a tap opens the item; the icons are a fixed set and a drawn heart shows in the game; the tower has the projectile choice and area damage, the castle a soldier kind per level that is saved;
 - keyboard: I opens / closes the backpack; P and I do nothing behind the open chronicle;
 - layout: on every menu screen, in the component editor, the backpack and the shop the head stays while the content scrolls, and the page never scrolls (PC and phone); the backpack stays open for two clicks into the game and closes on the third;
 - difficulty: the choice is remembered across a reload;

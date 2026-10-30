@@ -22,6 +22,15 @@ export const DEFAULT_RULES = {
 };
 
 const isHeroUnlock = (u) => u.key?.startsWith('hero:');
+const statOf = (u) => u.key.split(':')[1];
+
+// A hero stat added later (magic) gets its default schedule in rules saved before
+// it existed; an empty schedule (everything open from the start) stays empty.
+function withNewStats(stored, defaults) {
+  if (!stored.length) return stored;
+  const known = new Set(stored.map(statOf));
+  return [...stored, ...defaults.filter((u) => !known.has(statOf(u)))];
+}
 
 /** Defaults overlaid with whatever a stored record defines. */
 export function mergeRules(rec) {
@@ -34,7 +43,7 @@ export function mergeRules(rec) {
     build: { ...d.build, ...rec.build, soldier: { ...d.build.soldier, ...rec.build?.soldier } },
     heroUpgradeCosts: rec.heroUpgradeCosts?.length ? rec.heroUpgradeCosts : d.heroUpgradeCosts,
     hero: { ...d.hero, ...rec.hero },
-    unlocks: Array.isArray(rec.unlocks) ? rec.unlocks.filter(isHeroUnlock) : d.unlocks,
+    unlocks: Array.isArray(rec.unlocks) ? withNewStats(rec.unlocks.filter(isHeroUnlock), d.unlocks) : d.unlocks,
   };
 }
 

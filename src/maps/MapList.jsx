@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import SearchBox from '../ui/SearchBox.jsx';
+import { matchesQuery, searchTexts } from '../ui/search.js';
 import Screen from '../ui/Screen.jsx';
 import MapPainter from './MapPainter.jsx';
 import WaveEditor from './WaveEditor.jsx';
@@ -15,6 +17,8 @@ export default function MapList({ maps, assets, enemyTypes, themes = [], balance
   const themeIcon = (id) => themes.find((th) => th.id === id)?.icon ?? '';
   const [editing, setEditing] = useState(null);
   const [wavesFor, setWavesFor] = useState(null);
+  const [query, setQuery] = useState('');
+  const shown = maps.filter((m) => matchesQuery(query, ...searchTexts(m)));
 
   const createSample = () => {
     const m = emptyMap(t('maps.sample_name'));
@@ -61,11 +65,12 @@ export default function MapList({ maps, assets, enemyTypes, themes = [], balance
       <div className="row">
         <button className="btn primary" onClick={() => setEditing(emptyMap(''))}>+ {t('maps.new_blank')}</button>
         <button className="btn" onClick={createSample}>✨ {t('maps.new_sample')}</button>
+        <SearchBox value={query} onChange={setQuery} count={shown.length} />
       </div>
     }>
       {maps.length === 0 && <p className="muted">{t('maps.empty')}</p>}
       <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
-        {maps.map((m) => (
+        {shown.map((m) => (
           <div key={m.id} className="asset-tile" onClick={() => setEditing(m)}>
             {m.background && <img src={m.background} alt="" style={{ maxWidth: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: 4 }} />}
             <div className="name">{themeIcon(m.theme)} {m.name}</div>

@@ -97,3 +97,30 @@ describe('data migration (v1 → components)', () => {
     expect(again.db.themes).toHaveLength(DEFAULT_THEMES.length - 1);
   });
 });
+
+describe('data version 4: buildings have 20 % less HP', async () => {
+  const { migrateDb, HP_SCALE_V4 } = await import('./migrate.js');
+  const { DEFAULT_COMPONENTS } = await import('../config/components.js');
+  const tower = DEFAULT_COMPONENTS.find((c) => c.id === 'tower');
+
+  it('scales the buildings of a version-3 browser once, kids’ own ones too', () => {
+    const old = structuredClone(tower);
+    old.stats.levels = old.stats.levels.map((l) => ({ ...l, hp: Math.round(l.hp / HP_SCALE_V4) }));
+    const mine = { id: 'kid-hut', category: 'building', name: 'Hut', images: [], stats: { features: ['workers'], levels: [{ cost: 5, time: 5, hp: 100, round: 1, workers: 1 }] } };
+    const look = { id: 'kid-look', category: 'building', name: 'Look', images: [], stats: { variantOf: 'tower' } };
+    const seeded = DEFAULT_COMPONENTS.map((c) => c.id);
+    const db = { settings: { dataVersion: 3, builtInsSeeded: seeded, themesSeeded: true }, assets: [old, mine, look], maps: [], themes: [], rules: [] };
+    const once = migrateDb(db).db;
+    expect(once.assets.find((a) => a.id === 'tower').stats.levels.map((l) => l.hp)).toEqual(tower.stats.levels.map((l) => l.hp));
+    expect(once.assets.find((a) => a.id === 'kid-hut').stats.levels[0].hp).toBe(80);
+    expect(once.assets.find((a) => a.id === 'kid-look').stats).toEqual({ variantOf: 'tower' });
+    expect(once.settings.dataVersion).toBe(4);
+    const twice = migrateDb(once).db; // already version 4: not again
+    expect(twice.assets.find((a) => a.id === 'kid-hut').stats.levels[0].hp).toBe(80);
+  });
+
+  it('a fresh browser gets the new numbers as they are', () => {
+    const fresh = migrateDb({ settings: {}, assets: [], maps: [], themes: [], rules: [] }).db;
+    expect(fresh.assets.find((a) => a.id === 'tower').stats.levels.map((l) => l.hp)).toEqual(tower.stats.levels.map((l) => l.hp));
+  });
+});

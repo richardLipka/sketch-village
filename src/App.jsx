@@ -16,6 +16,9 @@ import Chronicle from './game/Chronicle.jsx';
 import { rulesOf } from './config/rules.js';
 import { buildingsOf, enemyTypesOf, itemsOf } from './config/components.js';
 import { starterMap } from './maps/mapRuntime.js';
+import { uiIconsOf } from './config/uiIcons.js';
+import { UiIconContext } from './ui/UiIcon.jsx';
+import { useDevice } from './ui/device.js';
 import { backupDue, noteChange, noteBackup, snoozeBackup, downloadSaveFile, storageStatus } from './data/safety.js';
 import { BackupReminder } from './data/SafetyCard.jsx';
 import UpdateToast from './ui/UpdateToast.jsx';
@@ -28,6 +31,7 @@ export default function App() {
   const [db, setDb] = useState(null);
   const [screen, setScreen] = useState('menu');
   const [loadError, setLoadError] = useState(null);
+  const { device } = useDevice(); // phone: the lists show one thing per line (sketch.css)
 
   useEffect(() => {
     loadDb()
@@ -56,6 +60,7 @@ export default function App() {
   const buildings = useMemo(() => buildingsOf(assets), [assets]);
   const enemyTypes = useMemo(() => enemyTypesOf(assets), [assets]);
   const items = useMemo(() => itemsOf(assets), [assets]);
+  const uiIcons = useMemo(() => uiIconsOf(assets), [assets]);
 
   // Replace one collection in memory and persist it. The kid made something:
   // note it for the backup reminder and ask the browser to keep the data.
@@ -95,7 +100,8 @@ export default function App() {
   if (!db) return <div className="page">{t('app.loading')}</div>;
 
   return (
-    <div className="page">
+    <UiIconContext.Provider value={uiIcons}>
+    <div className={`page device-${device}`}>
       <header className="row" style={{ marginBottom: 16 }}>
         {screen !== 'menu' && (
           <button className="btn" onClick={() => setScreen('menu')}>← {t('app.back')}</button>
@@ -153,5 +159,6 @@ export default function App() {
 
       {screen !== 'play' && <UpdateToast />}
     </div>
+    </UiIconContext.Provider>
   );
 }

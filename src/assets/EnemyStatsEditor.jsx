@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import NumField from './NumField.jsx';
+import ProjectilePick from './ProjectilePick.jsx';
 import { DEFAULT_ENEMY_STATS } from '../config/components.js';
 
 // Properties of an enemy component, next to its picture: its numbers, what it
@@ -13,6 +14,7 @@ const FIELDS = [
   ['damage', 0, 200, 1],
   ['cooldown', 0.2, 5, 0.1],
   ['range', 10, 300, 5],
+  ['splash', 0, 200, 5], // area damage: everyone defending this close to the hit gets hurt too
 ];
 
 const MINION_FIELDS = [
@@ -22,7 +24,7 @@ const MINION_FIELDS = [
   ['minionOnDeath', 0, 10, 1],
 ];
 
-export default function EnemyStatsEditor({ id, stats: raw, enemies = [], onChange }) {
+export default function EnemyStatsEditor({ id, stats: raw, enemies = [], projectiles = [], onChange }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const stats = { ...DEFAULT_ENEMY_STATS, ...raw };
@@ -55,6 +57,7 @@ export default function EnemyStatsEditor({ id, stats: raw, enemies = [], onChang
         ))}
         <label>{t('enemies.color')} <input type="color" value={stats.color} onChange={(e) => set({ color: e.target.value })} style={{ width: 48, height: 36 }} /></label>
       </div>
+      {stats.ranged && <div style={{ marginTop: 8 }}><ProjectilePick value={stats.projectile} projectiles={projectiles} onChange={(projectile) => set({ projectile })} /></div>}
 
       <label className="row" style={{ gap: 8, margin: '12px 0 4px' }}>
         <input type="checkbox" checked={summons} onChange={(e) => set({ summons: e.target.checked })} />

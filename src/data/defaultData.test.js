@@ -31,7 +31,7 @@ describe('small helpers', () => {
   });
 
   it('clampPoints respects the total and the per-stat max', () => {
-    expect(clampPoints({ melee: 9, ranged: 9, armor: 9 }, { ...HERO_RULES, points: 7, statMax: 4 })).toEqual({ melee: 4, ranged: 3, armor: 0, speed: 0 });
+    expect(clampPoints({ melee: 9, ranged: 9, armor: 9 }, { ...HERO_RULES, points: 7, statMax: 4 })).toEqual({ melee: 4, ranged: 3, armor: 0, speed: 0, magic: 0 });
   });
 });
 

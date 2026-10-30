@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import SearchBox from '../ui/SearchBox.jsx';
+import { matchesQuery, searchTexts } from '../ui/search.js';
 import AnimPreview from '../assets/AnimPreview.jsx';
 import { legendText } from '../config/legends.js';
 import { themeName, fitsTheme } from '../config/themes.js';
@@ -40,13 +42,15 @@ export default function Chronicle({ enemies, themes = [], seen = null, intro }) 
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const [theme, setTheme] = useState(null);
+  const [query, setQuery] = useState('');
   const name = (e) => e.name?.[lang] ?? e.id;
   const nameOf = (id) => { const e = enemies.find((x) => x.id === id); return e ? name(e) : null; };
-  const shown = enemies.filter((e) => fitsTheme(e, theme));
+  const shown = enemies.filter((e) => fitsTheme(e, theme) && matchesQuery(query, ...searchTexts(e)));
 
   return (
     <div className="chronicle">
       {intro && <p className="muted small">{intro}</p>}
+      <SearchBox value={query} onChange={setQuery} count={shown.length} />
       {themes.length > 0 && enemies.length > 4 && (
         <div className="row" style={{ gap: 6, marginBottom: 10 }}>
           <button className={`btn chip ${!theme ? 'active' : ''}`} onClick={() => setTheme(null)}>{t('themes.all')}</button>

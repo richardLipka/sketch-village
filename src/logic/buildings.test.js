@@ -303,7 +303,7 @@ describe('editable rules and components', () => {
       enemyTypes: DEFAULT_ENEMY_TYPES, rules, heroPoints: { melee: 5, ranged: 5, armor: 0, speed: 0 },
       waves: { rounds: [{ groups: [] }] },
     });
-    expect(w.heroPoints).toEqual({ melee: 2, ranged: 2, armor: 0, speed: 0 });
+    expect(w.heroPoints).toEqual({ melee: 2, ranged: 2, armor: 0, speed: 0, magic: 0 });
     expect(w.hero.maxHp).toBe(250);
     expect(w.heroStats.melee.damage).toBe(10 + 2 * 10);
   });
@@ -391,5 +391,25 @@ describe('describeSpot', () => {
     d = w.describeSpot('s3');
     expect(d.building).toMatchObject({ type: 'tower', level: 0, state: 'building' });
     expect(d.building.progress).toBe(0);
+  });
+});
+
+describe('hero magic', async () => {
+  const { heroNumbers, HERO_RULES, DEFAULT_HERO_POINTS } = await import('../config/heroStats.js');
+  const { mergeRules: merge } = await import('../config/rules.js');
+  it('magic points make spells stronger', () => {
+    const none = heroNumbers({ ...DEFAULT_HERO_POINTS, magic: 0 });
+    const three = heroNumbers({ ...DEFAULT_HERO_POINTS, magic: 3 });
+    expect(three.magic.damage - none.magic.damage).toBe(3 * HERO_RULES.magicPerPoint);
+    expect(heroNumbers(DEFAULT_HERO_POINTS, { magic: 1 }).magic.damage).toBe(none.magic.damage + 3 * HERO_RULES.magicPerPoint);
+  });
+  it('rules saved before magic existed still schedule its upgrades; an empty schedule stays empty', () => {
+    // a schedule saved before magic: the four older stats, as the kid set them
+    const saved = ['melee', 'ranged', 'armor', 'speed'].map((stat, i) => ({ key: `hero:${stat}:1`, round: 2 + i }));
+    const old = merge({ unlocks: saved });
+    expect(old.unlocks.find((u) => u.key === 'hero:melee:1').round).toBe(2);
+    expect(old.unlocks.filter((u) => u.key.startsWith('hero:magic:'))).toHaveLength(3);
+    expect(old.unlocks.filter((u) => u.key.startsWith('hero:ranged:'))).toEqual([{ key: 'hero:ranged:1', round: 3 }]); // the kid's schedule stays
+    expect(merge({ unlocks: [] }).unlocks).toEqual([]);
   });
 });

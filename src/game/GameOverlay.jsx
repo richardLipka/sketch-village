@@ -5,6 +5,7 @@ import { unlockLabel } from '../config/unlocks.js';
 import { WEAPON_CLASSES, isWeapon } from '../config/weapons.js';
 import WeaponIcon, { CLASS_ICON, SLOT_ICON } from './WeaponIcon.jsx';
 import FullscreenButton from '../ui/FullscreenButton.jsx';
+import UiIcon from '../ui/UiIcon.jsx';
 
 // The game's on-screen controls, laid over the map in its corners:
 //   top left: coins, workers, Town Hall · top centre: hero lives · top right: wave
@@ -20,9 +21,9 @@ export const Resources = memo(function Resources({ coins, workers, thHp, thMax, 
   const { t } = useTranslation();
   return (
     <div className="ov ov-tl sketch-card">
-      <span className="hud-num" title={t('game.coins')}>🪙 {coins}</span>
-      <span className="hud-num" title={t('build.workers_hint')}>👷 {workers}</span>
-      <span className="hud-num" title={t('game.town_hall')}>🏛️{thLevel} <Bar frac={thHp / thMax} color="#2563eb" /></span>
+      <span className="hud-num" title={t('game.coins')}><UiIcon name="coin" /> {coins}</span>
+      <span className="hud-num" title={t('build.workers_hint')}><UiIcon name="worker" /> {workers}</span>
+      <span className="hud-num" title={t('game.town_hall')}><UiIcon name="townhall" />{thLevel} <Bar frac={thHp / thMax} color="#2563eb" /></span>
     </div>
   );
 });
@@ -33,7 +34,10 @@ export const Lives = memo(function Lives({ lives, maxLives, hp, maxHp, dead, res
     <div className="ov ov-tc sketch-card" title={t('game.lives')}>
       {dead ? <b>⏳ {t('game.respawn_in', { s: respawnIn })}</b> : (
         <>
-          <span className="hearts">{'♥'.repeat(lives)}{'♡'.repeat(Math.max(0, maxLives - lives))}</span>
+          <span className="hearts">
+            {Array.from({ length: lives }, (_, i) => <UiIcon key={`h${i}`} name="heart" />)}
+            {Array.from({ length: Math.max(0, maxLives - lives) }, (_, i) => <UiIcon key={`e${i}`} name="heartEmpty" />)}
+          </span>
           <Bar frac={hp / maxHp} color="#16a34a" width="4.5em" />
         </>
       )}
@@ -56,7 +60,7 @@ export const WaveInfo = memo(function WaveInfo({ phase, round, totalRounds, prep
       </div>
       {phase === 'prep' && (
         <button className="btn primary" onClick={onReady} title={t('game.ready_hint')} style={{ marginTop: 4 }}>
-          ⚑ {t('game.ready')}{earlyBonus > 0 && ` (+${earlyBonus} 🪙)`}
+          <UiIcon name="ready" /> {t('game.ready')}{earlyBonus > 0 && <> (+{earlyBonus} <UiIcon name="coin" />)</>}
         </button>
       )}
       {newThings.length > 0 && <div className="small wave-extra">🎁 <b>{t('unlock.new')}</b> {newThings.map((k) => unlockLabel(k, t, typeName)).join(', ')}</div>}
@@ -80,7 +84,7 @@ export const AttackBar = memo(function AttackBar({ mode, hasMelee, hasRanged, ha
       {WEAPON_CLASSES.map((k, i) => (
         <button key={k} className={`btn attack ${mode === k ? 'active' : ''}`} disabled={!has[k]} onClick={() => onMode(k)}
           title={has[k] ? `${t(`weapons.class_${k}`)} (${i + 1})` : t(`weapons.need_${k}`)}>
-          {CLASS_ICON[k]}
+          <UiIcon name={k} />
           {mode === k && switching > 0 && <span className="switching" style={{ width: `${(switching / 2) * 100}%` }} />}
         </button>
       ))}
@@ -206,7 +210,7 @@ export const Equipment = memo(function Equipment({ inventoryKey, right, left, ar
       {open && (
         <div className="backpack sketch-card" onPointerDown={(e) => e.stopPropagation()}>
           <div className="row" style={{ justifyContent: 'space-between' }}>
-            <b>🎒 {t('weapons.inventory')}</b>
+            <b><UiIcon name="backpack" /> {t('weapons.inventory')}</b>
             <button className="btn icon" onClick={() => { setOpen(false); setPicked(null); }} title={t('common.done')}>✕</button>
           </div>
           <div className="backpack-body">
@@ -242,7 +246,7 @@ export const Equipment = memo(function Equipment({ inventoryKey, right, left, ar
         {twoHanded ? <span className="btn eq-slot muted" title={t('weapons.two_hands')}>↔</span> : stripSlot('left', left, SLOT_ICON.shield, t('weapons.left_hand'))}
         {stripSlot('armor', armor, SLOT_ICON.armor, t('weapons.slot_armor'))}
         <button className={`btn eq-slot ${open ? 'active' : ''}`} onClick={() => { setOpen(!open); setPicked(null); }} title={`${t('weapons.inventory')} (I)`}>
-          🎒<span className="small">{inBag.length}</span>
+          <UiIcon name="backpack" /><span className="small">{inBag.length}</span>
         </button>
       </div>
     </div>
@@ -272,7 +276,7 @@ export const Toolbar = memo(function Toolbar({ compact, paused, speed, wobble, m
       <div className="ov toolbar toolbar-compact">
         <button className={`btn icon ${paused ? 'active' : ''}`} onClick={onPause} title={t('game.pause')}>{paused ? '▶' : '⏸'}</button>
         <button className={`btn icon ${speed === 2 ? 'active' : ''}`} onClick={onSpeed} title={t('game.speed')}>{speed}×</button>
-        <button className="btn icon" onClick={onChronicle} title={t('game.chronicle')}>📖</button>
+        <button className="btn icon" onClick={onChronicle} title={t('game.chronicle')}><UiIcon name="chronicle" /></button>
         <button className={`btn icon ${more ? 'active' : ''}`} onClick={() => setMore(!more)} title={t('game.more')}>⋯</button>
         {more && (
           <div className="toolbar-more sketch-card" onClick={() => setMore(false)}>
@@ -293,7 +297,7 @@ export const Toolbar = memo(function Toolbar({ compact, paused, speed, wobble, m
       <button className={`btn icon ${speed === 2 ? 'active' : ''}`} onClick={onSpeed} title={t('game.speed')}>{speed}×</button>
       <button className="btn icon narrow-hide" onClick={() => onZoom(1 / 1.25)} title={t('game.zoom_out')}>−</button>
       <button className="btn icon narrow-hide" onClick={() => onZoom(1.25)} title={t('game.zoom_in')}>+</button>
-      <button className="btn icon" onClick={onChronicle} title={t('game.chronicle')}>📖</button>
+      <button className="btn icon" onClick={onChronicle} title={t('game.chronicle')}><UiIcon name="chronicle" /></button>
       <button className={`btn icon ${tipsOn ? 'active' : ''}`} onClick={onTips} title={t(tipsOn ? 'tips.skip' : 'tips.restart')}>💡</button>
       <button className="btn icon" onClick={onMute} title={t(muted ? 'game.sound_on' : 'game.sound_off')}>{muted ? '🔇' : '🔊'}</button>
       <button className={`btn icon ${wobble ? 'active' : ''}`} onClick={onWobble} title={t('game.wobble')}>〰️</button>

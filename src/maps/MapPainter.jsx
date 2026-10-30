@@ -334,6 +334,9 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
       <div className="row" style={{ marginBottom: 10 }}>
         <label>{t('maps.name')} <input type="text" value={map.name} onChange={(e) => update({ name: e.target.value })} /></label>
         <label>{t('editor.author')} <input type="text" value={map.author ?? ''} onChange={(e) => update({ author: e.target.value })} /></label>
+        <label className="description-field">{t('editor.description')}{' '}
+          <input type="text" value={map.description ?? ''} placeholder={t('editor.description_placeholder')} onChange={(e) => update({ description: e.target.value })} />
+        </label>
         <label>🏷️ {t('themes.map_theme')}{' '}
           <select value={map.theme ?? ''} onChange={(e) => update({ theme: e.target.value || null })}>
             <option value="">{t('themes.no_theme')}</option>

@@ -13,7 +13,7 @@ import { getCategory } from './categories.js';
 import { DEFAULT_HERO_POINTS } from '../config/heroStats.js';
 import { defaultItemStats } from '../config/weapons.js';
 import { newLevel } from '../config/features.js';
-import { DEFAULT_ENEMY_STATS, defaultComponent, compName } from '../config/components.js';
+import { DEFAULT_ENEMY_STATS, defaultComponent, compName, projectilesOf, soldierChoicesOf } from '../config/components.js';
 import { themeName } from '../config/themes.js';
 import { legendText } from '../config/legends.js';
 import { newId } from '../data/saveFile.js';
@@ -80,7 +80,7 @@ export function ThemeChips({ value = [], themes, onChange }) {
   );
 }
 
-export default function AssetEditor({ asset, isNew, heroRules, buildingTypes = [], enemyTypes = [], themes = [], onSave, onDelete, onCancel }) {
+export default function AssetEditor({ asset, isNew, heroRules, assets = [], buildingTypes = [], enemyTypes = [], themes = [], onSave, onDelete, onCancel }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const cat = getCategory(asset.category);
@@ -128,7 +128,7 @@ export default function AssetEditor({ asset, isNew, heroRules, buildingTypes = [
       header={<h2>{isNew ? t('editor.new_title', { cat: t(`cat.${asset.category}`) }) : t('editor.edit_title', { name: compName(asset, lang) || t(`cat.${asset.category}`) })}</h2>}
       footer={
         <div className="row">
-          {!isNew && !isCore && <button className="btn danger" onClick={() => { if (confirm(t('editor.confirm_delete'))) onDelete(draft.id); }}>🗑 {t('common.delete')}</button>}
+          {!isNew && !isCore && !cat.fixed && <button className="btn danger" onClick={() => { if (confirm(t('editor.confirm_delete'))) onDelete(draft.id); }}>🗑 {t('common.delete')}</button>}
           {builtIn && <button className="btn" onClick={restore}>↺ {t('component.restore')}</button>}
           <span className="spacer" />
           {!canSave && <span className="small muted">{t('component.need_name')}</span>}
@@ -140,6 +140,9 @@ export default function AssetEditor({ asset, isNew, heroRules, buildingTypes = [
       <div className="row" style={{ marginBottom: 16 }}>
         <label>{t('editor.name')} <input type="text" value={name} onChange={(e) => setName(e.target.value)} autoFocus /></label>
         <label>{t('editor.author')} <input type="text" value={draft.author ?? ''} onChange={(e) => set({ author: e.target.value })} /></label>
+        <label className="description-field">{t('editor.description')}{' '}
+          <input type="text" value={draft.description ?? ''} placeholder={t('editor.description_placeholder')} onChange={(e) => set({ description: e.target.value })} />
+        </label>
         {builtIn && <span className="small muted">⭐ {t('component.built_in')}</span>}
       </div>
 
@@ -155,7 +158,7 @@ export default function AssetEditor({ asset, isNew, heroRules, buildingTypes = [
           if (cat.slots) fallback = i > 0 ? images[0] : null;
           else for (let j = i - 1; j >= 0 && !fallback; j--) fallback = images[j];
           const label = cat.slots ? t(`editor.slot_${cat.slots[i]}`) : images.length > 1 ? t('editor.level', { n: i + 1 }) : null;
-          return <ImageSlot key={i} label={label} image={img} fallback={fallback} category={cat} onChange={(v) => setImage(i, v)} />;
+          return <ImageSlot key={i} label={label} image={img} fallback={fallback} placeholder={draft.stats?.emoji} category={cat} onChange={(v) => setImage(i, v)} />;
         })}
       </div>
       <p className="small muted">{t(cat.slots ? 'editor.slots_hint' : images.length > 1 ? 'editor.levels_hint' : 'component.picture_hint')}</p>
@@ -164,8 +167,11 @@ export default function AssetEditor({ asset, isNew, heroRules, buildingTypes = [
         <div style={{ marginTop: 12 }}>
           {cat.stats === 'hero' && <HeroStatsEditor points={draft.stats} rules={heroRules} onChange={(stats) => set({ stats })} />}
           {cat.stats === 'item' && <ItemStatsEditor category={asset.category} stats={draft.stats} onChange={(stats) => set({ stats })} />}
-          {cat.stats === 'enemy' && <EnemyStatsEditor id={draft.id} stats={draft.stats} enemies={enemyTypes} onChange={(stats) => set({ stats })} />}
-          {cat.stats === 'building' && <BuildingStatsEditor id={draft.id} stats={draft.stats} types={buildingTypes} onChange={(stats) => set({ stats })} />}
+          {cat.stats === 'enemy' && <EnemyStatsEditor id={draft.id} stats={draft.stats} enemies={enemyTypes} projectiles={projectilesOf(assets, lang)} onChange={(stats) => set({ stats })} />}
+          {cat.stats === 'building' && (
+            <BuildingStatsEditor id={draft.id} stats={draft.stats} types={buildingTypes}
+              projectiles={projectilesOf(assets, lang)} soldierChoices={soldierChoicesOf(assets, lang)} onChange={(stats) => set({ stats })} />
+          )}
           {cat.stats === 'coin' && (
             <NumField label={`🪙 ${t('editor.coin_value')}`} value={draft.stats.value} min={1} max={999} onChange={(v) => set({ stats: { value: Math.round(v) } })} />
           )}

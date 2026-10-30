@@ -11,6 +11,7 @@
 // anims    – which animations it can have (assets/animation.js); the still picture is used without them
 // legend   – has a legend (story + hint for the player) for the chronicle
 // sounds   – can have its own recorded sounds (walking growl, attack, death; assets/SoundEditor)
+// fixed    – a fixed set of built-ins (GUI icons): they are drawn, not added or deleted
 
 export const CATEGORIES = {
   // hero: default drawing + optional drawings holding a melee / ranged / magic weapon
@@ -29,6 +30,7 @@ export const CATEGORIES = {
   decoration: { size: 128, removeBg: true, levels: 1 },
   // a surface (grass, stones…) that covers a colour of the map in the game; tiled, so no paper removal
   texture:    { size: 128, removeBg: false, levels: 1 },
+  icon:       { size: 64,  removeBg: true, levels: 1, fixed: true },
 };
 
 export const CATEGORY_IDS = Object.keys(CATEGORIES);

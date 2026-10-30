@@ -9,15 +9,18 @@ export const DEFAULT_UNLOCKS = [
   { key: 'hero:ranged:1', round: 4 },
   { key: 'hero:melee:1', round: 6 },
   { key: 'hero:armor:1', round: 8 },
+  { key: 'hero:magic:1', round: 9 },
   { key: 'hero:speed:1', round: 10 },
   { key: 'hero:ranged:2', round: 13 },
   { key: 'hero:melee:2', round: 15 },
+  { key: 'hero:magic:2', round: 16 },
   { key: 'hero:armor:2', round: 17 },
   { key: 'hero:speed:2', round: 18 },
   { key: 'hero:ranged:3', round: 19 },
   { key: 'hero:melee:3', round: 19 },
   { key: 'hero:armor:3', round: 20 },
   { key: 'hero:speed:3', round: 20 },
+  { key: 'hero:magic:3', round: 20 },
 ];
 
 /**

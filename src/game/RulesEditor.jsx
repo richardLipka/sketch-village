@@ -42,7 +42,7 @@ const HERO = [
   ['rangedCooldownPerPoint', 0, 1, 0.05], ['rangedMinCooldown', 0.1, 5, 0.1],
   ['armorPerPoint', 0, 0.3, 0.01, true], ['armorMax', 0, 0.95, 0.05, true],
   ['speed', 20, 400, 5], ['speedPerPoint', 0, 60, 1],
-  ['magicDamage', 0, 200, 1], ['magicRange', 50, 600, 10], ['magicCooldown', 0.3, 10, 0.1],
+  ['magicDamage', 0, 200, 1], ['magicPerPoint', 0, 50, 1], ['magicRange', 50, 600, 10], ['magicCooldown', 0.3, 10, 0.1],
 ];
 
 const clone = (x) => JSON.parse(JSON.stringify(x));

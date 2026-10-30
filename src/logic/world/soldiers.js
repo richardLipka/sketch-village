@@ -14,6 +14,7 @@ export class Soldiers {
   updateSoldier(s, dt) {
     const castle = s.castleId === this.townHall.id ? this.townHall : this.buildings.find((b) => b.id === s.castleId);
     if (!castle || castle.state === 'ruin' || castle.hp <= 0) { s.dead = true; return; }
+    if (s.level !== castle.level && castle.level > 0) this.equipSoldier(s, castle); // the castle was upgraded
     s.cooldown = Math.max(0, s.cooldown - dt);
     const cfg = this.cfg.soldier;
     const patrol = this.levelStats(castle).soldierPatrol ?? cfg.aggro;
@@ -33,12 +34,16 @@ export class Soldiers {
     s.target = target?.id ?? null;
 
     if (target) {
-      if (dist(s, target) - target.radius <= cfg.range) {
+      if (dist(s, target) - target.radius <= (s.range ?? cfg.range)) {
         s.path = [];
         s.facing = target.x < s.x ? -1 : 1;
         if (s.cooldown === 0) {
           s.cooldown = s.attackCooldown;
-          this.damageEnemy(target, s.damage);
+          if (s.ranged) this.shoot(s, target, s.damage, 'soldier', s.splash, s.projectile);
+          else {
+            this.damageEnemy(target, s.damage);
+            if (s.splash > 0) for (const e of [...this.enemies]) if (e !== target && !e.flying && dist(e, target) <= s.splash + e.radius) this.damageEnemy(e, s.damage);
+          }
           this.emit('soldierAttack', { id: s.id });
         }
         return;

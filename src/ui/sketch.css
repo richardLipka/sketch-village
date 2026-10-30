@@ -257,7 +257,8 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 .ov-tr { top: 8px; right: 8px; max-width: min(22em, 44%); padding: 0.3em 0.5em; text-align: right; }
 .ov-br { right: 8px; bottom: 8px; display: flex; gap: 0.3em; }
 .ov-br-eq { right: 8px; bottom: calc(16px + max(56px, calc(2.9 * var(--u)))); display: flex; flex-direction: column; align-items: flex-end; gap: 0.3em; }
-.ov-bc { bottom: 8px; left: 50%; transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; gap: 0.2em; padding: 0.2em 0.4em; max-width: calc(100% - 2 * (max(56px, calc(2.9 * var(--u))) * 3 + 40px)); }
+/* width: max-content – placed at 50 %, it would otherwise wrap at half the screen and cover the tips above it */
+.ov-bc { bottom: 8px; left: 50%; transform: translateX(-50%); width: max-content; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.2em; padding: 0.2em 0.4em; max-width: calc(100% - 2 * (max(56px, calc(2.9 * var(--u))) * 3 + 40px)); }
 .hearts { color: #dc2626; font-size: 1.2em; letter-spacing: 1px; }
 .game-screen .btn.attack { position: relative; width: max(56px, calc(2.9 * var(--u))); height: max(56px, calc(2.9 * var(--u))); padding: 0; font-size: 1.4em; overflow: hidden; justify-content: center; }
 .btn.attack .switching { position: absolute; left: 0; bottom: 0; height: 6px; background: var(--danger); }
@@ -501,3 +502,33 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 .fill > .chronicle { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .fill > .chronicle > :not(.chronicle-grid) { flex: none; }
 .fill > .chronicle > .chronicle-grid { flex: 1; min-height: 0; overflow: auto; align-content: start; padding: 4px 6px 16px 0; }
+/* projectile choice (ProjectilePick) */
+.projectile-pick { gap: 6px; flex-wrap: wrap; }
+.chip-pic { width: 24px; height: 24px; object-fit: contain; vertical-align: middle; }
+
+/* GUI icons drawn by the kids (UiIcon): the size of the emoji they replace */
+.ui-icon { height: 1.15em; width: auto; max-width: 1.6em; object-fit: contain; vertical-align: -0.22em; }
+.hearts .ui-icon, .hearts .ui-icon-emoji { margin-right: 1px; }
+.btn.attack .ui-icon { height: 1.3em; max-width: 1.5em; }
+
+/* search box above a list (SearchBox) */
+.search-box { display: inline-flex; align-items: center; gap: 6px; margin: 4px 0; }
+.search-box input { width: min(18em, 60vw); }
+.description-field input { width: min(22em, 70vw); }
+
+/* phone: every list is one thing per line – picture left, text beside it – and scrolls */
+.device-phone .grid { grid-template-columns: 1fr !important; gap: 8px; }
+.device-phone .asset-tile {
+  display: grid; grid-template-columns: 64px 1fr auto; grid-auto-flow: row dense; column-gap: 12px; row-gap: 0;
+  align-items: center; text-align: left; padding: 6px 10px; transform: none !important; min-height: 0;
+}
+.device-phone .asset-tile > :first-child { grid-column: 1; grid-row: 1 / span 4; width: 64px; height: 64px; display: grid; place-items: center; overflow: hidden; }
+.device-phone .asset-tile > :first-child img, .device-phone .asset-tile > img:first-child { width: 64px; height: 64px; max-width: 64px; aspect-ratio: auto; object-fit: contain; }
+.device-phone .asset-tile > :not(:first-child) { grid-column: 2; }
+.device-phone .asset-tile > .row, .device-phone .asset-tile > button { grid-column: 3; grid-row: 1 / span 4; justify-self: end; align-self: center; justify-content: flex-end !important; flex-wrap: nowrap; }
+.device-phone .asset-tile .no-pic { font-size: 40px; padding: 0; }
+.device-phone .asset-tile.new { min-height: 56px; font-size: 32px; display: flex; justify-content: center; }
+.device-phone .chronicle-grid { grid-template-columns: 1fr; }
+.device-phone .chronicle-card { grid-template-columns: 96px 1fr; }
+.device-phone .chronicle-pic { width: 96px; height: 96px; }
+.device-phone .chronicle-pic canvas, .device-phone .chronicle-pic svg, .device-phone .chronicle-pic img { width: 96px !important; height: 96px !important; }

@@ -184,6 +184,11 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
       await load('soldier', soldier?.images.find(Boolean) || firstFrame(soldier?.anims));
       await load('cave', firstImage('cave'));
       await load('projectile', firstImage('projectile'));
+      // every drawn projectile and soldier on its own (buildings / enemies / castles pick them)
+      for (const a of assets) {
+        if (a.category === 'projectile') await load(`proj:${a.id}`, a.images?.find(Boolean));
+        if (a.category === 'soldier') await load(`soldier:${a.id}`, a.images?.find(Boolean) || firstFrame(a.anims));
+      }
       await load('chest', firstImage('chest'));
       for (const et of enemyTypes) await load(`enemy:${et.id}`, et.image || firstFrame(et.anims));
       for (const d of map.decorations) {
@@ -213,6 +218,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
       const director = new VoiceDirector({ voices: lengths });
       await loadAnims('hero', hero?.anims);
       await loadAnims('soldier', soldier?.anims);
+      for (const a of assets) if (a.category === 'soldier') await loadAnims(`soldier:${a.id}`, a.anims);
       for (const et of enemyTypes) await loadAnims(`enemy:${et.id}`, et.anims);
       for (const type of types) {
         for (const [v, set] of (buildings.lookAnims?.[type.id] ?? []).entries()) await loadAnims(`${type.id}#${v}`, set);

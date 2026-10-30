@@ -16,7 +16,8 @@ export const FEATURES = {
   // houses: workers make all building and upgrading faster
   workers: { icon: '👷', fields: [['workers', 0, 20, 1]], defaults: { workers: 1 } },
   // towers (and the Town Hall): shoot the enemy in range nearest to the centre
-  shoots: { icon: '🏹', fields: [['damage', 0, 500, 1], ['range', 30, 600, 10], ['cooldown', 0.1, 10, 0.05]], defaults: { damage: 8, range: 180, cooldown: 1 } },
+  // splash > 0: the shot hurts every enemy that close to where it hits (area damage)
+  shoots: { icon: '🏹', fields: [['damage', 0, 500, 1], ['range', 30, 600, 10], ['cooldown', 0.1, 10, 0.05], ['splash', 0, 200, 5]], defaults: { damage: 8, range: 180, cooldown: 1, splash: 0 } },
   // catapults: throw a stone at the biggest group of walking enemies in range;
   // it hurts every walking enemy where it lands (not flying ones, not too close)
   lobs: {
@@ -43,10 +44,13 @@ export const hasFeature = (type, f) => !!type?.features?.includes(f);
 
 /** A fresh level for a type with these features (numbers copied from `from` when given). */
 export function newLevel(features, from = {}) {
-  const lvl = { cost: 30, time: 12, hp: 400, round: 1 };
+  const lvl = { cost: 30, time: 12, hp: 320, round: 1 };
   for (const f of features) Object.assign(lvl, FEATURES[f]?.defaults);
   return { ...lvl, ...from };
 }
+
+/** How big a building is drawn: 20 % over the base size, +10 % per level above 1. */
+export const buildingScale = (level = 1) => 1.2 * (1 + 0.1 * (Math.max(1, level) - 1));
 
 /** Placeholder shape until a drawing exists – chosen from the main feature. */
 export function shapeOf(type) {

@@ -287,7 +287,7 @@ export class Buildings {
     }
     if (!best) return;
     b.cooldown = stats.cooldown;
-    this.shoot(b, best, stats.damage, 'tower');
+    this.shoot(b, best, stats.damage, 'tower', stats.splash ?? 0, this.typeOf(b)?.projectile ?? null);
     this.emit('buildingAttack', { id: b.id });
   }
 
@@ -309,7 +309,7 @@ export class Buildings {
       if (n > bn || (n === bn && v < bv)) { best = e; bn = n; bv = v; }
     }
     b.lobCooldown = stats.lobCooldown;
-    this.lob(b, { x: best.x, y: best.y }, stats.lobDamage, stats.lobSplash);
+    this.lob(b, { x: best.x, y: best.y }, stats.lobDamage, stats.lobSplash, this.typeOf(b)?.projectile ?? null);
     this.emit('buildingAttack', { id: b.id });
   }
 
@@ -324,12 +324,40 @@ export class Buildings {
     const door = this.snapToRoad(b);
     const a = slot * 2.1; // spread soldiers around the castle's door
     const home = { x: door.x + Math.cos(a) * 10 * Math.min(slot, 1.5), y: door.y + Math.sin(a) * 8 * Math.min(slot, 1.5) };
-    this.soldiers.push({
+    const s = {
       id: this.nextId++, kind: 'soldier', castleId: b.id, slot, x: door.x, y: door.y, home,
-      hp: stats.soldierHp, maxHp: stats.soldierHp, damage: stats.soldierDamage, attackCooldown: stats.soldierCooldown,
       cooldown: 0, radius: this.cfg.soldier.radius, target: null, path: [], repath: 0, facing: 1, dead: false,
-    });
+    };
+    this.equipSoldier(s, b, stats);
+    s.hp = s.maxHp;
+    this.soldiers.push(s);
     this.emit('soldierSpawn', { castleId: b.id });
+  }
+
+  /** The building type of a building or the Town Hall. */
+  typeOf(b) { return b === this.townHall || b.kind === 'townhall' ? this.coreType : this.buildingTypes[b.type]; }
+
+  /**
+   * A soldier as its castle's level makes it (SPEC §7): the numbers of that level
+   * and who it is – the level's soldierKind: a drawn soldier, or an enemy fighting
+   * on our side (soldier-sized; a shooting enemy shoots, with its projectile and
+   * area damage). Called when it appears and again when the castle is upgraded,
+   * so the soldiers already out there are upgraded too (their health in proportion).
+   */
+  equipSoldier(s, castle, stats = this.levelStats(castle)) {
+    const enemy = stats.soldierKind ? this.types[stats.soldierKind] : null;
+    const share = s.maxHp ? s.hp / s.maxHp : 1;
+    Object.assign(s, {
+      level: castle.level,
+      look: stats.soldierKind ?? null,
+      lookIsEnemy: !!enemy,
+      maxHp: stats.soldierHp, damage: stats.soldierDamage, attackCooldown: stats.soldierCooldown,
+      ranged: !!enemy?.ranged,
+      range: enemy?.ranged ? Math.max(this.cfg.soldier.range, enemy.range ?? 0) : this.cfg.soldier.range,
+      splash: enemy?.splash ?? 0,
+      projectile: enemy?.projectile ?? null,
+    });
+    s.hp = Math.max(1, Math.round(stats.soldierHp * share));
   }
 
   /** The numbers of a building's (or the Town Hall's) current level. */

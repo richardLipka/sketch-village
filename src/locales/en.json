@@ -87,7 +87,9 @@
     "detail_melee": "hit {{dmg}} ({{dps}}/s)",
     "detail_ranged": "arrow {{dmg}}, every {{cd}} s",
     "detail_armor": "-{{pct}} % damage",
-    "detail_speed": "speed {{speed}}"
+    "detail_speed": "speed {{speed}}",
+    "stat_magic": "Magic",
+    "detail_magic": "spells {{dmg}} damage (with a magic weapon)"
   },
   "editor": {
     "new_title": "New: {{cat}}",
@@ -103,7 +105,9 @@
     "slot_ranged": "With bow 🏹",
     "slot_magic": "With magic ✨",
     "confirm_delete": "Really delete this drawing?",
-    "need_name_image": "Name or first drawing is missing"
+    "need_name_image": "Name or first drawing is missing",
+    "description": "Description",
+    "description_placeholder": "what it is, what it does…"
   },
   "studio": {
     "title": "Studio – game parts",
@@ -128,7 +132,8 @@
     "shield": "Shields",
     "armor": "Armor",
     "chest": "Chest",
-    "texture": "Textures"
+    "texture": "Textures",
+    "icon": "GUI icons"
   },
   "catHint": {
     "hero": "The main character. Give it skill points.",
@@ -147,7 +152,8 @@
     "shield": "Shields for the left hand – set how much damage they absorb.",
     "armor": "Armor for the body – set how much damage it absorbs.",
     "chest": "Treasure chest dropped by enemies – it holds a weapon.",
-    "texture": "Photos or drawings of surfaces – grass, stones, sand, a carpet… In the map editor (Terrain) a colour of the map can be covered with them."
+    "texture": "Photos or drawings of surfaces – grass, stones, sand, a carpet… In the map editor (Terrain) a colour of the map can be covered with them.",
+    "icon": "The icons on the game’s controls – hearts, coins, workers, attack buttons… Draw your own; until then the game shows the emoji."
   },
   "import": {
     "done": "Imported: {{added}} new, {{updated}} updated, {{skipped}} unchanged.",
@@ -416,7 +422,10 @@
     "f_lobRange": "Throw range",
     "f_lobCooldown": "Throw every (s)",
     "f_lobSplash": "Area (px)",
-    "f_soldierPatrol": "Patrol distance"
+    "f_soldierPatrol": "Patrol distance",
+    "f_splash": "Area damage (px)",
+    "f_soldierKind": "Who fights",
+    "soldier_default": "soldier"
   },
   "weapons": {
     "title": "Weapons",
@@ -506,7 +515,8 @@
     "f_minionCount": "How many at once",
     "f_minionEvery": "Every (s)",
     "f_minionMax": "At most alive",
-    "f_minionOnDeath": "More when it dies"
+    "f_minionOnDeath": "More when it dies",
+    "f_splash": "Area damage (px)"
   },
   "waves": {
     "edit": "Waves",
@@ -622,7 +632,8 @@
     "g_build_interactRadius": "How close the hero must stand",
     "g_soldier_max": "Soldiers per castle",
     "g_soldier_speed": "Soldier speed",
-    "g_soldier_aggro": "Soldier reach"
+    "g_soldier_aggro": "Soldier reach",
+    "h_magicPerPoint": "+ spell per point"
   },
   "themes": {
     "title": "Themes",
@@ -785,5 +796,17 @@
     "preview_hits": "{{n}} of {{total}} hits heard",
     "preview_deaths": "{{n}} of {{total}} defeats heard",
     "preview_why": "{{monsters}} monsters came. The game leaves out sounds that come too close together, so even a big wave doesn’t turn into noise – and each recording stays special."
+  },
+  "search": {
+    "placeholder": "Find by name or description…",
+    "label": "Search",
+    "clear": "Clear the search",
+    "found_one": "{{count}} found",
+    "found_other": "{{count}} found"
+  },
+  "projectile": {
+    "label": "Projectile",
+    "default": "arrow",
+    "none_drawn": "draw projectiles in the studio (➶) to choose one"
   }
 }

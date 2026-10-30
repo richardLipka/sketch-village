@@ -26,7 +26,7 @@ export function featureLine(type, s, t) {
   return (type.features ?? []).map((f) => `${FEATURES[f]?.icon ?? ''} ${t(`feature.line_${f}`, s)}`).join(' · ');
 }
 
-const STAT_ICON = { melee: '⚔️', ranged: '🏹', armor: '🛡️', speed: '👟' };
+const STAT_ICON = { melee: '⚔️', ranged: '🏹', armor: '🛡️', speed: '👟', magic: '✨' };
 
 const iconOf = (type) => (type?.core ? '🏛️' : FEATURES[type?.features?.[0]]?.icon ?? '🏗️');
 

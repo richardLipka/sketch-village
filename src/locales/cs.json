@@ -87,7 +87,9 @@
     "detail_melee": "úder {{dmg}} ({{dps}}/s)",
     "detail_ranged": "šíp {{dmg}}, každých {{cd}} s",
     "detail_armor": "-{{pct}} % zranění",
-    "detail_speed": "rychlost {{speed}}"
+    "detail_speed": "rychlost {{speed}}",
+    "stat_magic": "Magie",
+    "detail_magic": "kouzla {{dmg}} poškození (s kouzelnou zbraní)"
   },
   "editor": {
     "new_title": "Nové: {{cat}}",
@@ -103,7 +105,9 @@
     "slot_ranged": "S lukem 🏹",
     "slot_magic": "S kouzly ✨",
     "confirm_delete": "Opravdu smazat tento obrázek?",
-    "need_name_image": "Chybí jméno nebo první obrázek"
+    "need_name_image": "Chybí jméno nebo první obrázek",
+    "description": "Popis",
+    "description_placeholder": "co to je, co to umí…"
   },
   "studio": {
     "title": "Ateliér – součásti hry",
@@ -128,7 +132,8 @@
     "shield": "Štíty",
     "armor": "Zbroj",
     "chest": "Truhla",
-    "texture": "Povrchy"
+    "texture": "Povrchy",
+    "icon": "Ikony"
   },
   "catHint": {
     "hero": "Hlavní postava. Nastav jí body dovedností.",
@@ -147,7 +152,8 @@
     "shield": "Štíty do levé ruky – nastav, kolik zranění pohltí.",
     "armor": "Zbroj na tělo – nastav, kolik zranění pohltí.",
     "chest": "Truhla s pokladem, kterou upustí nepřítel – je v ní zbraň.",
-    "texture": "Fotky nebo kresby povrchů – tráva, kameny, písek, koberec… V editoru map (Povrch) jimi můžeš pokrýt barvu mapy."
+    "texture": "Fotky nebo kresby povrchů – tráva, kameny, písek, koberec… V editoru map (Povrch) jimi můžeš pokrýt barvu mapy.",
+    "icon": "Ikony na ovládání hry – srdce, mince, dělníci, tlačítka útoku… Nakresli vlastní; do té doby hra ukazuje obrázkový znak."
   },
   "import": {
     "done": "Nahráno: {{added}} nových, {{updated}} aktualizovaných, {{skipped}} beze změny.",
@@ -416,7 +422,10 @@
     "f_lobRange": "Dostřel",
     "f_lobCooldown": "Hod každých (s)",
     "f_lobSplash": "Plocha (px)",
-    "f_soldierPatrol": "Hlídkují do"
+    "f_soldierPatrol": "Hlídkují do",
+    "f_splash": "Plošné poškození (px)",
+    "f_soldierKind": "Kdo bojuje",
+    "soldier_default": "voják"
   },
   "weapons": {
     "title": "Zbraně",
@@ -506,7 +515,8 @@
     "f_minionCount": "Kolik najednou",
     "f_minionEvery": "Každých (s)",
     "f_minionMax": "Nejvíc naživu",
-    "f_minionOnDeath": "Další, když zemře"
+    "f_minionOnDeath": "Další, když zemře",
+    "f_splash": "Plošné poškození (px)"
   },
   "waves": {
     "edit": "Vlny",
@@ -622,7 +632,8 @@
     "g_build_interactRadius": "Jak blízko musí hrdina stát",
     "g_soldier_max": "Vojáků na hrad",
     "g_soldier_speed": "Rychlost vojáků",
-    "g_soldier_aggro": "Dosah vojáků"
+    "g_soldier_aggro": "Dosah vojáků",
+    "h_magicPerPoint": "+ kouzlo za bod"
   },
   "themes": {
     "title": "Témata",
@@ -795,5 +806,19 @@
     "preview_hits": "zazní {{n}} z {{total}} útoků",
     "preview_deaths": "zazní {{n}} z {{total}} porážek",
     "preview_why": "Přišlo {{monsters}} příšer. Hra vynechává zvuky, které by šly moc brzy po sobě, aby ani velká vlna nebyla jen rámus – a každá nahrávka zůstala výjimečná."
+  },
+  "search": {
+    "placeholder": "Hledat podle jména nebo popisu…",
+    "label": "Hledat",
+    "clear": "Smazat hledání",
+    "found_one": "nalezen {{count}}",
+    "found_few": "nalezeny {{count}}",
+    "found_many": "nalezeno {{count}}",
+    "found_other": "nalezeno {{count}}"
+  },
+  "projectile": {
+    "label": "Střela",
+    "default": "šíp",
+    "none_drawn": "nakresli střely v ateliéru (➶), pak si můžeš vybrat"
   }
 }

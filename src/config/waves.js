@@ -27,7 +27,7 @@ const PLAN = [
   [['necromancer', 2, 8, 0], ['spider', 1, 1, 4], ['orc', 5, 3.0, 2], ['bat', 10, 1.8], ['archer', 8, 2.2]], // 17
   [['orc', 8, 2.5], ['wolf', 18, 1.4, 3], ['archer', 11, 2.3], ['bat', 10, 2.4, 3]],
   [['spider', 2, 9, 0], ['orc', 8, 2.0, 2], ['bat', 16, 1.3], ['archer', 8, 2.4]], // 19
-  [['troll', 1, 1, 0], ['dragon', 1, 1, 3], ['orc', 8, 2.4], ['goblin', 16, 1.4], ['bat', 10, 2.1]],
+  [['troll', 1, 1, 0], ['dragon', 1, 1, 3], ['orc', 8, 2.4], ['goblin', 16, 1.3], ['bat', 10, 2.1]],
 ];
 
 // stretches every spawn timeline; tuned with the bot so waves last 40–60 s now

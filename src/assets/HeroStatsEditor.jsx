@@ -23,6 +23,7 @@ export default function HeroStatsEditor({ points, rules = HERO_RULES, onChange }
     ranged: t('hero.detail_ranged', { dmg: n.ranged.damage, cd: n.ranged.cooldown }),
     armor: t('hero.detail_armor', { pct: Math.round(n.armor * 100) }),
     speed: t('hero.detail_speed', { speed: n.speed }),
+    magic: t('hero.detail_magic', { dmg: n.magic.damage }),
   };
 
   return (

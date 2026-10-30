@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import SearchBox from '../ui/SearchBox.jsx';
+import { matchesQuery, searchTexts } from '../ui/search.js';
 import Screen from '../ui/Screen.jsx';
 import { CATEGORY_IDS } from './categories.js';
 import AssetEditor, { emptyAsset } from './AssetEditor.jsx';
@@ -15,7 +17,7 @@ import ThemesEditor from './ThemesEditor.jsx';
 // Themed kinds (enemies, buildings) can be shown one theme at a time; the
 // themes themselves are edited here too (🏷️).
 
-const KIND_ICON = { hero: '🦸', enemy: '👾', building: '🏗️', soldier: '💂', weapon: '⚔️', shield: '🛡️', armor: '🦺', coin: '🪙', chest: '🎁', projectile: '➶', cave: '🕳️', decoration: '🌳', texture: '🧱' };
+const KIND_ICON = { hero: '🦸', enemy: '👾', building: '🏗️', soldier: '💂', weapon: '⚔️', shield: '🛡️', armor: '🦺', coin: '🪙', chest: '🎁', projectile: '➶', cave: '🕳️', decoration: '🌳', texture: '🧱', icon: '♥' };
 
 export default function AssetStudio({ assets, heroRules, buildingTypes = [], enemyTypes = [], themes = [], maps = [], onChange, onThemes }) {
   const { t, i18n } = useTranslation();
@@ -26,6 +28,7 @@ export default function AssetStudio({ assets, heroRules, buildingTypes = [], ene
   const [editing, setEditing] = useState(null); // { asset, isNew }
   const [theme, setTheme] = useState(null); // show only this theme (themed kinds)
   const [themesOpen, setThemesOpen] = useState(false);
+  const [query, setQuery] = useState(''); // search by name and description
 
   const pickCategory = (c) => {
     setCategory(c);
@@ -33,7 +36,7 @@ export default function AssetStudio({ assets, heroRules, buildingTypes = [], ene
   };
 
   const themed = getCategory(category).themed;
-  const list = assets.filter((a) => a.category === category && (!themed || fitsTheme(a, theme)));
+  const inCategory = assets.filter((a) => a.category === category && (!themed || fitsTheme(a, theme)));
   const themeIcons = (a) => (a.themes ?? []).map((id) => themes.find((th) => th.id === id)?.icon).filter(Boolean).join('');
   const countOf = (c) => assets.filter((a) => a.category === c).length;
   const typeName = (id) => buildingTypes.find((ty) => ty.id === id)?.name?.[lang] ?? id;
@@ -67,6 +70,7 @@ export default function AssetStudio({ assets, heroRules, buildingTypes = [], ene
     const icons = (a.stats?.features ?? []).map((f) => FEATURES[f]?.icon).join(' ');
     return `${a.stats?.core ? '🏛️ ' : ''}${icons} · ${t('component.n_levels', { n: a.stats?.levels?.length ?? 0 })}`;
   };
+  const list = inCategory.filter((a) => matchesQuery(query, ...searchTexts(a, [describe(a)])));
 
   return (
     <Screen title={t('studio.title')} head={<>
@@ -87,23 +91,24 @@ export default function AssetStudio({ assets, heroRules, buildingTypes = [], ene
           <button className="btn chip" onClick={() => setThemesOpen(true)}>🏷️ {t('themes.button')}…</button>
         </div>
       )}
+      <SearchBox value={query} onChange={setQuery} count={list.length} />
     </>}>
 
       <div className="grid">
-        <button className="asset-tile new btn" onClick={() => setEditing({ asset: emptyAsset(category), isNew: true })} title={t('studio.add')}>
+        {!getCategory(category).fixed && <button className="asset-tile new btn" onClick={() => setEditing({ asset: emptyAsset(category), isNew: true })} title={t('studio.add')}>
           +
-        </button>
+        </button>}
         {list.map((a) => {
           const pics = (a.images ?? []).filter(Boolean);
           return (
             <div key={a.id} className="asset-tile" onClick={() => setEditing({ asset: a, isNew: false })}>
               <div className="checker" style={{ borderRadius: 6, display: 'grid', placeItems: 'center' }}>
-                {pics.length ? <img src={pics.at(-1)} alt="" /> : <span className="no-pic" style={{ color: a.stats?.color }}>{KIND_ICON[a.category]}</span>}
+                {pics.length ? <img src={pics.at(-1)} alt="" /> : <span className="no-pic" style={{ color: a.stats?.color }}>{a.stats?.emoji ?? KIND_ICON[a.category]}</span>}
               </div>
               <div className="name">{a.builtIn && '⭐ '}{compName(a, lang)} {themed && <span title={t('themes.label')}>{themeIcons(a)}</span>}</div>
               <div className="author">{a.author && `✎ ${a.author}`}</div>
               {describe(a) && <div className="small muted">{describe(a)}</div>}
-              <button className="btn icon small" onClick={(e) => { e.stopPropagation(); duplicate(a); }} title={t('studio.duplicate')}>⧉</button>
+              {!getCategory(a.category).fixed && <button className="btn icon small" onClick={(e) => { e.stopPropagation(); duplicate(a); }} title={t('studio.duplicate')}>⧉</button>}
             </div>
           );
         })}
@@ -114,6 +119,7 @@ export default function AssetStudio({ assets, heroRules, buildingTypes = [], ene
           asset={editing.asset}
           isNew={editing.isNew}
           heroRules={heroRules}
+          assets={assets}
           buildingTypes={buildingTypes}
           enemyTypes={enemyTypes}
           themes={themes}

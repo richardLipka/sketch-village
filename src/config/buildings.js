@@ -21,47 +21,48 @@ export const BUILD = {
 export const HERO_UPGRADE_COSTS = [15, 30, 50]; // level n needs Town Hall level n
 
 // HP tuned with the balance bot (balance.test.js): buildings beside the roads
-// must survive enemies walking past while the towers shoot them.
+// must survive enemies walking past while the towers shoot them. All building
+// HP was lowered by 20 % in data version 4 (data/migrate.js scales stored ones).
 export const DEFAULT_BUILDING_TYPES = [
   {
     id: 'townhall', core: true, name: { cs: 'Radnice', en: 'Town hall' }, features: ['shoots', 'healHero'],
     levels: [
-      { cost: 0, time: 0, hp: 600, round: 1, damage: 5, range: 170, cooldown: 1.2, heal: 8, healRange: 80 },
-      { cost: 60, time: 20, hp: 900, round: 3, damage: 8, range: 190, cooldown: 1.1, heal: 8, healRange: 80 },
-      { cost: 100, time: 30, hp: 1200, round: 11, damage: 12, range: 210, cooldown: 1.0, heal: 8, healRange: 80 },
+      { cost: 0, time: 0, hp: 480, round: 1, damage: 5, range: 170, cooldown: 1.2, heal: 8, healRange: 80 },
+      { cost: 60, time: 20, hp: 720, round: 3, damage: 8, range: 190, cooldown: 1.1, heal: 8, healRange: 80 },
+      { cost: 100, time: 30, hp: 960, round: 11, damage: 12, range: 210, cooldown: 1.0, heal: 8, healRange: 80 },
     ],
   },
   {
     id: 'house', name: { cs: 'Dům', en: 'House' }, features: ['workers'],
     levels: [
-      { cost: 20, time: 10, hp: 400, round: 1, workers: 1 },
-      { cost: 30, time: 12, hp: 600, round: 7, workers: 2 },
-      { cost: 45, time: 15, hp: 800, round: 14, workers: 3 },
+      { cost: 20, time: 10, hp: 320, round: 1, workers: 1 },
+      { cost: 30, time: 12, hp: 480, round: 7, workers: 2 },
+      { cost: 45, time: 15, hp: 640, round: 14, workers: 3 },
     ],
   },
   {
     id: 'tower', name: { cs: 'Věž', en: 'Tower' }, features: ['shoots'],
     levels: [
-      { cost: 30, time: 12, hp: 500, round: 1, damage: 9, range: 180, cooldown: 1.0 },
-      { cost: 45, time: 14, hp: 750, round: 5, damage: 15, range: 200, cooldown: 0.9 },
-      { cost: 70, time: 18, hp: 1000, round: 12, damage: 22, range: 220, cooldown: 0.75 },
+      { cost: 30, time: 12, hp: 400, round: 1, damage: 9, range: 180, cooldown: 1.0 },
+      { cost: 45, time: 14, hp: 600, round: 5, damage: 15, range: 200, cooldown: 0.9 },
+      { cost: 70, time: 18, hp: 800, round: 12, damage: 22, range: 220, cooldown: 0.75 },
     ],
   },
   {
     id: 'castle', name: { cs: 'Hrad', en: 'Castle' }, features: ['soldiers'],
     levels: [
-      { cost: 40, time: 15, hp: 750, round: 2, soldierCount: 3, soldierHp: 30, soldierDamage: 6, soldierCooldown: 1.0, soldierRespawn: 12, soldierPatrol: 160 },
-      { cost: 60, time: 18, hp: 1100, round: 9, soldierCount: 3, soldierHp: 45, soldierDamage: 9, soldierCooldown: 1.0, soldierRespawn: 10, soldierPatrol: 180 },
-      { cost: 90, time: 22, hp: 1500, round: 16, soldierCount: 3, soldierHp: 60, soldierDamage: 12, soldierCooldown: 1.0, soldierRespawn: 8, soldierPatrol: 200 },
+      { cost: 40, time: 15, hp: 600, round: 2, soldierCount: 3, soldierHp: 30, soldierDamage: 6, soldierCooldown: 1.0, soldierRespawn: 12, soldierPatrol: 160 },
+      { cost: 60, time: 18, hp: 880, round: 9, soldierCount: 3, soldierHp: 45, soldierDamage: 9, soldierCooldown: 1.0, soldierRespawn: 10, soldierPatrol: 180 },
+      { cost: 90, time: 22, hp: 1200, round: 16, soldierCount: 3, soldierHp: 60, soldierDamage: 12, soldierCooldown: 1.0, soldierRespawn: 8, soldierPatrol: 200 },
     ],
   },
   {
     // area attack: slow, but every stone hurts a whole group on the road
     id: 'catapult', name: { cs: 'Katapult', en: 'Catapult' }, features: ['lobs'],
     levels: [
-      { cost: 45, time: 16, hp: 550, round: 6, lobDamage: 14, lobRange: 230, lobCooldown: 3.2, lobSplash: 45 },
-      { cost: 65, time: 18, hp: 800, round: 10, lobDamage: 22, lobRange: 250, lobCooldown: 3.0, lobSplash: 50 },
-      { cost: 95, time: 22, hp: 1100, round: 15, lobDamage: 32, lobRange: 270, lobCooldown: 2.8, lobSplash: 55 },
+      { cost: 45, time: 16, hp: 440, round: 6, lobDamage: 14, lobRange: 230, lobCooldown: 3.2, lobSplash: 45 },
+      { cost: 65, time: 18, hp: 640, round: 10, lobDamage: 22, lobRange: 250, lobCooldown: 3.0, lobSplash: 50 },
+      { cost: 95, time: 22, hp: 880, round: 15, lobDamage: 32, lobRange: 270, lobCooldown: 2.8, lobSplash: 55 },
     ],
   },
 ];

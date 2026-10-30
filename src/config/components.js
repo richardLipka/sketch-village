@@ -24,6 +24,7 @@ import { DEFAULT_BUILDING_TYPES } from './buildings.js';
 import { DEFAULT_ENEMY_TYPES } from './enemies.js';
 import { DEFAULT_WEAPONS, isWeapon, defaultItemStats } from './weapons.js';
 import { BUILT_IN_LEGENDS } from './legends.js';
+import { UI_ICONS, uiIconId } from './uiIcons.js';
 
 const STAMP = '2026-10-29T00:00:00.000Z'; // older than any edit, so edits always win a merge
 
@@ -41,6 +42,8 @@ export const DEFAULT_COMPONENTS = [
   ...DEFAULT_WEAPONS.map((w) => component(isWeapon(w) ? 'weapon' : w.slot, w.id, w.name, itemStats(w))),
   component('coin', 'coin1', { cs: 'Měďák', en: 'Copper coin' }, { value: 1 }),
   component('coin', 'coin5', { cs: 'Zlaťák', en: 'Gold coin' }, { value: 5 }),
+  // the game's GUI icons, to be drawn by the kids (config/uiIcons.js)
+  ...UI_ICONS.map((i) => component('icon', uiIconId(i.key), i.name, { icon: i.key, emoji: i.emoji })),
 ];
 
 export const defaultComponent = (id) => DEFAULT_COMPONENTS.find((c) => c.id === id) ?? null;
@@ -64,6 +67,7 @@ export function buildingsOf(assets = []) {
   const all = assets.filter((a) => a.category === 'building');
   const types = all.filter((a) => !a.stats?.variantOf && a.stats?.levels?.length).map((a) => ({
     id: a.id, name: bothLangs(a.name), core: !!a.stats.core, features: a.stats.features ?? [], levels: a.stats.levels, themes: a.themes ?? [],
+    projectile: a.stats.projectile ?? null,
   }));
   // every look (the type's own drawings + 'another look' components with pictures) and its animations
   const looks = {}, lookAnims = {};
@@ -86,8 +90,20 @@ export function enemyTypesOf(assets = []) {
 
 export const DEFAULT_ENEMY_STATS = {
   hp: 25, speed: 45, damage: 4, cooldown: 1, range: 25, armor: 0, coins: [1, 2], flying: false, ranged: false, boss: false, size: 1, color: '#16a34a',
+  splash: 0, projectile: null, // area damage (px around the hit) and the projectile of a shooting enemy (null = arrow)
   minions: [], minionCount: 2, minionEvery: 8, minionMax: 6, minionOnDeath: 0,
 };
+
+/** Projectiles drawn in the studio – what shooting buildings, enemies and soldiers can throw. */
+export function projectilesOf(assets = [], lang = 'cs') {
+  return assets.filter((a) => a.category === 'projectile').map((a) => ({ id: a.id, name: compName(a, lang) || '?', image: pictures(a)[0] ?? null }));
+}
+
+/** Who a castle can send out: drawn soldiers and every enemy (as a smaller soldier). */
+export function soldierChoicesOf(assets = [], lang = 'cs') {
+  const pick = (cat) => assets.filter((a) => a.category === cat).map((a) => ({ id: a.id, name: compName(a, lang) || '?', image: pictures(a)[0] ?? firstFrame(a) ?? null }));
+  return { soldiers: pick('soldier'), enemies: pick('enemy') };
+}
 
 /** Weapons, shields and armor as items. */
 export function itemsOf(assets = []) {
