@@ -223,7 +223,8 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
   }, [map, hero, assets, enemyTypes, buildings, types, rules, weapons, restart, onEvent, anyEvent]);
 
   const scene = () => gameRef.current?.scene.getScene('game');
-  useEffect(() => { const s = scene(); if (s) s.wobble = wobble; }, [wobble, hud === null]);
+  const started = hud !== null; // the scene exists once the first HUD arrived
+  useEffect(() => { const s = scene(); if (s) s.wobble = wobble; }, [wobble, started]);
 
   // ---- stable handlers (memoized children don't re-render because of them) ----
   const setMode = useCallback((m) => {

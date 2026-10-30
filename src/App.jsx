@@ -15,12 +15,15 @@ import Chronicle from './game/Chronicle.jsx';
 import { rulesOf } from './config/rules.js';
 import { buildingsOf, enemyTypesOf, itemsOf } from './config/components.js';
 import { starterMap } from './maps/mapRuntime.js';
+import { backupDue, noteChange, noteBackup, snoozeBackup, downloadSaveFile, storageStatus } from './data/safety.js';
+import { BackupReminder } from './data/SafetyCard.jsx';
+import UpdateToast from './ui/UpdateToast.jsx';
 
 // Screens: menu · components (studio) · maps · rules · play · save & load.
 // Everything the game uses is derived from the components (db.assets) and the
 // global rules, memoized so a running game isn't restarted by unrelated renders.
 export default function App() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [db, setDb] = useState(null);
   const [screen, setScreen] = useState('menu');
   const [loadError, setLoadError] = useState(null);
@@ -53,9 +56,17 @@ export default function App() {
   const enemyTypes = useMemo(() => enemyTypesOf(assets), [assets]);
   const items = useMemo(() => itemsOf(assets), [assets]);
 
-  // Replace one collection in memory and persist it.
+  // Replace one collection in memory and persist it. The kid made something:
+  // note it for the backup reminder and ask the browser to keep the data.
   const updateCollection = useCallback(async (name, records) => {
-    setDb((cur) => ({ ...cur, [name]: records }));
+    setDb((cur) => {
+      const patch = noteChange(cur.settings);
+      if (!patch) return { ...cur, [name]: records };
+      const settings = { ...cur.settings, ...patch };
+      saveSettings(settings);
+      storageStatus({ ask: true });
+      return { ...cur, [name]: records, settings };
+    });
     await saveCollection(name, records);
   }, []);
 
@@ -66,6 +77,11 @@ export default function App() {
       return { ...cur, settings };
     });
   }, []);
+
+  const backupNow = useCallback(() => {
+    downloadSaveFile(db, i18n.language);
+    updateSettings(noteBackup());
+  }, [db, i18n.language, updateSettings]);
 
   // after an import: merge happened in DataPanel; bring old data into components
   const replaceDb = useCallback(async (next) => {
@@ -92,6 +108,7 @@ export default function App() {
         <main style={{ textAlign: 'center' }}>
           <h1>{t('app.title')}</h1>
           <p className="muted">{t('app.subtitle')}</p>
+          {backupDue(db.settings) && <BackupReminder settings={db.settings} onBackup={backupNow} onLater={() => updateSettings(snoozeBackup())} />}
           <div className="sketch-card" style={{ display: 'inline-flex', flexDirection: 'column', gap: 16, padding: 32, marginTop: 24 }}>
             <button className="btn big primary" onClick={() => setScreen('play')}>▶ {t('menu.play')}</button>
             <button className="btn big" onClick={() => setScreen('studio')}>🧩 {t('menu.studio')}</button>
@@ -130,7 +147,9 @@ export default function App() {
         />
       )}
 
-      {screen === 'data' && <DataPanel db={db} onReplaceDb={replaceDb} />}
+      {screen === 'data' && <DataPanel db={db} onReplaceDb={replaceDb} onBackup={backupNow} />}
+
+      {screen !== 'play' && <UpdateToast />}
     </div>
   );
 }

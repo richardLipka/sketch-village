@@ -1,31 +1,22 @@
 import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { buildSaveFile, parseSaveFile, COLLECTIONS } from './saveFile.js';
+import { parseSaveFile, COLLECTIONS } from './saveFile.js';
 import { planImport, applyImport } from './mergePlan.js';
 import ImportReview from './ImportReview.jsx';
 import { saveDb, purgeAll, saveCollection } from './store.js';
 import { CATEGORY_IDS } from '../assets/categories.js';
 import { fetchDefaultData } from './defaultData.js';
+import SafetyCard from './SafetyCard.jsx';
 
 // Export everything to one JSON file (components with their pictures and
 // animations, maps, themes, rules, settings incl. the language), import with a
 // review of changed elements (data/mergePlan.js), purge (SPEC §13a).
-export default function DataPanel({ db, onReplaceDb }) {
+export default function DataPanel({ db, onReplaceDb, onBackup }) {
   const { t, i18n } = useTranslation();
   const fileRef = useRef(null);
   const [review, setReview] = useState(null); // an import plan waiting for the kid's decisions
   const [message, setMessage] = useState(null);
   const [purgeCat, setPurgeCat] = useState('');
-
-  const doExport = () => {
-    const file = buildSaveFile({ ...db, settings: { ...db.settings, language: i18n.language } });
-    const blob = new Blob([JSON.stringify(file)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `sketch-village-${file.exportedAt.slice(0, 10)}.json`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  };
 
   // new elements are added at once; changed ones are reviewed first
   const finish = async (plan, accept) => {
@@ -88,11 +79,8 @@ export default function DataPanel({ db, onReplaceDb }) {
       <h1>{t('data.title')}</h1>
       <p className="muted">{t('data.summary', { assets: db.assets.length, maps: db.maps.length, kb: sizeKb })}</p>
 
-      <div className="sketch-card" style={{ marginBottom: 20 }}>
-        <h2>{t('data.export_title')}</h2>
-        <p className="small muted">{t('data.export_hint')}</p>
-        <button className="btn primary" onClick={doExport}>⬇ {t('data.export')}</button>
-      </div>
+      <SafetyCard settings={db.settings} onBackup={onBackup} />
+
 
       <div className="sketch-card" style={{ marginBottom: 20 }}>
         <h2>{t('data.import_title')}</h2>

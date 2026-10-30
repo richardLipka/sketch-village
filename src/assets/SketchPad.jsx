@@ -41,7 +41,6 @@ export default function SketchPad({ size, initialImage, onSave, onCancel }) {
         ctx().drawImage(img, 0, 0, W, W);
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [W, initialImage]);
 
   const snapshot = useCallback(() => {

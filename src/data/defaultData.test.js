@@ -63,7 +63,9 @@ describe('items and coins drawn in the studio', () => {
 });
 
 describe('translations', () => {
-  const keys = (o, p = '') => Object.entries(o).flatMap(([k, v]) => (typeof v === 'object' ? keys(v, `${p}${k}.`) : [`${p}${k}`]));
+  // plural forms differ by language (Czech has few / many) – compare the base keys
+  const plural = (k) => k.replace(/_(zero|one|two|few|many|other)$/, '');
+  const keys = (o, p = '') => [...new Set(Object.entries(o).flatMap(([k, v]) => (typeof v === 'object' ? keys(v, `${p}${k}.`) : [`${p}${plural(k)}`])))];
   it('Czech and English have the same keys', () => {
     expect(keys(cs).sort()).toEqual(keys(en).sort());
   });

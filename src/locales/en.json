@@ -7,7 +7,11 @@
     "back": "Back",
     "coming_soon": "Coming soon",
     "fullscreen": "Fullscreen",
-    "fullscreen_exit": "Leave fullscreen"
+    "fullscreen_exit": "Leave fullscreen",
+    "later": "Later",
+    "update_ready": "A new version of the game is ready.",
+    "update_reload": "Reload",
+    "offline_ready": "The game now works without internet too."
   },
   "menu": {
     "play": "Play",
@@ -176,7 +180,6 @@
   "data": {
     "title": "Save & load",
     "summary": "{{assets}} drawings, {{maps}} maps, about {{kb}} kB",
-    "export_title": "Download everything",
     "export_hint": "One file with everything: all drawings with their animations and numbers, enemies with legends, buildings, maps with waves and terrain, themes, rules and settings. Take it to another computer.",
     "export": "Download file",
     "import_title": "Load a file",
@@ -678,5 +681,26 @@
     "open": "Shop & hero upgrades",
     "title": "Town hall shop",
     "go_to_hall": "The hero must stand at the town hall to buy – tap the town hall to walk there."
+  },
+  "safety": {
+    "title": "Backup & keeping drawings safe",
+    "last_backup": "Last backup: {{date}}",
+    "never": "No backup downloaded yet.",
+    "unsaved_zero": "today’s changes are not in a backup",
+    "unsaved_one": "changes from {{count}} day ago are not in a backup",
+    "unsaved_other": "changes from {{count}} days ago are not in a backup",
+    "persisted": "The browser promised to keep your drawings.",
+    "best_effort": "The browser may delete the drawings when space runs low or the game isn’t opened for a long time. Download backups – or install the game.",
+    "unsupported": "This browser can’t promise to keep the drawings. Download backups often.",
+    "ask_keep": "Ask the browser to keep them",
+    "install_why": "Install the game: it opens from its own icon, fills the whole screen and plays without internet.",
+    "installed": "The game is installed – it plays without internet too.",
+    "install": "Install the game",
+    "install_ios": "On iPhone or iPad: in Safari tap Share ⬆ and then “Add to Home Screen”. Only then does Safari keep the drawings for good.",
+    "install_menu": "In the browser’s menu choose “Install app” or “Add to home screen”.",
+    "reminder_one": "Your drawings from {{count}} day ago are only in this browser. Download a backup so they can’t get lost.",
+    "reminder_other": "Your drawings from {{count}} days ago are only in this browser. Download a backup so they can’t get lost.",
+    "backup_now": "Download backup",
+    "refused": "The browser said no for now. It usually agrees once the game is installed or played more often – until then, download backups."
   }
 }

@@ -25,17 +25,24 @@ A short, replayable village-defense game for a group of kids who also produce al
 | Crop | react-easy-crop | Already used in source |
 | Pathfinding | Own A* / BFS on walkability grid (or `pathfinding` / `easystarjs`) | Paths come from bitmap |
 | Storage | IndexedDB (via `idb-keyval`) + JSON export/import | localStorage quota (~5 MB) is too small for many assets |
-| Tests | Vitest | Wave engine, economy and path extraction are pure logic |
+| Tests | Vitest + **Playwright** | Wave engine, economy and path extraction are pure logic; browser tests play the built game (§15a) |
+| Offline / install | **vite-plugin-pwa** (Workbox service worker + manifest) | Plays without internet, installs to the home screen (§2.2) |
+| Lint | ESLint 9 (flat config, React hooks rules) | Catches mistakes before the tests |
 | Hosting | **GitHub Pages** (repo on github.com/richardLipka) | Static, free, HTTPS (required for camera) |
 
 ### 2.1 Hosting & deployment
 - Source in a public GitHub repo (`richardLipka/sketch-village`, name `TBD`), deployed to `https://richardlipka.github.io/<repo>/`.
 - **Fully static, no backend.** All data lives in the browser (IndexedDB) and moves between computers only via the JSON save file (§13a).
-- GitHub Actions workflow (`.github/workflows/deploy.yml`): on push to `main` → `npm ci` → `npm test` → `vite build` → deploy `dist/` to Pages.
+- GitHub Actions workflow (`.github/workflows/deploy.yml`): on every push and pull request → `npm ci` → `npm run lint` → `npm test` → `npm run e2e` (Playwright, Chromium); on push to `main` then → `vite build` → deploy `dist/` to Pages. A failed browser test uploads its trace.
 - Vite `base` = `/<repo>/` so asset URLs work under the sub-path. No client-side routing that needs server rewrites (use in-app state or hash routes).
 - **Class pack** (bundled default content): `public/default-data.json` shipped with the site is merged on a browser's first run and can be loaded any time (Save & load → Load class pack). Updating it = export JSON from the game, rename, commit it to the repo (steps in README). The shipped file is empty, so a fresh browser gets the built-in sample map.
 - Note: data in IndexedDB is per browser + per origin; kids on different computers must export/import JSON (or the teacher commits a combined file as the new default).
 
+### 2.2 Installable app, offline play
+- `vite-plugin-pwa` builds a web app manifest (name, icons from `public/icons/icon.svg` – `npm run icons` renders the PNGs, full screen, any orientation) and a service worker that **keeps the whole game** (code, Phaser, icons) after the first visit, so it opens and plays **without internet**. The class pack is fetched fresh when online and the last copy is used offline; the handwriting fonts are cached when first loaded.
+- **Install**: Chrome / Edge / Android offer it from the Save & load screen (📲 button); iPhone / iPad get the steps (Share → Add to Home Screen). Installed, the game opens from its own icon, without the address bar, full screen. On iPhone this is also the only way Safari keeps the data for good (§13b).
+- **Updates** never interrupt a game: a new version waits, and outside the play screen a note offers "Reload" (or "Later"). A note also says once when the game works offline.
+- `index.html`: `viewport-fit=cover`, iOS home-screen meta tags, theme colour, icons.
 ## 3. Asset Studio (generalized from simple_editable_train)
 
 ### 3.1 What is reused
@@ -101,6 +108,8 @@ Heroes, enemies and soldiers can have a **walking** and an **attack** animation,
 
 - **Phone, held sideways** (the expected way; held upright a note asks to turn it): the map fills the middle; the **left thumb** has a column of pause / speed / chronicle / ⋯ (exit, tips, sound, wobble, fullscreen); the **right thumb** has the attack types in a column at the edge (first one lowest) and the equipment slots beside it – both in the margins beside the map, covering at most a thin strip of it. Coins, lives and the wave run along the top in one thin line (the wave preview text is hidden). The building panel opens next to the left column; tips hide while it is open. **Backpack and shop fill the whole screen**: slots on the left, items on the right; drag & drop works with a finger (the dragged item floats above the finger), tap-then-tap too.
 - Every control is at least 48 px (44 px for small chips); checked at 844×390, 740×360 and 375×812 (upright) for overlaps, controls off screen and sideways scrolling, and the menus / editors / chronicle at phone size.
+- **Notch and rounded corners** (iPhone held sideways, home bar): the page reaches the screen edges (`viewport-fit=cover`), and everything with a control keeps to the **safe area** – the game screen, the full-screen backpack and shop, menus, dialogs and notes are padded by `env(safe-area-inset-*)` (as `--sa-t/r/b/l` in `sketch.css`, so the browser tests can pretend a notch). The map keeps its full height; on the notch side a strip of paper shows.
+- A browser test (§15a) checks the phone layout with a pretend notch on every run: all game buttons ≥ 44 px, inside the safe area, none on top of another, no sideways scrolling.
 
 ## 5. Map = Level
 
@@ -348,20 +357,30 @@ Everything is downloadable as **one JSON file** and importable on another comput
 - Version field + migration (`data/migrate.js`): version-1 files (separate `enemyTypes`, `buildingTypes`, `weapons`, `rules.townHallLevels`, per-type drawing categories) are converted into components on load and after import.
 - Export can also be per map (map + the assets it uses) `TBD`.
 
+## 13b. Keeping the drawings safe
+
+All data lives only in the browser, which may clear it (low disk space; Safari after ~7 days without a visit unless the game is on the home screen). So (`data/safety.js`, `SafetyCard`):
+
+- **Ask the browser to keep the data** (`navigator.storage.persist()`): automatically on the first change a kid makes, and with a button on the Save & load screen, which shows whether the browser agreed ("promised to keep your drawings" / "may delete them – download backups or install the game" / "said no for now").
+- **Backup reminder**: the first change after a backup is remembered (`settings.unsavedSince`); when it is **2 days** old the menu shows "Your drawings from N days ago are only in this browser" with **Download backup** and **Later** (quiet for a day). Downloading clears it and remembers the date (`lastBackupAt`, shown on Save & load). Importing or seeding doesn't count as a change.
+- **Install the game** (§2.2) – the Save & load screen explains why and how.
+
 ## 13. Project structure
 
 ```
 src/
   main.jsx, App.jsx
-  ui/            sketch.css (CSS wobble instead of Rough.js), device.js (phone / tablet / pc), LanguageSwitcher, FullscreenButton, Modal
+  ui/            sketch.css (CSS wobble instead of Rough.js, safe areas), device.js (phone / tablet / pc), install.js (install prompt, iOS, standalone), UpdateToast (new version / offline ready), LanguageSwitcher, FullscreenButton, Modal
   assets/        categories.js, CameraCapture, AssetCropper, BackgroundRemover + bgRemoval.js, SketchPad, ImageSlot, AssetStudio, AssetEditor (component editor), BuildingStatsEditor, EnemyStatsEditor, ItemStatsEditor, HeroStatsEditor, ThemesEditor, AnimationEditor + AnimPreview + animation.js (frames, strip cutting, frame-count guess), NumField
-  data/          saveFile.js (JSON format), mergePlan.js + ImportReview (reviewed import), migrate.js (v1 → components), store.js (IndexedDB), defaultData.js (class pack), DataPanel
+  data/          saveFile.js (JSON format), mergePlan.js + ImportReview (reviewed import), safety.js + SafetyCard (backup reminder, persistent storage), migrate.js (v1 → components), store.js (IndexedDB), defaultData.js (class pack), DataPanel
   config/        components.js (built-in components + derived lists), features.js, themes.js, legends.js (monster legends), balance, buildings, heroStats, enemies, weapons, waves (defaults) + rules.js (global rules over defaults)
   logic/         pathGrid, pathfinding, mapModel, waves, world (whole simulation), balanceBot  ← pure, unit-tested
   maps/          MapList, MapPainter, WaveEditor, mapRuntime (canvas helpers, sample map), textures.js (terrain textures)
   game/          PlaySetup, GameView (React ↔ Phaser), GameScene (incl. playing animations), GameOverlay, BuildPanel, Chronicle, RulesEditor, sound.js, tutorial.js
   locales/       cs.json, en.json
 public/default-data.json   class pack (empty by default)
+public/icons/              app icon (icon.svg → PNGs via npm run icons)
+e2e/                       Playwright browser tests (§15a)
 ```
 
 ## 14. Milestones
@@ -379,9 +398,22 @@ public/default-data.json   class pack (empty by default)
 5f. **Components** ✅ – every game part is one component (pictures + all numbers) edited in the studio, which became the general component editor (§7.1). Buildings are made from **features** (workers, arrows, soldiers, income, hero healing) with a table of 1–5 levels whose fields follow the features; the Town Hall is the `core` building type with the same features; "another look" components add drawings to an existing type. Enemies, weapons/shields/armor and coins carry their numbers next to their drawings; the separate Enemies and Weapons screens are gone and the Rules editor keeps only global rules. Old data and version-1 save files are migrated automatically. Tests cover new building kinds made only from data (market, well, 4-level tower).
 5g. **Lives & backpack** ✅ – every lost life sends the hero away for 10 s and back to the Town Hall; losing all 5 loses the game (the end screen says why). The bot now walks back to heal below 40 % HP and still wins every seed without losing a life; the same bot without healing loses every seed (new test). Small retune: dragon 280 HP / speed 36, rounds 14–15 spawns. **Backpack** rebuilt: three slots (right hand, left hand, armor) with the hero's attack / reach / armor shown live, items dragged onto slots with mouse or finger (or tap item → tap slot), wrong slots refused, worn items dragged back to take them off.
 5h. **Summoners, catapult, themes, terrain** ✅ – enemies can **call minions** (any enemies, several kinds mixed; how many, how often, at most alive, more on death; minions never summon): new built-ins **necromancer** → skeletons, **spider queen** → spiderlings (more when she dies), plus skeleton and spiderling. New building feature **lobs** and built-in **catapult** (rounds 6 / 10 / 15): area damage to walking enemies. **Themes** (§7.2) with an editor; maps have a theme. **Terrain textures** in the map editor with preview (§5.1). Waves: spider queen in rounds 8 and 19, necromancers in 12 and 17; necromancer tuned to 90 HP / every 8 s; the bot builds a catapult – all seeds won, waves 40–60 s. Architecture: building features run from a behaviour table, one spawn path for caves and summoners, ground-target projectiles, built-ins seeded by id.
+5k. **Data safety, installable app, notch, browser tests** ✅ – the browser is asked to keep the data, a backup reminder on the menu after 2 days of unsaved changes, a "Backup & keeping drawings safe" card (§13b); installable app that plays offline, updates wait for a reload outside the game (§2.2); iPhone notch / home bar safe areas (§4a); Playwright browser tests and ESLint run in CI before every deploy (§15a).
 5j. **Import review, shop overlay, phones** ✅ – import merges by name and shows what changed (update / keep / all), settings travel with the file (incl. language); the patrol distance is filled into older castles so it shows in the editor; "calls minions" is a checkbox (the choice is kept when switched off); the Town Hall shop is an overlay with backpack-sized tiles; automatic phone / tablet / PC layout (§4a); chronicle pictures at editor size.
 5i. **Animations, chronicle, patrols** ✅ – optional **animations** for heroes, enemies, soldiers (walk, attack) and buildings (attack, reload): a photographed strip of 4–12 frames is cut automatically (frame count guessed from the paper gaps), frames are lined up over the previous one (onion skin, drag or arrows), speed and preview in the component editor; the game plays them by what each thing does (§3.2a). **Chronicle** with legends and hints for every monster, in the menu and in the game, plus a "new monster" note (§12). **Soldiers patrol** only up to their castle's patrol distance and come back to their starting point (§7). World events for animations: `buildingAttack`, `soldierAttack`. Balance re-checked (round 16 retimed): all seeds won, waves 40–60 s.
 6. **Later** – rotating decorations, a "+" mark on reused level drawings, a round-summary card, per-map export, playtests on a real tablet and with kids, animated sprites (frame sheets photographed from a printed template), longbowmen soldiers that can hit flying enemies, walls.
+
+## 15a. Browser tests
+
+`npm run e2e` (Playwright, `e2e/`) builds the game, serves it and plays it in Chromium twice – as a PC (1280×800) and as a phone held sideways (844×390, touch):
+
+- every menu screen opens without errors; a game starts, runs and pauses;
+- import: a new element is added, one with the same name and a change is reviewed and kept;
+- backup reminder: appears for 3-day-old changes, "Later" hides it across a reload, "Download backup" downloads a valid save file and clears it;
+- phone with a pretend notch: game buttons big enough, inside the safe area, not overlapping (also with the ⋯ menu open), menus clear of the notch;
+- offline: after the first visit the game reloads and starts a game with the network switched off.
+
+Locally `PW_CHANNEL=chrome npm run e2e` uses the installed Chrome (no browser download). Any uncaught error or console error fails a test.
 
 ## 15. Open questions
 

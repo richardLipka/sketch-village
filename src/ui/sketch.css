@@ -10,6 +10,12 @@
   --hl-yellow: #fde68a;
   --hl-green: #bbf7d0;
   --hl-red: #fecaca;
+  /* iPhone notch / rounded corners / home bar (index.html has viewport-fit=cover);
+     0 elsewhere. Variables so the browser tests can pretend a notch. */
+  --sa-t: env(safe-area-inset-top, 0px);
+  --sa-r: env(safe-area-inset-right, 0px);
+  --sa-b: env(safe-area-inset-bottom, 0px);
+  --sa-l: env(safe-area-inset-left, 0px);
   --hl-blue: #bfdbfe;
   --danger: #b91c1c;
   --wobble-a: 255px 15px 225px 15px / 15px 225px 15px 255px;
@@ -38,7 +44,7 @@ h1 { font-size: 2.6rem; transform: rotate(-1.5deg); }
 h2 { font-size: 1.8rem; }
 
 /* ---- layout ---- */
-.page { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px 80px; }
+.page { max-width: 1100px; margin: 0 auto; padding: calc(24px + var(--sa-t)) calc(16px + var(--sa-r)) calc(48px + var(--sa-b)) calc(80px + var(--sa-l)); }
 .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .spacer { flex: 1; }
 .muted { color: var(--ink-soft); }
@@ -133,7 +139,8 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 .modal-back {
   position: fixed; inset: 0; z-index: 100;
   background: #1e3a8a33; backdrop-filter: blur(2px);
-  display: grid; place-items: center; padding: 16px;
+  display: grid; place-items: center;
+  padding: calc(16px + var(--sa-t)) calc(16px + var(--sa-r)) calc(16px + var(--sa-b)) calc(16px + var(--sa-l));
 }
 .modal { width: min(720px, 100%); max-height: 95vh; overflow: auto; background: var(--paper); }
 
@@ -205,7 +212,7 @@ label { display: inline-flex; gap: 8px; align-items: center; }
    All sizes are in em of a font that grows with the window, so the controls keep
    the same share of the screen in a small window and on a big monitor; buttons
    never get smaller than 48 px (finger size). */
-.game-screen { padding: 0; --u: clamp(18px, calc(0.75vw + 0.75vh + 8px), 34px); font-size: var(--u); }
+.game-screen { padding: var(--sa-t) var(--sa-r) var(--sa-b) var(--sa-l); --u: clamp(18px, calc(0.75vw + 0.75vh + 8px), 34px); font-size: var(--u); }
 .game-screen .game-host { border: none; border-radius: 0; }
 .game-screen .btn { font-size: 1em; min-height: max(48px, calc(2.3 * var(--u))); }
 .game-screen .btn.icon { min-width: max(48px, calc(2.3 * var(--u))); padding: 0.15em 0.4em; }
@@ -284,11 +291,11 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 .rules-table td { padding: 2px 8px; }
 .rules-table td:first-child { min-width: 150px; }
 
-.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) rotate(-1deg); z-index: 200; background: var(--hl-green); }
+.toast { position: fixed; bottom: calc(20px + var(--sa-b)); left: 50%; transform: translateX(-50%) rotate(-1deg); z-index: 200; background: var(--hl-green); }
 .error-text { color: var(--danger); }
 
 @media (max-width: 600px) {
-  .page { padding-left: 16px; }
+  .page { padding-left: calc(16px + var(--sa-l)); }
   body { background-image: repeating-linear-gradient(var(--paper) 0 31px, var(--paper-line) 31px 32px); }
 }
 
@@ -367,14 +374,22 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 .device-phone .game-msg { top: calc(8px + 2.6em); max-width: 50%; white-space: normal; text-align: center; font-size: 0.85em; }
 .device-phone .monster-note { top: calc(8px + 2.6em); max-width: 52%; font-size: 0.85em; }
 /* full-screen backpack: slots on the left, items on the right */
-.device-phone .backpack { position: fixed; inset: 6px; width: auto; max-height: none; z-index: 30; display: flex; flex-direction: column; }
+.device-phone .backpack { position: fixed; inset: calc(6px + var(--sa-t)) calc(6px + var(--sa-r)) calc(6px + var(--sa-b)) calc(6px + var(--sa-l)); width: auto; max-height: none; z-index: 30; display: flex; flex-direction: column; }
 .device-phone .backpack-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(15em, 42%) 1fr; gap: 8px; }
 .device-phone .backpack-body .eq-bag { overflow: auto; align-content: start; }
 .device-phone .eq-big { min-height: 5em; }
 .device-phone .drag-hint { display: none; }
-.device-phone .shop-overlay { position: fixed; inset: 6px; transform: none; width: auto; max-height: none; }
+.device-phone .shop-overlay { position: fixed; inset: calc(6px + var(--sa-t)) calc(6px + var(--sa-r)) calc(6px + var(--sa-b)) calc(6px + var(--sa-l)); transform: none; width: auto; max-height: none; }
 .device-phone .eq-ghost { transform: translate(-50%, -110%) rotate(-6deg); } /* above the finger */
 /* the backpack lives inside the equipment strip: lift the strip above the other controls while it is open */
 .ov-br-eq:has(.backpack) { z-index: 40; }
 /* phones: no room for a tip next to an open building panel – it comes back when the panel closes */
 .device-phone .game-stage:has(.build-panel) .coach { display: none; }
+
+/* data safety (SPEC §13b) */
+.backup-reminder { display: inline-block; max-width: 34em; margin-top: 16px; padding: 12px 18px; background: var(--hl-yellow); transform: rotate(-0.6deg); }
+.backup-reminder p { margin: 0 0 8px; }
+.safety-card .btn { margin-bottom: 6px; }
+/* app notes (update, offline) at the top, so they never cover a message at the bottom */
+.toast.toast-top { top: calc(12px + var(--sa-t)); bottom: auto; background: var(--hl-blue); }
+.update-toast { background: var(--hl-yellow); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }

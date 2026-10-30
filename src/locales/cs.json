@@ -7,7 +7,11 @@
     "back": "Zpět",
     "coming_soon": "Už brzy",
     "fullscreen": "Celá obrazovka",
-    "fullscreen_exit": "Zrušit celou obrazovku"
+    "fullscreen_exit": "Zrušit celou obrazovku",
+    "later": "Později",
+    "update_ready": "Je připravená nová verze hry.",
+    "update_reload": "Načíst znovu",
+    "offline_ready": "Hra teď funguje i bez internetu."
   },
   "menu": {
     "play": "Hrát",
@@ -176,7 +180,6 @@
   "data": {
     "title": "Uložit a nahrát",
     "summary": "{{assets}} obrázků, {{maps}} map, asi {{kb}} kB",
-    "export_title": "Stáhnout vše",
     "export_hint": "Jeden soubor se vším: všechny obrázky s animacemi a čísly, nepřátelé s legendami, budovy, mapy s vlnami a povrchy, témata, pravidla a nastavení. Přenes ho na jiný počítač.",
     "export": "Stáhnout soubor",
     "import_title": "Nahrát soubor",
@@ -678,5 +681,30 @@
     "open": "Obchod a vylepšení hrdiny",
     "title": "Obchod na radnici",
     "go_to_hall": "Nakupovat může hrdina jen u radnice – ťukni na radnici a dojde tam."
+  },
+  "safety": {
+    "title": "Záloha a bezpečí obrázků",
+    "last_backup": "Poslední záloha: {{date}}",
+    "never": "Zatím žádná stažená záloha.",
+    "unsaved_zero": "dnešní změny nejsou v záloze",
+    "unsaved_one": "změny z doby před {{count}} dnem nejsou v záloze",
+    "unsaved_few": "změny z doby před {{count}} dny nejsou v záloze",
+    "unsaved_many": "změny z doby před {{count}} dny nejsou v záloze",
+    "unsaved_other": "změny z doby před {{count}} dny nejsou v záloze",
+    "persisted": "Prohlížeč slíbil, že obrázky schová.",
+    "best_effort": "Prohlížeč může obrázky smazat, když mu dojde místo nebo se hra dlouho neotevře. Stahuj zálohy – nebo si hru nainstaluj.",
+    "unsupported": "Tento prohlížeč nemůže slíbit, že obrázky schová. Stahuj zálohy často.",
+    "ask_keep": "Požádat prohlížeč, ať je schová",
+    "install_why": "Nainstaluj si hru: otevře se z vlastní ikony, zabere celou obrazovku a hraje se i bez internetu.",
+    "installed": "Hra je nainstalovaná – hraje se i bez internetu.",
+    "install": "Nainstalovat hru",
+    "install_ios": "Na iPhonu nebo iPadu: v Safari ťukni na Sdílet ⬆ a pak „Přidat na plochu“. Teprve pak Safari obrázky schová natrvalo.",
+    "install_menu": "V nabídce prohlížeče vyber „Nainstalovat aplikaci“ nebo „Přidat na plochu“.",
+    "reminder_one": "Tvoje obrázky z doby před {{count}} dnem jsou jen v tomhle prohlížeči. Stáhni si zálohu, ať se neztratí.",
+    "reminder_few": "Tvoje obrázky z doby před {{count}} dny jsou jen v tomhle prohlížeči. Stáhni si zálohu, ať se neztratí.",
+    "reminder_many": "Tvoje obrázky z doby před {{count}} dny jsou jen v tomhle prohlížeči. Stáhni si zálohu, ať se neztratí.",
+    "reminder_other": "Tvoje obrázky z doby před {{count}} dny jsou jen v tomhle prohlížeči. Stáhni si zálohu, ať se neztratí.",
+    "backup_now": "Stáhnout zálohu",
+    "refused": "Prohlížeč zatím nesouhlasil. Obvykle souhlasí, když je hra nainstalovaná nebo se hraje častěji – do té doby stahuj zálohy."
   }
 }
