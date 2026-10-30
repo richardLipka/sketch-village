@@ -6,7 +6,12 @@ import { mapCanvas, gridFromCanvas, ruggedRoads } from '../maps/mapRuntime.js';
 import { texturedCanvas } from '../maps/textures.js';
 import { fitsTheme } from '../config/themes.js';
 import { loadImage } from '../assets/imageEncoding.js';
+import { composeFrame, firstFrame, DEFAULT_FPS } from '../assets/animation.js';
 import SelectionPanel from './SelectionPanel.jsx';
+import Chronicle, { monstersOfWaves } from './Chronicle.jsx';
+import Modal from '../ui/Modal.jsx';
+import AnimPreview from '../assets/AnimPreview.jsx';
+import { legendText } from '../config/legends.js';
 import { Resources, Lives, WaveInfo, AttackBar, Equipment, Toolbar, Coach } from './GameOverlay.jsx';
 import { DEFAULT_HERO_POINTS } from '../config/heroStats.js';
 import { DEFAULT_RULES } from '../config/rules.js';
@@ -19,6 +24,7 @@ import { play, setMuted, soundFor } from './sound.js';
 import { TUTORIAL_STEPS, TUTORIAL_DONE, advanceTutorial } from './tutorial.js';
 
 const MESSAGE_MS = 2600;
+const NEW_MONSTER_MS = 7000;
 
 // React wrapper: prepares images, grid and the World, runs Phaser and lays the
 // controls over the map (GameOverlay). Fills the whole window.
@@ -29,7 +35,7 @@ const MESSAGE_MS = 2600;
 // - the scene sends a HUD snapshot only when a visible value changed;
 // - overlay pieces are memoized with primitive props and stable callbacks;
 // - the build panel refreshes itself (SelectionPanel), not the whole screen.
-export default function GameView({ map, hero, assets, enemyTypes, buildings, weapons = DEFAULT_WEAPONS, rules = DEFAULT_RULES, settings = {}, onSettings, onExit }) {
+export default function GameView({ map, hero, assets, enemyTypes, buildings, weapons = DEFAULT_WEAPONS, rules = DEFAULT_RULES, themes = [], settings = {}, onSettings, onExit }) {
   const { t, i18n } = useTranslation();
   const hostRef = useRef(null);
   const gameRef = useRef(null);
@@ -42,6 +48,11 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
   const [restart, setRestart] = useState(0);
   const [selection, setSelection] = useState(null);
   const [panelVersion, setPanelVersion] = useState(0); // bumped after an action → panel re-reads at once
+  // the chronicle of this map's monsters: who has been met in this game, the newest one
+  const seen = useRef(new Set());
+  const [newMonster, setNewMonster] = useState(null);
+  const [chronicle, setChronicle] = useState(false);
+  const monsters = useMemo(() => monstersOfWaves(wavesOf(map, rules.balance), enemyTypes), [map, rules, enemyTypes]);
   const wobble = !!settings.wobble;
   const muted = !!settings.muted;
   const tip = settings.tutorialStep ?? 0;
@@ -72,7 +83,18 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
     const { tip: step, onSettings: save } = live.current;
     const next = advanceTutorial(step, e);
     if (next !== step) save?.({ tutorialStep: next });
+    // a monster seen for the first time in this game: a short note from the chronicle
+    if (e.type === 'spawn' && !seen.current.has(e.enemy)) {
+      seen.current.add(e.enemy);
+      setNewMonster({ id: e.enemy, at: Date.now() });
+    }
   }, []);
+
+  useEffect(() => {
+    if (!newMonster) return undefined;
+    const id = setTimeout(() => setNewMonster(null), NEW_MONSTER_MS);
+    return () => clearTimeout(id);
+  }, [newMonster]);
 
   // World events shown as a message
   const onEvent = useCallback((e) => {
@@ -103,6 +125,8 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
     let alive = true;
     setHud(null);
     setSelection(null);
+    seen.current = new Set();
+    setNewMonster(null);
     (async () => {
       const bg = await mapCanvas(map);
       const grid = gridFromCanvas(bg, map.palette); // walkability from the painted map…
@@ -111,7 +135,8 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
       const firstImage = (cat) => assets.find((a) => a.category === cat)?.images.find(Boolean);
       const images = { background: shown };
       const load = async (key, src) => { if (src) images[key] = await loadImage(src); };
-      await load('hero', hero?.images[0]);
+      // (something drawn only as an animation uses its first frame as the still picture)
+      await load('hero', hero?.images[0] || firstFrame(hero?.anims));
       // optional hero drawings per weapon class (images[1..3]); missing ones use the default
       for (const [i, k] of ['melee', 'ranged', 'magic'].entries()) await load(`hero:${k}`, hero?.images[i + 1]);
       // buildings: every look of a type (its own drawings + "another look" components)
@@ -131,14 +156,33 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
       }
       const coinTypes = coinTypesOf(assets);
       for (const c of coinTypes) if (c.src) await load(c.key, c.src);
-      await load('soldier', firstImage('soldier'));
+      const soldier = assets.find((a) => a.category === 'soldier' && (a.images?.some(Boolean) || firstFrame(a.anims)));
+      await load('soldier', soldier?.images.find(Boolean) || firstFrame(soldier?.anims));
       await load('cave', firstImage('cave'));
       await load('projectile', firstImage('projectile'));
       await load('chest', firstImage('chest'));
-      for (const et of enemyTypes) await load(`enemy:${et.id}`, et.image);
+      for (const et of enemyTypes) await load(`enemy:${et.id}`, et.image || firstFrame(et.anims));
       for (const d of map.decorations) {
         const a = assets.find((x) => x.id === d.asset);
         if (a && !images[a.id]) await load(a.id, a.images[0]);
+      }
+      // animations: every frame (moved by its alignment offset) is a texture
+      // `${base}|${kind}|${i}`; the scene plays them (still picture without them)
+      const anims = {};
+      const loadAnims = async (base, set) => {
+        const info = {};
+        for (const [kind, a] of Object.entries(set ?? {})) {
+          if (!a?.frames?.length) continue;
+          for (const [i, src] of a.frames.entries()) images[`${base}|${kind}|${i}`] = composeFrame(await loadImage(src), a.offsets?.[i]);
+          info[kind] = { n: a.frames.length, fps: a.fps ?? DEFAULT_FPS };
+        }
+        if (Object.keys(info).length) anims[base] = info;
+      };
+      await loadAnims('hero', hero?.anims);
+      await loadAnims('soldier', soldier?.anims);
+      for (const et of enemyTypes) await loadAnims(`enemy:${et.id}`, et.anims);
+      for (const type of types) {
+        for (const [v, set] of (buildings.lookAnims?.[type.id] ?? []).entries()) await loadAnims(`${type.id}#${v}`, set);
       }
       if (!alive) return;
 
@@ -159,7 +203,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
         scene: [],
       });
       gameRef.current.scene.add('game', GameScene, true, {
-        world, map, images, variants, enemyTypes, buildingTypes: types, wobble: !!live.current.wobble,
+        world, map, images, variants, anims, enemyTypes, buildingTypes: types, wobble: !!live.current.wobble,
         onHud: setHud, onEvent, onSelect: setSelection, onAnyEvent: anyEvent,
       });
       // dev-only handle for automated browser testing
@@ -191,6 +235,21 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
   const changeSpeed = useCallback(() => setSpeed((s) => { const n = s === 1 ? 2 : 1; const sc = scene(); if (sc) sc.speed = n; return n; }), []);
   const togglePause = useCallback(() => setPaused((p) => { const sc = scene(); if (sc) sc.paused = !p; return !p; }), []);
   const zoom = useCallback((f) => scene()?.zoomBy(f), []);
+  // the chronicle pauses the game while it is open (and resumes only if it paused it)
+  const pausedByChronicle = useRef(false);
+  const openChronicle = useCallback(() => {
+    const sc = scene();
+    pausedByChronicle.current = !!sc && !sc.paused;
+    if (sc) sc.paused = true;
+    setNewMonster(null);
+    setChronicle(true);
+  }, []);
+  const closeChronicle = useCallback(() => {
+    const sc = scene();
+    if (sc && pausedByChronicle.current) sc.paused = false;
+    pausedByChronicle.current = false;
+    setChronicle(false);
+  }, []);
   const toggleWobble = useCallback(() => live.current.onSettings?.({ wobble: !live.current.wobble }), []);
   const toggleMute = useCallback(() => {
     const m = !!live.current.muted;
@@ -276,7 +335,14 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
           </>
         )}
         <Toolbar paused={paused} speed={speed} wobble={wobble} muted={muted} tipsOn={tip < TUTORIAL_DONE}
-          onExit={exit} onPause={togglePause} onSpeed={changeSpeed} onZoom={zoom} onWobble={toggleWobble} onMute={toggleMute} onTips={toggleTips} />
+          onExit={exit} onPause={togglePause} onSpeed={changeSpeed} onZoom={zoom} onWobble={toggleWobble} onMute={toggleMute} onTips={toggleTips} onChronicle={openChronicle} />
+        {playing && newMonster && <MonsterNote enemy={enemyTypes.find((e) => e.id === newMonster.id)} key={newMonster.at} onMore={openChronicle} onClose={() => setNewMonster(null)} />}
+        {chronicle && (
+          <Modal onClose={closeChronicle} wide>
+            <div className="row"><h2 style={{ margin: 0 }}>📖 {t('chronicle.map_title')}</h2><span className="spacer" /><button className="btn" onClick={closeChronicle}>✕</button></div>
+            <Chronicle enemies={monsters} themes={themes} seen={seen.current} />
+          </Modal>
+        )}
         {message && <div className="game-msg sketch-card" key={message.at}>{message.text}</div>}
         {playing && tip < TUTORIAL_DONE && <Coach text={t(`tips.${TUTORIAL_STEPS[tip].id}`)} index={tip} total={TUTORIAL_DONE} onSkip={skipTips} />}
         {playing && selection && (
@@ -302,5 +368,24 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
         )}
       </div>
     </section>
+  );
+}
+
+// "New monster!" – shown once per game when a monster appears for the first time.
+function MonsterNote({ enemy, onMore, onClose }) {
+  const { t, i18n } = useTranslation();
+  if (!enemy) return null;
+  const lang = i18n.language;
+  const hint = legendText(enemy.legend?.hint, lang);
+  return (
+    <div className="monster-note sketch-card ov">
+      <AnimPreview anim={enemy.anims?.walk} still={enemy.image} size={56} className="" />
+      <div>
+        <b>📖 {t('chronicle.new_monster')}: {enemy.name?.[lang] ?? enemy.id}</b>
+        {hint && <div className="small">💡 {hint}</div>}
+        <button className="btn chip" onClick={onMore}>{t('chronicle.more')}</button>
+      </div>
+      <button className="btn icon" onClick={onClose} aria-label="✕">✕</button>
+    </div>
   );
 }

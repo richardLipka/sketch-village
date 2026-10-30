@@ -24,11 +24,12 @@ export const FEATURES = {
     fields: [['lobDamage', 0, 500, 1], ['lobRange', 60, 700, 10], ['lobCooldown', 0.5, 15, 0.1], ['lobSplash', 10, 200, 5]],
     defaults: { lobDamage: 14, lobRange: 230, lobCooldown: 3.2, lobSplash: 45 },
   },
-  // castles: keep soldiers that fight ground enemies around them
+  // castles: keep soldiers that patrol the road around them (up to soldierPatrol
+  // px away) and fight walking enemies there
   soldiers: {
     icon: '🛡️',
-    fields: [['soldierCount', 1, 10, 1], ['soldierHp', 1, 999, 5], ['soldierDamage', 0, 200, 1], ['soldierCooldown', 0.1, 10, 0.1], ['soldierRespawn', 1, 120, 1]],
-    defaults: { soldierCount: 3, soldierHp: 30, soldierDamage: 6, soldierCooldown: 1, soldierRespawn: 12 },
+    fields: [['soldierCount', 1, 10, 1], ['soldierHp', 1, 999, 5], ['soldierDamage', 0, 200, 1], ['soldierCooldown', 0.1, 10, 0.1], ['soldierRespawn', 1, 120, 1], ['soldierPatrol', 40, 600, 10]],
+    defaults: { soldierCount: 3, soldierHp: 30, soldierDamage: 6, soldierCooldown: 1, soldierRespawn: 12, soldierPatrol: 160 },
   },
   // markets, mines…: coins after every survived round
   income: { icon: '🪙', fields: [['income', 0, 200, 1]], defaults: { income: 5 } },

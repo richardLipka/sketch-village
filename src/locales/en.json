@@ -16,7 +16,8 @@
     "enemies": "Enemies",
     "data": "Save & load",
     "rules": "Rules",
-    "weapons": "Weapons"
+    "weapons": "Weapons",
+    "chronicle": "Chronicle"
   },
   "common": {
     "cancel": "Cancel",
@@ -286,7 +287,8 @@
     "msg_life": "Ouch! Lives left: {{n}}",
     "msg_hero_down": "The hero fell! Back at the town hall in {{s}} s. Lives left: {{n}}",
     "msg_hero_back": "The hero is back!",
-    "respawn_in": "Hero back in {{s}} s"
+    "respawn_in": "Hero back in {{s}} s",
+    "chronicle": "Chronicle – monsters of this map"
   },
   "build": {
     "type_house": "House",
@@ -357,12 +359,12 @@
     "name_healHero": "Heals the hero",
     "hint_workers": "Workers make all building and upgrading faster.",
     "hint_shoots": "Shoots the enemy in range that is closest to the town hall.",
-    "hint_soldiers": "Keeps soldiers that fight walking enemies around it.",
+    "hint_soldiers": "Keeps soldiers that patrol the road around it and fight walking enemies there – never further than the patrol distance; then they go back to their place.",
     "hint_income": "Gives coins after every survived round.",
     "hint_healHero": "Heals the hero standing close to it.",
     "line_workers": "+{{workers}} workers",
     "line_shoots": "arrow {{damage}}, range {{range}}, every {{cooldown}} s",
-    "line_soldiers": "{{soldierCount}} soldiers: health {{soldierHp}}, attack {{soldierDamage}}",
+    "line_soldiers": "{{soldierCount}} soldiers: health {{soldierHp}}, attack {{soldierDamage}}, patrol {{soldierPatrol}}",
     "line_income": "+{{income}} 🪙 each round",
     "line_healHero": "heals the hero +{{heal}}/s up to {{healRange}} away",
     "f_cost": "Price 🪙",
@@ -387,7 +389,8 @@
     "f_lobDamage": "Stone power",
     "f_lobRange": "Throw range",
     "f_lobCooldown": "Throw every (s)",
-    "f_lobSplash": "Area (px)"
+    "f_lobSplash": "Area (px)",
+    "f_soldierPatrol": "Patrol distance"
   },
   "weapons": {
     "title": "Weapons",
@@ -611,5 +614,41 @@
     "no_theme": "– no theme –",
     "fits": "Fits the theme",
     "others": "Other enemies"
+  },
+  "anim": {
+    "title": "Animation",
+    "hint": "Draw 4–12 frames side by side (or one under another) on one sheet, take a photo and open it here – it is cut into frames. Drag a frame over the previous one (faded) to line them up. Without an animation the still picture is used.",
+    "kind_walk": "Walking",
+    "kind_attack": "Attack",
+    "kind_reload": "Reloading",
+    "open_strip": "Open a strip of frames",
+    "remove": "Remove animation",
+    "frames": "Frames",
+    "direction": "Strip",
+    "dir_auto": "automatic",
+    "dir_h": "side by side",
+    "dir_v": "one under another",
+    "remove_paper": "Remove the paper",
+    "align": "Line up – frame over the previous one",
+    "reset": "Back to its place",
+    "show_previous": "Show the previous frame",
+    "preview": "Preview",
+    "speed": "Speed",
+    "fps": "frames/s"
+  },
+  "chronicle": {
+    "title": "Chronicle",
+    "map_title": "Chronicle – monsters of this map",
+    "intro": "All monsters of the land with their stories and hints. Write your own legends in the studio (Enemies).",
+    "legend": "Legend",
+    "legend_hint": "A short story about this monster and a hint for the player. They are in the chronicle (📖) and pop up when the monster comes for the first time.",
+    "story_placeholder": "Where does it live? What does it like?",
+    "hint": "Hint",
+    "hint_placeholder": "How to beat it?",
+    "not_met": "not met yet",
+    "new_monster": "New monster",
+    "more": "Read in the chronicle",
+    "calls": "calls",
+    "no_story": "No story yet – write one in the studio!"
   }
 }

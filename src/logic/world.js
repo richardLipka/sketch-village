@@ -698,6 +698,7 @@ export class World {
     if (!best) return;
     b.cooldown = stats.cooldown;
     this.shoot(b, best, stats.damage, 'tower');
+    this.emit('buildingAttack', { id: b.id });
   }
 
   /**
@@ -719,6 +720,7 @@ export class World {
     }
     b.lobCooldown = stats.lobCooldown;
     this.lob(b, { x: best.x, y: best.y }, stats.lobDamage, stats.lobSplash);
+    this.emit('buildingAttack', { id: b.id });
   }
 
   castleSpawn(b, stats, dt) {
@@ -740,26 +742,38 @@ export class World {
     this.emit('soldierSpawn', { castleId: b.id });
   }
 
+  /** The numbers of a building's (or the Town Hall's) current level. */
+  levelStats(b) {
+    if (b === this.townHall) return this.thLevels[b.level - 1] ?? {};
+    return this.buildingTypes[b.type]?.levels[Math.max(0, b.level - 1)] ?? {};
+  }
+
+  /**
+   * Soldiers guard their building: they fight walking enemies that come within
+   * the building's patrol distance (`soldierPatrol`), never chase beyond it and
+   * go back to their own starting point afterwards. With nothing to fight they
+   * patrol: walk to a spot on the road inside that distance, look around for a
+   * moment and walk back to the starting point.
+   */
   updateSoldier(s, dt) {
     const castle = s.castleId === this.townHall.id ? this.townHall : this.buildings.find((b) => b.id === s.castleId);
     if (!castle || castle.state === 'ruin' || castle.hp <= 0) { s.dead = true; return; }
     s.cooldown = Math.max(0, s.cooldown - dt);
     const cfg = this.cfg.soldier;
+    const patrol = this.levelStats(castle).soldierPatrol ?? cfg.aggro;
+    const inside = (e) => !e.flying && !e.dead && dist(e, castle) <= patrol;
 
-    // keep the current target while it is alive and not too far from home;
-    // enemies attacking this castle or its soldiers are chased twice as far
-    const ours = (e) => e.victim && (e.victim.id === castle.id || e.victim.castleId === castle.id);
-    const reach = (e) => cfg.aggro * (ours(e) ? 2 : 1);
-    let target = s.target ? this.enemies.find((e) => e.id === s.target && !e.flying) : null;
-    if (target && dist(target, s.home) > reach(target) * 1.5) target = null;
+    let target = s.target ? this.enemies.find((e) => e.id === s.target) : null;
+    if (target && !inside(target)) target = null; // out of the patrol area: let it go
     if (!target) {
       let bd = Infinity;
       for (const e of this.enemies) {
-        if (e.flying) continue;
-        const d = dist(e, s.home);
-        if (d <= reach(e) && d < bd) { bd = d; target = e; }
+        if (!inside(e)) continue;
+        const d = dist(e, s);
+        if (d < bd) { bd = d; target = e; }
       }
     }
+    if (target && s.target !== target.id) { s.path = []; s.patrolTo = null; }
     s.target = target?.id ?? null;
 
     if (target) {
@@ -769,6 +783,7 @@ export class World {
         if (s.cooldown === 0) {
           s.cooldown = s.attackCooldown;
           this.damageEnemy(target, s.damage);
+          this.emit('soldierAttack', { id: s.id });
         }
         return;
       }
@@ -777,9 +792,30 @@ export class World {
         s.path = this.pathBetween(s, target) ?? [];
         s.repath = REPATH_EVERY;
       }
-    } else if (dist(s, s.home) > 3 && !s.path.length) {
-      s.path = this.pathBetween(s, s.home) ?? [];
-      if (s.path.length) s.path[s.path.length - 1] = { ...s.home };
+    } else if (s.patrolTo) {
+      // out on patrol: at the far point, look around, then head back
+      if (!s.path.length) {
+        s.lookLeft = (s.lookLeft ?? 1.5) - dt;
+        if (s.lookLeft <= 0) { s.patrolTo = null; s.lookLeft = null; }
+      }
+    } else if (dist(s, s.home) > 3) {
+      if (!s.path.length) {
+        s.path = this.pathBetween(s, s.home) ?? [];
+        if (s.path.length) s.path[s.path.length - 1] = { ...s.home };
+      }
+    } else {
+      // at the starting point: after a short rest go on patrol
+      s.restLeft = (s.restLeft ?? 2 + this.rng() * 3) - dt;
+      if (s.restLeft <= 0) {
+        s.restLeft = null;
+        const a = this.rng() * Math.PI * 2, r = patrol * (0.45 + this.rng() * 0.4);
+        const p = this.snapToRoad({ x: castle.x + Math.cos(a) * r, y: castle.y + Math.sin(a) * r });
+        if (dist(p, castle) <= patrol && dist(p, s) > 20) {
+          s.patrolTo = p;
+          s.path = this.pathBetween(s, p) ?? [];
+          if (!s.path.length) s.patrolTo = null;
+        }
+      }
     }
     this.walk(s, cfg.speed * dt);
   }

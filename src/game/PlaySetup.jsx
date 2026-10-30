@@ -21,7 +21,7 @@ export default function PlaySetup({ maps, assets, enemyTypes, buildings, rules, 
     return (
       <Suspense fallback={<p>{t('app.loading')}</p>}>
         <GameView
-          map={map} hero={hero} assets={assets} enemyTypes={enemyTypes} buildings={buildings} rules={rules} weapons={weapons}
+          map={map} hero={hero} assets={assets} enemyTypes={enemyTypes} buildings={buildings} rules={rules} weapons={weapons} themes={themes}
           settings={settings} onSettings={onSettings} onExit={() => setPlaying(false)}
         />
       </Suspense>

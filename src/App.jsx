@@ -11,6 +11,7 @@ import FullscreenButton from './ui/FullscreenButton.jsx';
 import MapList from './maps/MapList.jsx';
 import PlaySetup from './game/PlaySetup.jsx';
 import RulesEditor from './game/RulesEditor.jsx';
+import Chronicle from './game/Chronicle.jsx';
 import { rulesOf } from './config/rules.js';
 import { buildingsOf, enemyTypesOf, itemsOf } from './config/components.js';
 import { starterMap } from './maps/mapRuntime.js';
@@ -95,6 +96,7 @@ export default function App() {
             <button className="btn big primary" onClick={() => setScreen('play')}>▶ {t('menu.play')}</button>
             <button className="btn big" onClick={() => setScreen('studio')}>🧩 {t('menu.studio')}</button>
             <button className="btn big" onClick={() => setScreen('maps')}>🗺️ {t('menu.maps')}</button>
+            <button className="btn big" onClick={() => setScreen('chronicle')}>📖 {t('menu.chronicle')}</button>
             <button className="btn big" onClick={() => setScreen('rules')}>⚙️ {t('menu.rules')}</button>
             <button className="btn big" onClick={() => setScreen('data')}>💾 {t('menu.data')}</button>
           </div>
@@ -110,6 +112,13 @@ export default function App() {
 
       {screen === 'maps' && (
         <MapList maps={db.maps} assets={db.assets} enemyTypes={enemyTypes} themes={db.themes} balance={rules.balance} onChange={(m) => updateCollection('maps', m)} />
+      )}
+
+      {screen === 'chronicle' && (
+        <section>
+          <h1>📖 {t('chronicle.title')}</h1>
+          <Chronicle enemies={enemyTypes} themes={db.themes} intro={t('chronicle.intro')} />
+        </section>
       )}
 
       {screen === 'rules' && <RulesEditor rules={rules} onSave={(r) => updateCollection('rules', [r])} />}

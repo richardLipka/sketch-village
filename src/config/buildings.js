@@ -14,7 +14,8 @@ export const BUILD = {
   regenDelay: 5, // s after the last hit
   buildingRadius: 26,
   sellRefund: 0.7, // share of all coins spent on a building returned when it is sold
-  soldier: { speed: 80, range: 30, aggro: 150, radius: 12 },
+  // aggro = patrol distance for castles saved before soldierPatrol existed
+  soldier: { speed: 80, range: 30, aggro: 160, radius: 12 },
 };
 
 export const HERO_UPGRADE_COSTS = [15, 30, 50]; // level n needs Town Hall level n
@@ -49,9 +50,9 @@ export const DEFAULT_BUILDING_TYPES = [
   {
     id: 'castle', name: { cs: 'Hrad', en: 'Castle' }, features: ['soldiers'],
     levels: [
-      { cost: 40, time: 15, hp: 750, round: 2, soldierCount: 3, soldierHp: 30, soldierDamage: 6, soldierCooldown: 1.0, soldierRespawn: 12 },
-      { cost: 60, time: 18, hp: 1100, round: 9, soldierCount: 3, soldierHp: 45, soldierDamage: 9, soldierCooldown: 1.0, soldierRespawn: 10 },
-      { cost: 90, time: 22, hp: 1500, round: 16, soldierCount: 3, soldierHp: 60, soldierDamage: 12, soldierCooldown: 1.0, soldierRespawn: 8 },
+      { cost: 40, time: 15, hp: 750, round: 2, soldierCount: 3, soldierHp: 30, soldierDamage: 6, soldierCooldown: 1.0, soldierRespawn: 12, soldierPatrol: 160 },
+      { cost: 60, time: 18, hp: 1100, round: 9, soldierCount: 3, soldierHp: 45, soldierDamage: 9, soldierCooldown: 1.0, soldierRespawn: 10, soldierPatrol: 180 },
+      { cost: 90, time: 22, hp: 1500, round: 16, soldierCount: 3, soldierHp: 60, soldierDamage: 12, soldierCooldown: 1.0, soldierRespawn: 8, soldierPatrol: 200 },
     ],
   },
   {

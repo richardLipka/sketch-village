@@ -31,7 +31,6 @@ const GENERAL = [
   ['build', 'regenDelay', 0, 60, 1],
   ['build', 'interactRadius', 30, 400, 10],
   ['soldier', 'speed', 10, 300, 5],
-  ['soldier', 'aggro', 30, 500, 10],
 ];
 
 // hero skill-point table (rules.hero)

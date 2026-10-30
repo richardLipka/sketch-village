@@ -16,7 +16,8 @@
     "enemies": "Nepřátelé",
     "data": "Uložit a nahrát",
     "rules": "Pravidla",
-    "weapons": "Zbraně"
+    "weapons": "Zbraně",
+    "chronicle": "Kronika"
   },
   "common": {
     "cancel": "Zrušit",
@@ -286,7 +287,8 @@
     "msg_life": "Au! Zbývá životů: {{n}}",
     "msg_hero_down": "Hrdina padl! Vrátí se na radnici za {{s}} s. Zbývá životů: {{n}}",
     "msg_hero_back": "Hrdina je zpět!",
-    "respawn_in": "Hrdina se vrátí za {{s}} s"
+    "respawn_in": "Hrdina se vrátí za {{s}} s",
+    "chronicle": "Kronika – příšery této mapy"
   },
   "build": {
     "type_house": "Dům",
@@ -357,12 +359,12 @@
     "name_healHero": "Léčí hrdinu",
     "hint_workers": "Dělníci zrychlují každou stavbu a vylepšení.",
     "hint_shoots": "Střílí na nepřítele v dosahu, který je nejblíž radnici.",
-    "hint_soldiers": "Má vojáky, kteří bojují s pěšími nepřáteli kolem.",
+    "hint_soldiers": "Má vojáky, kteří hlídkují po cestě kolem a bojují s pěšími nepřáteli – nikdy dál, než kam hlídkují; potom se vrátí na své místo.",
     "hint_income": "Po každém přežitém kole dá mince.",
     "hint_healHero": "Léčí hrdinu, který stojí blízko.",
     "line_workers": "+{{workers}} dělníci",
     "line_shoots": "šíp {{damage}}, dostřel {{range}}, každých {{cooldown}} s",
-    "line_soldiers": "vojáků {{soldierCount}}: životy {{soldierHp}}, útok {{soldierDamage}}",
+    "line_soldiers": "{{soldierCount}} vojáci: životy {{soldierHp}}, útok {{soldierDamage}}, hlídka {{soldierPatrol}}",
     "line_income": "+{{income}} 🪙 za kolo",
     "line_healHero": "léčí hrdinu +{{heal}}/s do vzdálenosti {{healRange}}",
     "f_cost": "Cena 🪙",
@@ -387,7 +389,8 @@
     "f_lobDamage": "Síla kamene",
     "f_lobRange": "Dostřel",
     "f_lobCooldown": "Hod každých (s)",
-    "f_lobSplash": "Plocha (px)"
+    "f_lobSplash": "Plocha (px)",
+    "f_soldierPatrol": "Hlídkují do"
   },
   "weapons": {
     "title": "Zbraně",
@@ -611,5 +614,41 @@
     "no_theme": "– bez tématu –",
     "fits": "Patří k tématu",
     "others": "Ostatní nepřátelé"
+  },
+  "anim": {
+    "title": "Animace",
+    "hint": "Nakresli 4–12 obrázků vedle sebe (nebo pod sebe) na jeden papír, vyfoť ho a otevři tady – rozstříhá se na snímky. Přetáhni snímek přes předchozí (průsvitný), aby na sebe seděly. Bez animace se použije obyčejný obrázek.",
+    "kind_walk": "Chůze",
+    "kind_attack": "Útok",
+    "kind_reload": "Nabíjení",
+    "open_strip": "Otevřít pás snímků",
+    "remove": "Smazat animaci",
+    "frames": "Snímků",
+    "direction": "Pás",
+    "dir_auto": "sám pozná",
+    "dir_h": "vedle sebe",
+    "dir_v": "pod sebou",
+    "remove_paper": "Odstranit papír",
+    "align": "Srovnat – snímek přes předchozí",
+    "reset": "Zpátky na místo",
+    "show_previous": "Ukázat předchozí snímek",
+    "preview": "Ukázka",
+    "speed": "Rychlost",
+    "fps": "snímků/s"
+  },
+  "chronicle": {
+    "title": "Kronika",
+    "map_title": "Kronika – příšery této mapy",
+    "intro": "Všechny příšery země s jejich příběhy a radami. Vlastní legendy napiš v ateliéru (Nepřátelé).",
+    "legend": "Legenda",
+    "legend_hint": "Krátký příběh o příšeře a rada pro hráče. Jsou v kronice (📖) a ukážou se, když příšera přijde poprvé.",
+    "story_placeholder": "Kde bydlí? Co má rádo?",
+    "hint": "Rada",
+    "hint_placeholder": "Jak ji porazit?",
+    "not_met": "zatím nepotkaná",
+    "new_monster": "Nová příšera",
+    "more": "Přečíst v kronice",
+    "calls": "svolává",
+    "no_story": "Zatím bez příběhu – napiš ho v ateliéru!"
   }
 }

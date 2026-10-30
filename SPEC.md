@@ -72,6 +72,16 @@ From `richardLipka/simple_editable_train`:
 6. **Upgrade levels**: house and tower have **one drawing per upgrade level** (kids draw each level). An asset of category `house`/`tower` is a set `{ levels: [img1, img2, img3] }`; a missing level falls back to the previous drawing with a pencil "+" badge so the game stays playable while drawings are in progress.
 7. **Single JSON save file** – see §13a. All data (assets incl. scanned graphics as base64, maps, waves, settings) is downloadable and importable as one file.
 
+### 3.2a Animations (optional)
+
+Heroes, enemies and soldiers can have a **walking** and an **attack** animation, buildings an **attack** and a **reloading** one (`categories.js` → `anims`). Without them the still picture is used, as before; something drawn only as an animation uses its first frame as the still picture.
+
+- Kids draw **4–12 frames** side by side (or one under another) on one sheet, photograph it and open it in the component editor. The strip is cut into frames, the paper is removed, and **the number of frames is guessed** from the paper gaps between the drawings (can be changed).
+- **Lining up**: the selected frame is drawn over the previous one (faded, "onion skin"); drag it or nudge it with the arrow buttons until they sit on top of each other. The offset is stored per frame, the pictures stay untouched.
+- **Speed** 2–20 frames/s, with a live **preview**.
+- Stored as `component.anims = { walk: { frames: [dataURL…], fps, offsets: [[dx, dy]…] }, attack: {…}, reload: {…} }` (exported with everything else).
+- **In the game**: walking loops while the thing moves; an attack plays once on every hit / shot (buildings: attack, then reload); otherwise the still picture. Animations run on game time (they follow 2× speed and stop when paused); walkers don't step in sync.
+
 ### 3.3 Asset flow
 ```
 [Photo | Upload | Draw] → Crop (category aspect) → Remove background → Touch-up in SketchPad → Name + author → Save to library
@@ -176,7 +186,7 @@ export const HERO_STAT_TABLE = {
 | **Castle** | periodically sends **soldiers** that attack the nearest enemy | 3 | soldier count / spawn interval / soldier stats per level |
 
 - **Town Hall level gates other buildings**: a building can't be upgraded above the Town Hall's level (TH 1 → buildings max level 1, TH 2 → max 2, TH 3 → max 3). Town Hall upgrades also raise its max HP.
-- **Soldiers**: auto-controlled units, walk on paths, attack the nearest enemy, **significantly weaker than the hero** (e.g. ~20 % of hero HP/damage). **Max 3 alive per castle**; a dead soldier is replaced after the castle's respawn interval. Castle level raises soldier strength (not count). With no enemy around, soldiers walk back and guard next to their castle. Kids draw a `soldier` asset.
+- **Soldiers**: auto-controlled units, walk on paths, attack the nearest enemy, **significantly weaker than the hero** (e.g. ~20 % of hero HP/damage). **Max 3 alive per castle**; a dead soldier is replaced after the castle's respawn interval. Castle level raises soldier strength (not count). **Patrol**: soldiers guard the road around their castle up to its **patrol distance** (`soldierPatrol`, per level: 160 / 180 / 200 px). They fight walking enemies inside it, never follow one beyond it, and then go back to their own starting point. With nothing to fight they patrol: walk to a spot on the road inside the distance, look around, and walk back. Kids draw a `soldier` component (with optional walking / attack animations).
 - Every building has **limited HP** and **repairs itself slowly** (1 % max HP/s, starting 5 s after the last hit).
 - **Destroyed** building → rubble on the spot; can be **rebuilt for coins** (= level-1 build cost) or cleared for free. A rebuilt building starts at **level 1 – upgrades are lost**.
 - **Buildings are data, built from features.** Each building type is a component (§7.1); what it does comes from the features switched on in the studio, so new kinds of buildings are added without code.
@@ -202,7 +212,7 @@ Building **features** (`config/features.js`) – each adds its own columns to th
 | 👷 workers | workers | speeds up all construction |
 | 🏹 shoots | damage, range, cooldown | arrows at the enemy nearest to the centre |
 | 🪨 lobs (catapult) | lobDamage, lobRange, lobCooldown, lobSplash | a slow stone at the biggest group of walking enemies in range; hurts every walking enemy where it lands (not flying ones, not closer than 50 px) |
-| 🛡️ soldiers | soldierCount, soldierHp, soldierDamage, soldierCooldown, soldierRespawn | keeps up to N soldiers alive |
+| 🛡️ soldiers | soldierCount, soldierHp, soldierDamage, soldierCooldown, soldierRespawn, soldierPatrol | keeps up to N soldiers alive, patrolling up to soldierPatrol px around it |
 | 🪙 income | income | coins at the end of every round |
 | ❤️ healHero | heal, healRange | heals the hero standing nearby |
 
@@ -278,12 +288,13 @@ Waves are data (JSON), editable in an in-game editor and importable.
 
 ## 12. Screens
 
-1. Main menu (Play, Asset Studio, Map editor, Wave editor, Settings)
+1. Main menu (Play, Studio, Maps, **Chronicle**, Rules, Save & load)
 2. Asset Studio (library by category + capture/draw/edit)
 3. Hero select
 4. Game (map + HUD + build menu)
 5. Round summary / Victory / Defeat
 6. Editors – **all open to kids**: Map Painter/Editor, **Wave editor** (rounds, groups, caves, timings), the studio's component editor (pictures + numbers of buildings, enemies, weapons, coins, heroes) and the Rules editor (global rules). "Reset to defaults" button in each editor so experiments are safe.
+7. **Chronicle** (📖) – every monster with its picture (walking animation when it has one), its **legend** (a short story) and a **hint for the player**, plus what it can do (health, speed, attack, flying, shooting, boss, which minions it calls). In the menu: all monsters, filtered by theme. **In the game** (📖 on the toolbar; the game pauses while it is open): the monsters of this map's waves and their minions, the ones not met yet faded. When a monster appears for the first time in a game, a short note shows its name and hint with "Read in the chronicle". Legends are written in the component editor (enemies: `legend = { story, hint }`, one text per language for the built-in monsters, one text for the kids' own); all built-in monsters come with a legend in Czech and English.
 
 ## 13a. Save file (one JSON)
 
@@ -334,12 +345,12 @@ Everything is downloadable as **one JSON file** and importable on another comput
 src/
   main.jsx, App.jsx
   ui/            sketch.css (CSS wobble instead of Rough.js), LanguageSwitcher, FullscreenButton, Modal
-  assets/        categories.js, CameraCapture, AssetCropper, BackgroundRemover + bgRemoval.js, SketchPad, ImageSlot, AssetStudio, AssetEditor (component editor), BuildingStatsEditor, EnemyStatsEditor, ItemStatsEditor, HeroStatsEditor, ThemesEditor, NumField
+  assets/        categories.js, CameraCapture, AssetCropper, BackgroundRemover + bgRemoval.js, SketchPad, ImageSlot, AssetStudio, AssetEditor (component editor), BuildingStatsEditor, EnemyStatsEditor, ItemStatsEditor, HeroStatsEditor, ThemesEditor, AnimationEditor + AnimPreview + animation.js (frames, strip cutting, frame-count guess), NumField
   data/          saveFile.js (JSON + merge), migrate.js (v1 → components), store.js (IndexedDB), defaultData.js (class pack), DataPanel
-  config/        components.js (built-in components + derived lists), features.js, themes.js, balance, buildings, heroStats, enemies, weapons, waves (defaults) + rules.js (global rules over defaults)
+  config/        components.js (built-in components + derived lists), features.js, themes.js, legends.js (monster legends), balance, buildings, heroStats, enemies, weapons, waves (defaults) + rules.js (global rules over defaults)
   logic/         pathGrid, pathfinding, mapModel, waves, world (whole simulation), balanceBot  ← pure, unit-tested
   maps/          MapList, MapPainter, WaveEditor, mapRuntime (canvas helpers, sample map), textures.js (terrain textures)
-  game/          PlaySetup, GameView (React ↔ Phaser), GameScene, GameOverlay, BuildPanel, RulesEditor, sound.js, tutorial.js
+  game/          PlaySetup, GameView (React ↔ Phaser), GameScene (incl. playing animations), GameOverlay, BuildPanel, Chronicle, RulesEditor, sound.js, tutorial.js
   locales/       cs.json, en.json
 public/default-data.json   class pack (empty by default)
 ```
@@ -359,6 +370,7 @@ public/default-data.json   class pack (empty by default)
 5f. **Components** ✅ – every game part is one component (pictures + all numbers) edited in the studio, which became the general component editor (§7.1). Buildings are made from **features** (workers, arrows, soldiers, income, hero healing) with a table of 1–5 levels whose fields follow the features; the Town Hall is the `core` building type with the same features; "another look" components add drawings to an existing type. Enemies, weapons/shields/armor and coins carry their numbers next to their drawings; the separate Enemies and Weapons screens are gone and the Rules editor keeps only global rules. Old data and version-1 save files are migrated automatically. Tests cover new building kinds made only from data (market, well, 4-level tower).
 5g. **Lives & backpack** ✅ – every lost life sends the hero away for 10 s and back to the Town Hall; losing all 5 loses the game (the end screen says why). The bot now walks back to heal below 40 % HP and still wins every seed without losing a life; the same bot without healing loses every seed (new test). Small retune: dragon 280 HP / speed 36, rounds 14–15 spawns. **Backpack** rebuilt: three slots (right hand, left hand, armor) with the hero's attack / reach / armor shown live, items dragged onto slots with mouse or finger (or tap item → tap slot), wrong slots refused, worn items dragged back to take them off.
 5h. **Summoners, catapult, themes, terrain** ✅ – enemies can **call minions** (any enemies, several kinds mixed; how many, how often, at most alive, more on death; minions never summon): new built-ins **necromancer** → skeletons, **spider queen** → spiderlings (more when she dies), plus skeleton and spiderling. New building feature **lobs** and built-in **catapult** (rounds 6 / 10 / 15): area damage to walking enemies. **Themes** (§7.2) with an editor; maps have a theme. **Terrain textures** in the map editor with preview (§5.1). Waves: spider queen in rounds 8 and 19, necromancers in 12 and 17; necromancer tuned to 90 HP / every 8 s; the bot builds a catapult – all seeds won, waves 40–60 s. Architecture: building features run from a behaviour table, one spawn path for caves and summoners, ground-target projectiles, built-ins seeded by id.
+5i. **Animations, chronicle, patrols** ✅ – optional **animations** for heroes, enemies, soldiers (walk, attack) and buildings (attack, reload): a photographed strip of 4–12 frames is cut automatically (frame count guessed from the paper gaps), frames are lined up over the previous one (onion skin, drag or arrows), speed and preview in the component editor; the game plays them by what each thing does (§3.2a). **Chronicle** with legends and hints for every monster, in the menu and in the game, plus a "new monster" note (§12). **Soldiers patrol** only up to their castle's patrol distance and come back to their starting point (§7). World events for animations: `buildingAttack`, `soldierAttack`. Balance re-checked (round 16 retimed): all seeds won, waves 40–60 s.
 6. **Later** – rotating decorations, a "+" mark on reused level drawings, a round-summary card, per-map export, playtests on a real tablet and with kids, animated sprites (frame sheets photographed from a printed template), longbowmen soldiers that can hit flying enemies, walls.
 
 ## 15. Open questions

@@ -6,6 +6,7 @@ import HeroStatsEditor from './HeroStatsEditor.jsx';
 import ItemStatsEditor from './ItemStatsEditor.jsx';
 import EnemyStatsEditor from './EnemyStatsEditor.jsx';
 import BuildingStatsEditor from './BuildingStatsEditor.jsx';
+import AnimationEditor from './AnimationEditor.jsx';
 import NumField from './NumField.jsx';
 import { getCategory } from './categories.js';
 import { DEFAULT_HERO_POINTS } from '../config/heroStats.js';
@@ -13,12 +14,15 @@ import { defaultItemStats } from '../config/weapons.js';
 import { newLevel } from '../config/features.js';
 import { DEFAULT_ENEMY_STATS, defaultComponent, compName } from '../config/components.js';
 import { themeName } from '../config/themes.js';
+import { legendText } from '../config/legends.js';
 import { newId } from '../data/saveFile.js';
 
 // The component editor (SPEC §3.4): one game thing – its name, its pictures and
 // ALL its properties together (a hero's skill points, an enemy's numbers, a
 // building type's features and levels, a weapon's damage, a coin's value…) and,
-// for enemies and buildings, the themes (worlds) it belongs to.
+// for enemies and buildings, the themes (worlds) it belongs to, optional
+// animations (walking, attacking, reloading) and, for enemies, a legend for the
+// chronicle.
 
 const AUTHOR_KEY = 'sv:lastAuthor';
 
@@ -99,6 +103,11 @@ export default function AssetEditor({ asset, isNew, heroRules, buildingTypes = [
   const name = compName(draft, lang);
   const setName = (v) => set({ name: typeof draft.name === 'string' || !draft.name ? v : { ...draft.name, [lang]: v } });
   const builtIn = defaultComponent(draft.id);
+  // legend texts: built-ins have one per language, kids' components a single text
+  const setLegend = (key, v) => {
+    const cur = draft.legend?.[key];
+    set({ legend: { ...draft.legend, [key]: cur && typeof cur === 'object' ? { ...cur, [lang]: v } : v } });
+  };
   const isCore = !!draft.stats?.core;
 
   const canSave = name.trim() && !(draft.category === 'building' && draft.stats?.variantOf && !images.some(Boolean));
@@ -110,7 +119,7 @@ export default function AssetEditor({ asset, isNew, heroRules, buildingTypes = [
   };
   const restore = () => {
     if (!confirm(t('component.confirm_restore'))) return;
-    set({ name: builtIn.name, stats: structuredClone(builtIn.stats), themes: [...(builtIn.themes ?? [])] });
+    set({ name: builtIn.name, stats: structuredClone(builtIn.stats), themes: [...(builtIn.themes ?? [])], ...(builtIn.legend ? { legend: structuredClone(builtIn.legend) } : {}) });
   };
 
   return (
@@ -148,6 +157,23 @@ export default function AssetEditor({ asset, isNew, heroRules, buildingTypes = [
           {cat.stats === 'coin' && (
             <NumField label={`🪙 ${t('editor.coin_value')}`} value={draft.stats.value} min={1} max={999} onChange={(v) => set({ stats: { value: Math.round(v) } })} />
           )}
+        </div>
+      )}
+
+      {cat.legend && (
+        <div className="sketch-card" style={{ padding: 10, marginTop: 12 }}>
+          <h3 style={{ margin: '0 0 6px' }}>📖 {t('chronicle.legend')}</h3>
+          <p className="small muted" style={{ margin: '0 0 6px' }}>{t('chronicle.legend_hint')}</p>
+          <textarea rows={3} style={{ width: '100%' }} value={legendText(draft.legend?.story, lang)} placeholder={t('chronicle.story_placeholder')} onChange={(e) => setLegend('story', e.target.value)} />
+          <label className="row small" style={{ gap: 6, marginTop: 6 }}>💡 {t('chronicle.hint')}
+            <input type="text" style={{ flex: 1 }} value={legendText(draft.legend?.hint, lang)} placeholder={t('chronicle.hint_placeholder')} onChange={(e) => setLegend('hint', e.target.value)} />
+          </label>
+        </div>
+      )}
+
+      {cat.anims && (
+        <div style={{ marginTop: 12 }}>
+          <AnimationEditor kinds={cat.anims} anims={draft.anims ?? {}} size={cat.size} removeBg={cat.removeBg} onChange={(anims) => set({ anims })} />
         </div>
       )}
 

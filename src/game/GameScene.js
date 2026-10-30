@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { hasFeature, shapeOf } from '../config/features.js';
+import { frameAt } from '../assets/animation.js';
 
 // Draws the World simulation (src/logic/world.js) and forwards clicks to it.
 // Camera: zoom (wheel, pinch, buttons) and drag-pan, clamped to the map.
@@ -20,7 +21,8 @@ export default class GameScene extends Phaser.Scene {
 
   /**
    * data: { world, map, images: { background, hero?, townhall?, cave?, coin?, projectile?,
-   *         'enemy:<typeId>'?, [decorAssetId]? }, enemyTypes, onHud(state), onEvent(e) }
+   *         'enemy:<typeId>'?, [decorAssetId]?, '<base>|<kind>|<i>' animation frames },
+   *         anims: { <base>: { walk?|attack?|reload?: { n, fps } } }, enemyTypes, onHud(state), onEvent(e) }
    */
   init(data) {
     this.cfg = data;
@@ -35,6 +37,41 @@ export default class GameScene extends Phaser.Scene {
     this.textPool = [];
     this.puffPool = [];
     this.splashPool = [];
+    this.animClock = 0; // ms of game time (follows speed and pause) that animations run on
+    this.heroAnim = {};
+    this.townHallAnim = {};
+  }
+
+  // ---------------- animations ----------------
+  // Something with animations (cfg.anims[base]) shows a one-shot (attack, then
+  // reload) while it plays, its walk loop while it moves, otherwise its still
+  // picture (null here). `state` keeps the one-shot per sprite.
+
+  animKey(state, base, moving) {
+    const info = base && this.cfg.anims?.[base];
+    if (!info) return null;
+    while (state.oneShot) {
+      const a = info[state.oneShot.kind];
+      const i = a ? frameAt(a.n, a.fps, this.animClock - state.oneShot.start, false) : null;
+      if (i !== null) return `${base}|${state.oneShot.kind}|${i}`;
+      const next = state.queue?.shift();
+      state.oneShot = next ? { kind: next, start: this.animClock } : null;
+    }
+    if (moving && info.walk) return `${base}|walk|${frameAt(info.walk.n, info.walk.fps, this.animClock + (state.phase ?? 0))}`;
+    return null;
+  }
+
+  playOnce(state, base, kinds) {
+    const info = base && this.cfg.anims?.[base];
+    const have = kinds.filter((k) => info?.[k]);
+    if (!state || !have.length) return;
+    state.oneShot = { kind: have[0], start: this.animClock };
+    state.queue = have.slice(1);
+  }
+
+  // the look of a building texture key `type#look:level` (placeholders have none)
+  lookOf(key) {
+    return key.includes('#') ? key.slice(0, key.lastIndexOf(':')) : null;
   }
 
   // Texture of a building: one of the kids' drawings of that kind (picked by the
@@ -317,6 +354,7 @@ export default class GameScene extends Phaser.Scene {
     if (!this.paused) {
       const dt = Math.min(MAX_DT, dtMs / 1000) * this.speed;
       w.update(dt);
+      this.animClock += dt * 1000;
     }
     for (const e of w.drainEvents()) this.onEvent(e);
     this.syncEntities();
@@ -341,6 +379,13 @@ export default class GameScene extends Phaser.Scene {
     if (e.type === 'coinPicked') this.floatText(e.x, e.y - 16, `+${e.value ?? 1}`, '#a16207');
     if (e.type === 'cantHit') this.cfg.onEvent?.(e);
     if (e.type === 'buildingDestroyed') { const s = this.world.spots.find((p) => p.id === e.spotId); if (s) this.puff(s.x, s.y); }
+    if (e.type === 'enemyAttack') { const sp = this.sprites.get(e.id); if (sp) this.playOnce(sp, sp.base, ['attack']); }
+    if (e.type === 'soldierAttack') { const sp = this.sprites.get(`s${e.id}`); if (sp) this.playOnce(sp, 'soldier', ['attack']); }
+    if (e.type === 'heroAttack') this.playOnce(this.heroAnim, 'hero', ['attack']);
+    if (e.type === 'buildingAttack') {
+      if (e.id === this.world.townHall.id) { const th = this.world.townHall; this.playOnce(this.townHallAnim, this.lookOf(this.buildingKey(th.type, this.townHallVariant, th.level)), ['attack', 'reload']); }
+      else { const sp = this.sprites.get(`b${e.id}`); if (sp) this.playOnce(sp, sp.base, ['attack', 'reload']); }
+    }
     if (e.type === 'splash') this.splash(e.x, e.y, e.radius, e.owner === 'stone' ? 0x78716c : 0xa855f7);
     if (e.type === 'summon') { this.splash(e.x, e.y, 36, 0x4c1d95); this.floatText(e.x, e.y - 36, `+${e.count}`, '#4c1d95'); }
     if (e.type === 'chestOpened') this.floatText(e.x, e.y - 24, e.weapon ? '🎁' : `+${e.coins}`, '#7c3aed');
@@ -424,25 +469,33 @@ export default class GameScene extends Phaser.Scene {
     for (const e of w.enemies) {
       const type = w.types[e.type];
       const size = (type.boss ? 84 : 48) * (type.size ?? 1);
+      const still = this.textures.exists(`enemy:${type.id}`) ? `enemy:${type.id}` : 'hero';
       const s = this.sprite(e.id, () => ({
-        img: this.add.image(e.x, e.y, this.textures.exists(`enemy:${type.id}`) ? `enemy:${type.id}` : 'hero').setDisplaySize(size, size).setOrigin(0.5, 0.75),
+        img: this.add.image(e.x, e.y, still).setDisplaySize(size, size).setOrigin(0.5, 0.75),
         bar: this.add.graphics().setDepth(9000),
+        base: `enemy:${type.id}`, phase: Math.random() * 1000, // walkers don't step in sync
       }));
+      const key = this.animKey(s, s.base, !e.attacking) ?? still;
+      if (s.img.texture.key !== key) s.img.setTexture(key).setDisplaySize(size, size);
       const bob = e.flying ? Math.sin(this.time.now / 180 + e.id) * 4 - 18 : 0;
       s.img.setPosition(e.x, e.y + bob).setDepth(e.flying ? 8000 + e.y : e.y);
       if (e.facing) s.img.setFlipX(e.facing < 0);
-      s.img.setAngle((e.attacking ? Math.sin(this.time.now / 60) * 6 : 0) + this.jitter(e.id) * 3);
+      // without an attack animation the drawing shakes while it attacks
+      const shake = e.attacking && !this.cfg.anims?.[s.base]?.attack;
+      s.img.setAngle((shake ? Math.sin(this.time.now / 60) * 6 : 0) + this.jitter(e.id) * 3);
       this.bar(s.bar, e.x, e.y + bob - size * 0.75 - 6, 36, e.hp / e.maxHp, 0xdc2626);
     }
 
     for (const b of w.buildings) {
       // show the drawing of the level being built (or the current one), at least level 1
       const shownLevel = Math.max(1, b.state === 'building' || b.state === 'upgrading' ? b.level + 1 : b.level);
-      const key = this.buildingKey(b.type, b.variant ?? 0, shownLevel);
+      const still = this.buildingKey(b.type, b.variant ?? 0, shownLevel);
       const s = this.sprite(`b${b.id}`, () => ({
-        img: this.add.image(b.x, b.y, key).setDisplaySize(64, 64).setOrigin(0.5, 0.6).setDepth(b.y),
+        img: this.add.image(b.x, b.y, still).setDisplaySize(64, 64).setOrigin(0.5, 0.6).setDepth(b.y),
         bar: this.add.graphics().setDepth(9000).setPosition(b.x, b.y),
       }));
+      s.base = this.lookOf(still);
+      const key = (b.state === 'ready' && this.animKey(s, s.base, false)) || still;
       if (s.img.texture.key !== key) s.img.setTexture(key).setDisplaySize(64, 64);
       if (this.wobble || s.img.angle) s.img.setAngle(this.jitter(b.id) * 2);
       const busy = b.state === 'building' || b.state === 'upgrading';
@@ -471,6 +524,8 @@ export default class GameScene extends Phaser.Scene {
         img: this.add.image(so.x, so.y, 'soldier').setDisplaySize(36, 36).setOrigin(0.5, 0.85),
         bar: this.add.graphics().setDepth(9000),
       }));
+      const soKey = this.animKey(s, 'soldier', so.path.length > 0) ?? 'soldier';
+      if (s.img.texture.key !== soKey) s.img.setTexture(soKey).setDisplaySize(36, 36);
       s.img.setPosition(so.x, so.y).setDepth(so.y).setFlipX(so.facing < 0).setAngle(this.jitter(so.id) * 3);
       if (so.hp < so.maxHp) this.bar(s.bar, so.x, so.y - 38, 26, so.hp / so.maxHp, 0x2563eb);
       else s.bar.setVisible(false);
@@ -515,7 +570,8 @@ export default class GameScene extends Phaser.Scene {
     // hero
     const h = w.hero;
     // a drawing for the current weapon class when the kids made one
-    const heroKey = this.textures.exists(`hero:${h.mode}`) ? `hero:${h.mode}` : 'hero';
+    const heroStill = this.textures.exists(`hero:${h.mode}`) ? `hero:${h.mode}` : 'hero';
+    const heroKey = this.animKey(this.heroAnim, 'hero', h.path.length > 0) ?? heroStill;
     if (this.hero.texture.key !== heroKey) this.hero.setTexture(heroKey).setDisplaySize(56, 56);
     this.hero.setVisible(!h.dead).setPosition(h.x, h.y).setDepth(h.y).setFlipX(h.facing < 0).setAngle(this.jitter(0.7) * 3);
     this.hero.setAlpha(h.invuln > 0 ? (Math.floor(this.time.now / 100) % 2 ? 0.35 : 1) : 1);
@@ -534,7 +590,8 @@ export default class GameScene extends Phaser.Scene {
 
     // town hall
     const th = w.townHall;
-    const thKey = this.buildingKey(th.type, this.townHallVariant, th.level);
+    const thStill = this.buildingKey(th.type, this.townHallVariant, th.level);
+    const thKey = (th.hp > 0 && this.animKey(this.townHallAnim, this.lookOf(thStill), false)) || thStill;
     if (this.townHall.texture.key !== thKey) this.townHall.setTexture(thKey).setDisplaySize(96, 96);
     if (this.wobble || this.townHall.angle) this.townHall.setAngle(this.jitter(0.3) * 1.5);
     const thSig = `${Math.round((70 * th.hp) / th.maxHp)}|${th.upgrade ? Math.round((60 * th.upgrade.progress) / th.upgrade.time) : ''}`;

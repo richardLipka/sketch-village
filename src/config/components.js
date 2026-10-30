@@ -14,7 +14,8 @@
 //   texture:  a photo / drawing of a surface (grass, stones…) for the map terrain
 //
 // Every component may also have `themes` (config/themes.js): the worlds it
-// belongs to; none = every world.
+// belongs to (none = every world); `anims` (assets/animation.js): walking /
+// attacking / reloading frames; enemies a `legend` (config/legends.js).
 //
 // Built-in components (`builtIn: true`) are added on the first start; kids can
 // change them like their own and restore their default numbers.
@@ -22,6 +23,7 @@
 import { DEFAULT_BUILDING_TYPES } from './buildings.js';
 import { DEFAULT_ENEMY_TYPES } from './enemies.js';
 import { DEFAULT_WEAPONS, isWeapon, defaultItemStats } from './weapons.js';
+import { BUILT_IN_LEGENDS } from './legends.js';
 
 const STAMP = '2026-10-29T00:00:00.000Z'; // older than any edit, so edits always win a merge
 
@@ -35,7 +37,7 @@ const itemStats = (w) => (isWeapon(w)
 
 export const DEFAULT_COMPONENTS = [
   ...DEFAULT_BUILDING_TYPES.map(({ id, name, themes, ...stats }) => component('building', id, name, stats, themes)),
-  ...DEFAULT_ENEMY_TYPES.map(({ id, name, themes, ...stats }) => component('enemy', id, name, stats, themes)),
+  ...DEFAULT_ENEMY_TYPES.map(({ id, name, themes, ...stats }) => ({ ...component('enemy', id, name, stats, themes), legend: BUILT_IN_LEGENDS[id] })),
   ...DEFAULT_WEAPONS.map((w) => component(isWeapon(w) ? 'weapon' : w.slot, w.id, w.name, itemStats(w))),
   component('coin', 'coin1', { cs: 'Měďák', en: 'Copper coin' }, { value: 1 }),
   component('coin', 'coin5', { cs: 'Zlaťák', en: 'Gold coin' }, { value: 5 }),
@@ -53,6 +55,7 @@ export function compName(c, lang = 'cs') {
 export const bothLangs = (name) => (typeof name === 'string' ? { cs: name, en: name } : name);
 
 const pictures = (c) => (c.images ?? []).filter(Boolean);
+const firstFrame = (c) => Object.values(c.anims ?? {}).find((an) => an?.frames?.length)?.frames[0] ?? null;
 
 // ---------------- what the engine uses ----------------
 
@@ -62,17 +65,22 @@ export function buildingsOf(assets = []) {
   const types = all.filter((a) => !a.stats?.variantOf && a.stats?.levels?.length).map((a) => ({
     id: a.id, name: bothLangs(a.name), core: !!a.stats.core, features: a.stats.features ?? [], levels: a.stats.levels, themes: a.themes ?? [],
   }));
-  const looks = {};
+  // every look (the type's own drawings + 'another look' components with pictures) and its animations
+  const looks = {}, lookAnims = {};
   for (const t of types) {
     const own = all.find((a) => a.id === t.id);
-    looks[t.id] = [own, ...all.filter((a) => a.stats?.variantOf === t.id)].filter((a) => pictures(a).length).map((a) => a.images);
+    // a look with only an animation uses its first frame as the still picture
+    const list = [own, ...all.filter((a) => a.stats?.variantOf === t.id)].filter((a) => a && (pictures(a).length || firstFrame(a)));
+    looks[t.id] = list.map((a) => (pictures(a).length ? a.images : [firstFrame(a)]));
+    lookAnims[t.id] = list.map((a) => a.anims ?? null);
   }
-  return { types, looks };
+  return { types, looks, lookAnims };
 }
 
 export function enemyTypesOf(assets = []) {
   return assets.filter((a) => a.category === 'enemy').map((a) => ({
     ...DEFAULT_ENEMY_STATS, ...a.stats, id: a.id, name: bothLangs(a.name), image: pictures(a)[0] ?? null, themes: a.themes ?? [],
+    anims: a.anims ?? null, legend: a.legend ?? null,
   }));
 }
 

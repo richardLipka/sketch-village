@@ -9,7 +9,8 @@
 //  v2 → v3: built-in components are tracked by id (`settings.builtInsSeeded`), so
 //  built-ins added in later versions (catapult, skeleton, necromancer, spider…)
 //  arrive in existing browsers too – but one a kid deleted never comes back;
-//  the default themes are added once; built-ins get their default themes.
+//  the default themes are added once; built-ins get their default themes;
+//  built-in monsters get their default legends (once, when they have none).
 
 import { DEFAULT_COMPONENTS, defaultComponent } from '../config/components.js';
 import { DEFAULT_THEMES } from '../config/themes.js';
@@ -67,10 +68,12 @@ export function migrateDb(db) {
     changed = true;
   }
   delete settings.componentsSeeded;
-  // built-ins from before themes existed get their default themes
+  // built-ins from before themes / legends existed get their defaults
   for (const [i, a] of assets.entries()) {
     const def = defaultComponent(a.id);
-    if (a.builtIn && a.themes === undefined && def) { assets[i] = { ...a, themes: [...(def.themes ?? [])] }; changed = true; }
+    if (!a.builtIn || !def) continue;
+    if (a.themes === undefined) { assets[i] = { ...assets[i], themes: [...(def.themes ?? [])] }; changed = true; }
+    if (a.legend === undefined && def.legend) { assets[i] = { ...assets[i], legend: structuredClone(def.legend) }; changed = true; }
   }
 
   // 1b) the default themes, once

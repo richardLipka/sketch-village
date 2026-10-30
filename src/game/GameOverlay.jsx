@@ -229,7 +229,7 @@ export function itemLine(w, t) {
   ].filter(Boolean).join(' · ');
 }
 
-export const Toolbar = memo(function Toolbar({ paused, speed, wobble, muted, tipsOn, onExit, onPause, onSpeed, onZoom, onWobble, onMute, onTips }) {
+export const Toolbar = memo(function Toolbar({ paused, speed, wobble, muted, tipsOn, onExit, onPause, onSpeed, onZoom, onWobble, onMute, onTips, onChronicle }) {
   const { t } = useTranslation();
   return (
     <div className="ov ov-bc toolbar sketch-card">
@@ -238,6 +238,7 @@ export const Toolbar = memo(function Toolbar({ paused, speed, wobble, muted, tip
       <button className={`btn icon ${speed === 2 ? 'active' : ''}`} onClick={onSpeed} title={t('game.speed')}>{speed}×</button>
       <button className="btn icon narrow-hide" onClick={() => onZoom(1 / 1.25)} title={t('game.zoom_out')}>−</button>
       <button className="btn icon narrow-hide" onClick={() => onZoom(1.25)} title={t('game.zoom_in')}>+</button>
+      <button className="btn icon" onClick={onChronicle} title={t('game.chronicle')}>📖</button>
       <button className={`btn icon ${tipsOn ? 'active' : ''}`} onClick={onTips} title={t(tipsOn ? 'tips.skip' : 'tips.restart')}>💡</button>
       <button className="btn icon" onClick={onMute} title={t(muted ? 'game.sound_on' : 'game.sound_off')}>{muted ? '🔇' : '🔊'}</button>
       <button className={`btn icon ${wobble ? 'active' : ''}`} onClick={onWobble} title={t('game.wobble')}>〰️</button>
