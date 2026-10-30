@@ -2,14 +2,22 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import AnimPreview from './AnimPreview.jsx';
 import PasteButton from './PasteButton.jsx';
-import { ANIM_KINDS, MIN_FRAMES, MAX_FRAMES, MIN_FPS, MAX_FPS, DEFAULT_FPS, sliceStrip, guessStripFrames, loadFrames, hasAnim } from './animation.js';
+import ImageSlot from './ImageSlot.jsx';
+import {
+  ANIM_KINDS, MIN_FRAMES, MAX_FRAMES, MIN_FPS, MAX_FPS, DEFAULT_FPS, sliceStrip, guessStripFrames, loadFrames, hasAnim,
+  insertFrame, replaceFrame, duplicateFrame, moveFrame,
+} from './animation.js';
 
 // Animations of one component (walking / attacking / reloading), next to its
-// still picture. Open a photo of a strip of 4–12 frames → it is cut into
-// frames (paper removed; how many frames is guessed from the paper gaps between
-// the drawings and can be changed). Then line the frames up: the selected frame is drawn
-// over the previous one (faded), and can be nudged with the arrows or dragged.
-// Set the speed and watch the preview. No animation = the still picture is used.
+// still picture. The sequence is a row of frame PANELS side by side, each made
+// with the same tools as any picture – draw (over the previous frame, shown
+// faded), photo, upload or paste, then crop and remove paper. Panels can be
+// copied (the flip-book way: copy, then change a little), moved and removed;
+// "+" adds one. A ready strip of 4–12 frames can still be opened (file or
+// clipboard): it is cut into panels (frame count guessed from the paper gaps).
+// Then line the frames up: the selected frame is drawn over the previous one
+// (faded) and can be nudged or dragged. Set the speed and watch the preview.
+// No animation = the still picture is used.
 
 const VIEW = 224; // px of the alignment view
 
@@ -64,6 +72,15 @@ export default function AnimationEditor({ kinds, anims = {}, size = 128, removeB
   };
 
   const pickKind = (k) => { setKind(k); setRaw(null); setSel(0); };
+  // a change made on the panels: the strip just opened is no longer re-cut
+  const apply = (next, select = sel) => {
+    setRaw(null);
+    setAnim(next);
+    setSel(Math.max(0, Math.min(select, (next?.frames.length ?? 1) - 1)));
+  };
+  const cat = { size, removeBg };
+  const frames = anim?.frames ?? [];
+  const full = frames.length >= MAX_FRAMES;
   const offsetOf = (i) => anim.offsets?.[i] ?? [0, 0];
   const placeAt = (pos) => {
     const offsets = anim.frames.map((_, i) => offsetOf(i));
@@ -110,6 +127,38 @@ export default function AnimationEditor({ kinds, anims = {}, size = 128, removeB
         </div>
       )}
 
+      <div className="frame-panels">
+        {frames.map((f, i) => (
+          <ImageSlot
+            key={i} compact label={String(i + 1)} image={f} category={cat}
+            underlay={frames[i - 1] ?? null} selected={i === sel} onSelect={() => setSel(i)}
+            removeTitle={t('anim.frame_remove')}
+            onChange={(img) => apply(replaceFrame(anim, i, img), i)}
+          >
+            <div className="frame-ops">
+              <button type="button" className="btn icon" title={t('anim.frame_left')} disabled={i === 0} onClick={() => apply(moveFrame(anim, i, -1), i - 1)}>◀</button>
+              <button type="button" className="btn icon" title={t('anim.frame_copy')} disabled={full} onClick={() => apply(duplicateFrame(anim, i), i + 1)}>⧉</button>
+              <button type="button" className="btn icon" title={t('anim.frame_right')} disabled={i === frames.length - 1} onClick={() => apply(moveFrame(anim, i, 1), i + 1)}>▶</button>
+            </div>
+          </ImageSlot>
+        ))}
+        {!full && (
+          <div className="add-frame-wrap">
+            <ImageSlot
+              compact adder label={`+ ${t('anim.frame_new')}`} image={null} category={cat} underlay={frames.at(-1) ?? null}
+              onChange={(img) => img && apply(insertFrame(anim, img), frames.length)}
+            >
+              {frames.length > 0 && (
+                <div className="frame-ops">
+                  <button type="button" className="btn" title={t('anim.frame_copy_last_hint')} onClick={() => apply(duplicateFrame(anim, frames.length - 1), frames.length)}>⧉ {t('anim.frame_copy_last')}</button>
+                </div>
+              )}
+            </ImageSlot>
+          </div>
+        )}
+      </div>
+      {frames.length > 0 && <p className="small muted" style={{ margin: '4px 0 0' }}>{t('anim.panels_hint', { n: frames.length, max: MAX_FRAMES })}</p>}
+
       {hasAnim(anim) && (
         <>
           <div className="row" style={{ gap: 16, alignItems: 'flex-start', marginTop: 10 }}>
@@ -136,14 +185,6 @@ export default function AnimationEditor({ kinds, anims = {}, size = 128, removeB
               </label>
             </div>
           </div>
-          <div className="row anim-frames" style={{ gap: 4, marginTop: 8 }}>
-            {anim.frames.map((f, i) => (
-              <button key={i} type="button" className={`anim-frame checker ${i === sel ? 'on' : ''}`} onClick={() => setSel(i)} title={String(i + 1)}>
-                <img src={f} alt="" />
-                <span className="small">{i + 1}</span>
-              </button>
-            ))}
-          </div>
         </>
       )}
     </div>
@@ -159,7 +200,8 @@ function OnionView({ anim, sel, onion, size, onDragTo }) {
 
   useEffect(() => {
     const c = ref.current;
-    if (!c || !frames.length) return;
+    // right after frames were added / removed the loaded pictures lag behind – wait for them
+    if (!c || !frames.length || frames.length !== anim.frames.length || !frames[sel]) return;
     const ctx = c.getContext('2d');
     const k = VIEW / size;
     ctx.clearRect(0, 0, VIEW, VIEW);

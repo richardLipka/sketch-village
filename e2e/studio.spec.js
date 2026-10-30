@@ -131,3 +131,67 @@ test('hear the monster sounds as in the game: a little wave with a timeline', as
   expect(skipped).toBeGreaterThan(played); // most hits and some defeats are left out
   expect(errors).toEqual([]);
 });
+
+// draw a short stroke on the open drawing pad
+async function scribble(page, dx = 0) {
+  const box = await page.locator('.pad-canvas').boundingBox();
+  await page.mouse.move(box.x + 60 + dx, box.y + 60);
+  await page.mouse.down();
+  for (let i = 1; i <= 8; i++) await page.mouse.move(box.x + 60 + dx + i * 20, box.y + 60 + i * 12);
+  await page.mouse.up();
+}
+
+test('an animation made of frame panels: draw, copy, trace over the previous, paste, move, remove, keep', async ({ page }) => {
+  const errors = watchErrors(page);
+  await openGoblin(page);
+  const anim = page.locator('.anim-editor');
+  const frames = anim.locator('.frame-panels .slot:not(.adder)');
+  const adder = anim.locator('.frame-panels .slot.adder');
+  await expect(frames).toHaveCount(0);
+
+  // 1st frame: drawn
+  await adder.getByTitle('Nakreslit').click();
+  await scribble(page);
+  await page.locator('.modal').last().getByRole('button', { name: /Hotovo/ }).click();
+  await expect(frames).toHaveCount(1);
+
+  // 2nd: a copy of the last one, then changed – the previous frame shows faded underneath
+  await adder.getByRole('button', { name: /kopie posledního/ }).click();
+  await expect(frames).toHaveCount(2);
+  await expect(frames.nth(1)).toHaveClass(/selected/);
+  await frames.nth(1).getByTitle('Upravit kreslením').click();
+  await expect(page.locator('.pad-underlay')).toBeVisible();
+  await scribble(page, 80);
+  await page.locator('.modal').last().getByRole('button', { name: /Hotovo/ }).click();
+
+  // 3rd: pasted from the clipboard → cropped like any picture
+  await page.evaluate(async () => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 120;
+    c.getContext('2d').fillRect(30, 30, 60, 60);
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': await new Promise((r) => c.toBlob(r, 'image/png')) })]);
+  });
+  await adder.getByTitle('Vložit obrázek ze schránky').click();
+  await expect(page.locator('.reactEasyCrop_Container')).toBeVisible();
+  await page.locator('.modal').last().getByRole('button', { name: 'Zrušit' }).click();
+
+  // only the selected frame shows its tools; move and remove work on it
+  await frames.nth(0).locator('.pic').click();
+  await expect(frames.nth(0).getByTitle('Posunout o místo doprava')).toBeVisible();
+  await expect(frames.nth(1).getByTitle('Posunout o místo doprava')).toBeHidden();
+  const first = await frames.nth(0).locator('.pic img').getAttribute('src');
+  await frames.nth(0).getByTitle('Posunout o místo doprava').click();
+  await expect(frames.nth(1).locator('.pic img')).toHaveAttribute('src', first);
+  await expect(frames.nth(1)).toHaveClass(/selected/);
+  await anim.screenshot({ path: 'test-results/anim-panels.png' });
+  await frames.nth(1).getByTitle('Kopírovat snímek', { exact: false }).click();
+  await expect(frames).toHaveCount(3);
+  await frames.nth(2).getByTitle('Smazat tento snímek').click();
+  await expect(frames).toHaveCount(2);
+
+  // saved with the component
+  await page.locator('.modal').getByRole('button', { name: /Uložit/ }).last().click();
+  await page.locator('.asset-tile', { hasText: 'Skřet' }).click();
+  await expect(page.locator('.anim-editor .frame-panels .slot:not(.adder)')).toHaveCount(2);
+  expect(errors).toEqual([]);
+});

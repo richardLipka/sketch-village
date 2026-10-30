@@ -10,13 +10,14 @@ import AssetCropper from './AssetCropper.jsx';
 // Draw a new asset or touch up a photographed one (pencil, eraser, fill,
 // magic-wand erase with adjustable strength, flip, crop, load a picture from
 // disk, undo / redo for all of them). Works at 2× the stored size so strokes
-// stay smooth, then downscales on save.
+// stay smooth, then downscales on save. `underlay` (an animation's previous
+// frame) shows faded under the drawing to trace over; it is never saved.
 
 const COLORS = ['#1f2937', '#1e3a8a', '#2563eb', '#16a34a', '#65a30d', '#ca8a04', '#ea580c', '#dc2626', '#db2777', '#7c3aed', '#78350f', '#9ca3af', '#ffffff'];
 const SIZES = [2, 5, 10, 18];
 const UNDO_LIMIT = 25;
 
-export default function SketchPad({ size, initialImage, onSave, onCancel }) {
+export default function SketchPad({ size, initialImage, underlay = null, onSave, onCancel }) {
   const { t } = useTranslation();
   const W = Math.max(size * 2, 256);
   const canvasRef = useRef(null);
@@ -30,6 +31,7 @@ export default function SketchPad({ size, initialImage, onSave, onCancel }) {
   const [cropSrc, setCropSrc] = useState(null); // image being cropped (current drawing or a file)
   const fileRef = useRef(null);
   const [, force] = useState(0);
+  const [showUnder, setShowUnder] = useState(true);
 
   const ctx = () => canvasRef.current.getContext('2d', { willReadFrequently: true });
 
@@ -184,14 +186,17 @@ export default function SketchPad({ size, initialImage, onSave, onCancel }) {
     <Modal onClose={onCancel} wide>
       <h2>{t('sketch.title')}</h2>
       <div className="pad-wrap">
-        <canvas
-          ref={canvasRef}
-          className="pad-canvas checker"
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-        />
+        <div className="pad-stack">
+          {underlay && showUnder && <img src={underlay} alt="" className="pad-underlay" />}
+          <canvas
+            ref={canvasRef}
+            className={`pad-canvas ${underlay && showUnder ? '' : 'checker'}`}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+          />
+        </div>
         <div className="tools">
           <div className="row" style={{ gap: 6 }}>
             {TOOLS.map(([id, icon]) => (
@@ -201,6 +206,11 @@ export default function SketchPad({ size, initialImage, onSave, onCancel }) {
             ))}
           </div>
           <div className="small muted">{t(`sketch.tool_${tool}`)}</div>
+          {underlay && (
+            <label className="small" style={{ display: 'block' }}>
+              <input type="checkbox" checked={showUnder} onChange={(e) => setShowUnder(e.target.checked)} /> {t('anim.show_previous')}
+            </label>
+          )}
           {tool === 'wand' && (
             <label className="small" style={{ display: 'block' }}>
               {t('sketch.wand_strength')}: {wandStrength}

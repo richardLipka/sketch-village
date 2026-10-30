@@ -109,3 +109,34 @@ describe('guessing the number of frames in a strip', () => {
     expect(guessFrameCount(strip(2))).toBeNull(); // too few for an animation
   });
 });
+
+describe('frames as panels', async () => {
+  const { insertFrame, replaceFrame, duplicateFrame, moveFrame, removeFrame, MAX_FRAMES, DEFAULT_FPS } = await import('./animation.js');
+  const anim = { frames: ['a', 'b', 'c'], fps: 10, offsets: [[1, 0], [2, 0], [3, 0]] };
+
+  it('starts an animation from the first drawn frame', () => {
+    expect(insertFrame(null, 'x')).toEqual({ fps: DEFAULT_FPS, frames: ['x'], offsets: [[0, 0]] });
+  });
+
+  it('adds, replaces, copies, moves and removes frames with their alignment', () => {
+    expect(insertFrame(anim, 'd')).toMatchObject({ frames: ['a', 'b', 'c', 'd'], offsets: [[1, 0], [2, 0], [3, 0], [0, 0]], fps: 10 });
+    expect(insertFrame(anim, 'z', 1).frames).toEqual(['a', 'z', 'b', 'c']);
+    expect(replaceFrame(anim, 1, 'B')).toMatchObject({ frames: ['a', 'B', 'c'], offsets: [[1, 0], [0, 0], [3, 0]] });
+    expect(duplicateFrame(anim, 0)).toMatchObject({ frames: ['a', 'a', 'b', 'c'], offsets: [[1, 0], [1, 0], [2, 0], [3, 0]] });
+    expect(moveFrame(anim, 2, -1)).toMatchObject({ frames: ['a', 'c', 'b'], offsets: [[1, 0], [3, 0], [2, 0]] });
+    expect(moveFrame(anim, 0, -1)).toBe(anim); // already first
+    expect(removeFrame(anim, 0)).toMatchObject({ frames: ['b', 'c'], offsets: [[2, 0], [3, 0]] });
+    expect(replaceFrame(anim, 0, null).frames).toEqual(['b', 'c']); // ✕ on a panel removes it
+  });
+
+  it('the last frame removed = no animation; never more than the maximum', () => {
+    expect(removeFrame({ frames: ['a'], offsets: [[0, 0]] }, 0)).toBe(null);
+    const full = { frames: Array(MAX_FRAMES).fill('f'), offsets: [] };
+    expect(insertFrame(full, 'x')).toBe(full);
+    expect(duplicateFrame(full, 0)).toBe(full);
+  });
+
+  it('frames without stored offsets get them', () => {
+    expect(duplicateFrame({ frames: ['a'] }, 0).offsets).toEqual([[0, 0], [0, 0]]);
+  });
+});

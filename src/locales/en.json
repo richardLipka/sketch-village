@@ -643,7 +643,7 @@
   },
   "anim": {
     "title": "Animation",
-    "hint": "Draw 4–12 frames side by side (or one under another) on one sheet, take a photo and open it here – it is cut into frames. Drag a frame over the previous one (faded) to line them up. Without an animation the still picture is used.",
+    "hint": "An animation is a row of pictures (frames) side by side, played one after another. Make each frame here like any picture – draw it (the previous frame shows faded underneath, to trace over), take a photo, upload or paste it. Tip: copy a frame (⧉) and change it a little. You can also open a photo of a whole strip of 4–12 frames – it is cut into frames. Then drag each frame over the previous one to line them up. Without an animation the still picture is used.",
     "kind_walk": "Walking",
     "kind_attack": "Attack",
     "kind_reload": "Reloading",
@@ -660,7 +660,15 @@
     "show_previous": "Show the previous frame",
     "preview": "Preview",
     "speed": "Speed",
-    "fps": "frames/s"
+    "fps": "frames/s",
+    "frame_new": "frame",
+    "frame_remove": "Remove this frame",
+    "frame_left": "Move one place left",
+    "frame_right": "Move one place right",
+    "frame_copy": "Copy this frame (then change the copy a little)",
+    "frame_copy_last": "copy last",
+    "frame_copy_last_hint": "A new frame as a copy of the last one – then change it a little",
+    "panels_hint": "{{n}} of {{max}} frames · click a frame to line it up below"
   },
   "chronicle": {
     "title": "Chronicle",

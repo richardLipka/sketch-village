@@ -67,6 +67,56 @@ export const hasAnim = (a) => !!a?.frames?.length;
 /** The first frame of any animation – the still picture of something drawn only as an animation. */
 export const firstFrame = (anims) => Object.values(anims ?? {}).find(hasAnim)?.frames[0] ?? null;
 
+// ---------------- frames as panels (pure) ----------------
+// The animation editor shows the frames as panels side by side; each can be
+// drawn, photographed, uploaded or pasted, copied, moved or removed. These keep
+// the frames and their alignment offsets together; null = no animation left.
+
+const withFrames = (anim, frames, offsets) => (frames.length ? { fps: anim?.fps ?? DEFAULT_FPS, ...anim, frames, offsets } : null);
+const offsetsOf = (anim) => (anim?.frames ?? []).map((_, i) => anim.offsets?.[i] ?? [0, 0]);
+
+/** A new frame at `at` (default: the end); at most MAX_FRAMES. */
+export function insertFrame(anim, src, at = anim?.frames?.length ?? 0) {
+  const frames = [...(anim?.frames ?? [])], offsets = offsetsOf(anim);
+  if (frames.length >= MAX_FRAMES) return anim;
+  frames.splice(at, 0, src);
+  offsets.splice(at, 0, [0, 0]);
+  return withFrames(anim, frames, offsets);
+}
+
+/** A new picture for frame i (its alignment starts over). */
+export function replaceFrame(anim, i, src) {
+  if (!src) return removeFrame(anim, i);
+  const frames = [...anim.frames], offsets = offsetsOf(anim);
+  frames[i] = src;
+  offsets[i] = [0, 0];
+  return withFrames(anim, frames, offsets);
+}
+
+/** A copy of frame i right after it, lined up the same – the flip-book way: copy, then change a little. */
+export function duplicateFrame(anim, i) {
+  if (anim.frames.length >= MAX_FRAMES) return anim;
+  const frames = [...anim.frames], offsets = offsetsOf(anim);
+  frames.splice(i + 1, 0, frames[i]);
+  offsets.splice(i + 1, 0, [...offsets[i]]);
+  return withFrames(anim, frames, offsets);
+}
+
+/** Frame i one place earlier (-1) or later (+1). */
+export function moveFrame(anim, i, by) {
+  const j = i + by;
+  if (j < 0 || j >= anim.frames.length) return anim;
+  const frames = [...anim.frames], offsets = offsetsOf(anim);
+  [frames[i], frames[j]] = [frames[j], frames[i]];
+  [offsets[i], offsets[j]] = [offsets[j], offsets[i]];
+  return withFrames(anim, frames, offsets);
+}
+
+export function removeFrame(anim, i) {
+  const frames = anim.frames.filter((_, k) => k !== i), offsets = offsetsOf(anim).filter((_, k) => k !== i);
+  return withFrames(anim, frames, offsets);
+}
+
 // ---------------- canvas helpers (browser) ----------------
 
 /** guessFrameCount for a strip picture (data URL). */

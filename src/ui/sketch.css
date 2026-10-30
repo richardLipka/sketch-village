@@ -312,11 +312,6 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 .terrain-row select { min-height: 44px; }
 
 /* component editor: animations */
-.anim-frames { flex-wrap: wrap; }
-.anim-frame { position: relative; width: 56px; height: 56px; padding: 0; border: 2px solid var(--ink); border-radius: 6px; cursor: pointer; background-color: #fffdf7; }
-.anim-frame img { width: 100%; height: 100%; object-fit: contain; }
-.anim-frame span { position: absolute; right: 2px; bottom: 0; }
-.anim-frame.on { outline: 3px solid var(--hl-yellow); outline-offset: 1px; }
 .onion { border: 2px solid var(--ink); border-radius: 8px; }
 
 /* the chronicle */
@@ -447,3 +442,19 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 .preview-timeline .mark.played.past { opacity: 1; transform: translateX(-50%) scale(1.25); }
 .preview-timeline .mark.skipped { color: var(--ink-soft); font-size: 11px; }
 .preview-summary { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 4px 0; }
+
+/* drawing over the previous animation frame (SketchPad underlay) */
+.pad-stack { position: relative; width: min(512px, 90vw); }
+.pad-stack .pad-canvas { position: relative; display: block; }
+.pad-underlay { position: absolute; inset: 2.5px; width: calc(100% - 5px); height: calc(100% - 5px); object-fit: contain; opacity: 0.3; pointer-events: none; background: #fffdf7; border-radius: 4px; }
+/* animation frames as panels side by side (AnimationEditor) */
+.frame-panels { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; align-items: flex-start; }
+/* a frame shows just its picture; the selected one (and "+ frame") shows its tools,
+   at full finger size – click a frame to work on it */
+.slot.compact { width: 112px; }
+.slot.compact .pic { width: 100px; height: 100px; margin: 2px auto 4px; cursor: pointer; }
+.slot.compact:not(.selected):not(.adder) .row, .slot.compact:not(.selected):not(.adder) .frame-ops { display: none; }
+.slot.compact.selected, .slot.compact.adder { width: 196px; }
+.slot.compact .row, .frame-ops { gap: 4px !important; flex-wrap: wrap; justify-content: center; }
+.slot.selected .pic { outline: 3px solid var(--hl-yellow); outline-offset: 2px; }
+.frame-ops { display: flex; margin-top: 4px; }

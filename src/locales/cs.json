@@ -643,7 +643,7 @@
   },
   "anim": {
     "title": "Animace",
-    "hint": "Nakresli 4–12 obrázků vedle sebe (nebo pod sebe) na jeden papír, vyfoť ho a otevři tady – rozstříhá se na snímky. Přetáhni snímek přes předchozí (průsvitný), aby na sebe seděly. Bez animace se použije obyčejný obrázek.",
+    "hint": "Animace je řada obrázků (snímků) vedle sebe, které se přehrávají jeden po druhém. Každý snímek tu udělej jako kterýkoli obrázek – nakresli ho (předchozí snímek je pod ním průsvitně, můžeš ho obtahovat), vyfoť, nahraj nebo vlož. Tip: zkopíruj snímek (⧉) a trochu ho změň. Můžeš také otevřít fotku celého pásu 4–12 snímků – rozstříhá se na snímky. Pak každý snímek přetáhni přes předchozí, aby na sebe seděly. Bez animace se použije obyčejný obrázek.",
     "kind_walk": "Chůze",
     "kind_attack": "Útok",
     "kind_reload": "Nabíjení",
@@ -660,7 +660,15 @@
     "show_previous": "Ukázat předchozí snímek",
     "preview": "Ukázka",
     "speed": "Rychlost",
-    "fps": "snímků/s"
+    "fps": "snímků/s",
+    "frame_new": "snímek",
+    "frame_remove": "Smazat tento snímek",
+    "frame_left": "Posunout o místo doleva",
+    "frame_right": "Posunout o místo doprava",
+    "frame_copy": "Zkopírovat snímek (kopii pak trochu změň)",
+    "frame_copy_last": "kopie posledního",
+    "frame_copy_last_hint": "Nový snímek jako kopie posledního – pak ho trochu změň",
+    "panels_hint": "{{n}} z {{max}} snímků · klikni na snímek a dole ho srovnej"
   },
   "chronicle": {
     "title": "Kronika",
