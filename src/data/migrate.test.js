@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { migrateDb, DATA_VERSION } from './migrate.js';
 import { DEFAULT_COMPONENTS, buildingsOf, enemyTypesOf, itemsOf } from '../config/components.js';
 import { World } from '../logic/world.js';
+import { DEFAULT_THEMES } from '../config/themes.js';
 
 const pic = 'data:image/png;base64,x';
 const T = '2026-10-29T12:00:00.000Z';
@@ -11,7 +12,9 @@ describe('data migration (v1 → components)', () => {
     const { db, changed } = migrateDb({ settings: {}, assets: [] });
     expect(changed).toBe(true);
     expect(db.assets.map((a) => a.id)).toEqual(DEFAULT_COMPONENTS.map((c) => c.id));
-    expect(db.settings).toMatchObject({ componentsSeeded: true, dataVersion: DATA_VERSION });
+    expect(db.settings).toMatchObject({ dataVersion: DATA_VERSION, themesSeeded: true });
+    expect(db.settings.builtInsSeeded).toHaveLength(DEFAULT_COMPONENTS.length);
+    expect(db.themes.map((th) => th.id)).toEqual(DEFAULT_THEMES.map((th) => th.id));
     // running again changes nothing; deleted built-ins don't come back
     const again = migrateDb({ ...db, assets: db.assets.filter((a) => a.id !== 'goblin') });
     expect(again.changed).toBe(false);
@@ -62,9 +65,35 @@ describe('data migration (v1 → components)', () => {
       grid: { cols, rows, cell: 16, walk }, enemyTypes: enemyTypesOf(db.assets), buildingTypes: buildingsOf(db.assets).types,
       weapons: itemsOf(db.assets), waves: { rounds: [{ groups: [{ enemy: 'goblin', count: 2 }] }] },
     });
-    expect(Object.keys(w.buildingTypes).sort()).toEqual(['castle', 'house', 'tower']);
+    expect(Object.keys(w.buildingTypes).sort()).toEqual(['castle', 'catapult', 'house', 'tower']);
     expect(w.coreType.id).toBe('townhall');
     expect(w.inventory).toEqual(['stick', 'shortbow']);
     for (let i = 0; i < 300; i++) w.update(1 / 30);
+  });
+
+  it('v2 → v3: new built-ins arrive in an existing browser, deleted ones stay deleted, themes are added', () => {
+    // a version-2 browser: seeded once, goblin deleted by a kid, tower edited (no themes yet)
+    const v2 = migrateDb({ settings: {}, assets: [] }).db;
+    const old = {
+      settings: { componentsSeeded: true, dataVersion: 2 },
+      assets: v2.assets
+        .filter((a) => ['townhall', 'house', 'tower', 'castle', 'wolf', 'orc'].includes(a.id))
+        .map(({ themes, ...a }) => (a.id === 'tower' ? { ...a, name: 'Our tower' } : a)),
+      maps: [], rules: [],
+    };
+    const { db, changed } = migrateDb(old);
+    expect(changed).toBe(true);
+    const ids = db.assets.map((a) => a.id);
+    for (const id of ['catapult', 'skeleton', 'necromancer', 'spider', 'spiderling']) expect(ids).toContain(id);
+    expect(ids).not.toContain('goblin'); // deleted in version 2: stays deleted
+    expect(db.assets.find((a) => a.id === 'tower').name).toBe('Our tower');
+    expect(db.assets.find((a) => a.id === 'wolf').themes).toEqual(['plains', 'goblinForest']);
+    expect(db.themes).toHaveLength(DEFAULT_THEMES.length);
+    expect(db.settings.componentsSeeded).toBeUndefined();
+    // and again: nothing more to do; a deleted new built-in doesn't come back either
+    const again = migrateDb({ ...db, assets: db.assets.filter((a) => a.id !== 'catapult'), themes: db.themes.slice(1) });
+    expect(again.changed).toBe(false);
+    expect(again.db.assets.some((a) => a.id === 'catapult')).toBe(false);
+    expect(again.db.themes).toHaveLength(DEFAULT_THEMES.length - 1);
   });
 });

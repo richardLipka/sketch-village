@@ -75,6 +75,8 @@ const SOUNDS = {
   magic: (c) => { tone(c, { f0: 500, f1: 1400, dur: 0.18, vol: 0.2 }); tone(c, { type: 'triangle', f0: 750, f1: 2100, dur: 0.18, vol: 0.12 }); },
   chest: (c) => [659, 784, 988, 1319].forEach((f, i) => tone(c, { type: 'triangle', f0: f, dur: 0.14, vol: 0.28, delay: i * 0.07 })),
   click: (c) => tone(c, { f0: 900, dur: 0.04, vol: 0.15 }),
+  thud: (c) => { noise(c, { dur: 0.25, vol: 0.35, freq: 250 }); tone(c, { type: 'sine', f0: 120, f1: 50, dur: 0.25, vol: 0.3 }); },
+  summon: (c) => { tone(c, { type: 'sawtooth', f0: 180, f1: 360, dur: 0.4, vol: 0.12 }); tone(c, { type: 'triangle', f0: 270, f1: 540, dur: 0.4, vol: 0.1, delay: 0.05 }); },
   nope: (c) => tone(c, { type: 'square', f0: 160, dur: 0.12, vol: 0.12 }),
 };
 
@@ -97,6 +99,8 @@ export function soundFor(e) {
     case 'won': return 'won';
     case 'lost': return 'lost';
     case 'cantHit': return 'nope';
+    case 'splash': return e.owner === 'stone' ? 'thud' : null;
+    case 'summon': return 'summon';
     default: return null;
   }
 }

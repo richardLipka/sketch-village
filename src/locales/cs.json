@@ -122,7 +122,8 @@
     "weapon": "Zbraně",
     "shield": "Štíty",
     "armor": "Zbroj",
-    "chest": "Truhla"
+    "chest": "Truhla",
+    "texture": "Povrchy"
   },
   "catHint": {
     "hero": "Hlavní postava. Nastav jí body dovedností.",
@@ -140,7 +141,8 @@
     "weapon": "Meče, luky, kouzelné hůlky. Každá nakreslená zbraň je ve hře – vedle obrázku nastav druh, jednu nebo obě ruce a sílu.",
     "shield": "Štíty do levé ruky – nastav, kolik zranění pohltí.",
     "armor": "Zbroj na tělo – nastav, kolik zranění pohltí.",
-    "chest": "Truhla s pokladem, kterou upustí nepřítel – je v ní zbraň."
+    "chest": "Truhla s pokladem, kterou upustí nepřítel – je v ní zbraň.",
+    "texture": "Fotky nebo kresby povrchů – tráva, kameny, písek, koberec… V editoru map (Povrch) jimi můžeš pokrýt barvu mapy."
   },
   "import": {
     "done": "Nahráno: {{added}} nových, {{updated}} aktualizovaných, {{skipped}} beze změny.",
@@ -224,7 +226,21 @@
     "problem_cave_too_close": "Jeskyně {{n}} je moc blízko radnice.",
     "problem_cave_off_path": "Jeskyně {{n}} není u cesty.",
     "problem_cave_not_connected": "Z jeskyně {{n}} nevede cesta k radnici.",
-    "problem_respawn_off_path": "Start hrdiny musí být u cesty."
+    "problem_respawn_off_path": "Start hrdiny musí být u cesty.",
+    "mode_terrain": "Povrch",
+    "terrain_hint": "Každá barva mapy může ve hře vypadat jako povrch – tráva, kameny, voda… Tady se pořád maluje barvami, aby kyblík vyléval správně.",
+    "terrain_none": "Nejdřív něco namaluj.",
+    "texture_none": "Jen barva",
+    "preview": "Ukázat povrchy",
+    "my_textures": "Tvoje povrchy",
+    "tex_grass": "Tráva",
+    "tex_meadow": "Kvetoucí louka",
+    "tex_dirt": "Polní cesta",
+    "tex_sand": "Písek",
+    "tex_cobble": "Dlažba",
+    "tex_stone": "Skála",
+    "tex_water": "Voda",
+    "tex_snow": "Sníh"
   },
   "play": {
     "title": "Hrát",
@@ -364,7 +380,14 @@
     "f_soldierRespawn": "Nový voják za (s)",
     "f_income": "Mince za kolo",
     "f_heal": "Léčení za s",
-    "f_healRange": "Dosah léčení"
+    "f_healRange": "Dosah léčení",
+    "name_lobs": "Hází kameny (katapult)",
+    "hint_lobs": "Hodí kámen na největší skupinu pěších nepřátel – kde dopadne, zraní všechny. Létající nepřátele ani ty těsně u sebe netrefí.",
+    "line_lobs": "kámen {{lobDamage}} na plochu {{lobSplash}}, dostřel {{lobRange}}, každých {{lobCooldown}} s",
+    "f_lobDamage": "Síla kamene",
+    "f_lobRange": "Dostřel",
+    "f_lobCooldown": "Hod každých (s)",
+    "f_lobSplash": "Plocha (px)"
   },
   "weapons": {
     "title": "Zbraně",
@@ -447,7 +470,14 @@
     "new_name": "Příšera",
     "name": "Jméno",
     "color": "Barva (než bude obrázek)",
-    "confirm_delete": "Smazat nepřítele „{{name}}“? Vlny, které ho používají, ho vynechají."
+    "confirm_delete": "Smazat nepřítele „{{name}}“? Vlny, které ho používají, ho vynechají.",
+    "f_size": "Velikost",
+    "minions": "Svolává pomocníky",
+    "minions_hint": "Vyber, které nepřátele svolává – pokaždé jednoho z nich náhodně. Pomocníci sami nikoho nesvolávají.",
+    "f_minionCount": "Kolik najednou",
+    "f_minionEvery": "Každých (s)",
+    "f_minionMax": "Nejvíc naživu",
+    "f_minionOnDeath": "Další, když zemře"
   },
   "waves": {
     "edit": "Vlny",
@@ -564,5 +594,22 @@
     "g_soldier_max": "Vojáků na hrad",
     "g_soldier_speed": "Rychlost vojáků",
     "g_soldier_aggro": "Dosah vojáků"
+  },
+  "themes": {
+    "title": "Témata",
+    "button": "Témata",
+    "hint": "Světy jako pláně, hřbitov nebo skřetí les. Nepřátelé a budovy mohou patřit k tématům a každá mapa může mít své: na mapě se dají stavět jen budovy jejího tématu (nebo bez tématu) a editor vln ukáže nepřátele tématu jako první.",
+    "add": "Nové téma",
+    "new_name": "Nový svět",
+    "icon": "Značka",
+    "confirm_delete": "Smazat téma „{{name}}“? Věci a mapy, které ho používají, zůstanou, jen bez tohoto tématu.",
+    "used": "použito {{n}}×",
+    "all": "Vše",
+    "label": "Témata",
+    "component_hint": "Ke kterým světům patří. Když nic nezaškrtneš, hodí se do každého světa.",
+    "map_theme": "Téma",
+    "no_theme": "– bez tématu –",
+    "fits": "Patří k tématu",
+    "others": "Ostatní nepřátelé"
   }
 }

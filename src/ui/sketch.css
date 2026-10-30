@@ -291,3 +291,15 @@ label { display: inline-flex; gap: 8px; align-items: center; }
   .page { padding-left: 16px; }
   body { background-image: repeating-linear-gradient(var(--paper) 0 31px, var(--paper-line) 31px 32px); }
 }
+
+/* toggle chips: themes, minion kinds */
+.btn.chip { min-height: 40px; padding: 4px 12px; font-size: 0.95em; border-radius: 999px; gap: 6px; }
+.btn.chip.active { background: var(--hl-yellow); }
+.chip-img { width: 26px; height: 26px; object-fit: contain; }
+.chip-dot { display: inline-block; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--ink); }
+
+/* map editor: terrain textures */
+.terrain-row { gap: 8px; margin: 4px 0; align-items: center; }
+.terrain-row .swatch { width: 32px; height: 32px; cursor: default; }
+.tex-swatch { display: inline-block; width: 40px; height: 40px; border: 2px solid var(--ink); border-radius: 6px; object-fit: cover; }
+.terrain-row select { min-height: 44px; }

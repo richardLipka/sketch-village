@@ -327,7 +327,7 @@ describe('new kinds of buildings, made only from data', () => {
     const market = { id: 'market', name: { cs: 'Trh', en: 'Market' }, features: ['income', 'workers'], levels: [{ cost: 10, time: 5, hp: 300, round: 1, income: 7, workers: 2 }] };
     const well = { id: 'well', name: { cs: 'Studna', en: 'Well' }, features: ['healHero'], levels: [{ cost: 10, time: 5, hp: 300, round: 1, heal: 20, healRange: 100 }] };
     const w = makeWorld({ coins: 100, rounds: [{ groups: [] }, { groups: [] }], buildingTypes: [...OPEN_TYPES, market, well] });
-    expect(Object.keys(w.describeSpot('s1').options.reduce((o, x) => ({ ...o, [x.type]: 1 }), {}))).toEqual(['house', 'tower', 'castle', 'market', 'well']);
+    expect(Object.keys(w.describeSpot('s1').options.reduce((o, x) => ({ ...o, [x.type]: 1 }), {}))).toEqual(['house', 'tower', 'castle', 'catapult', 'market', 'well']);
     goTo(w, spot(w, 's1'));
     w.build('s1', 'market');
     w.build('s4', 'well');
@@ -383,10 +383,10 @@ describe('describeSpot', () => {
     const w = makeWorld({ coins: 35 });
     let d = w.describeSpot('s3');
     expect(d.building).toBeNull();
-    expect(d.options.map((o) => [o.type, o.reason])).toEqual([['house', 'far'], ['tower', 'far'], ['castle', 'far']]);
+    expect(d.options.map((o) => [o.type, o.reason])).toEqual([['house', 'far'], ['tower', 'far'], ['castle', 'far'], ['catapult', 'far']]);
     goTo(w, spot(w, 's3'));
     d = w.describeSpot('s3');
-    expect(d.options.map((o) => o.reason)).toEqual([null, null, 'coins']);
+    expect(d.options.map((o) => o.reason)).toEqual([null, null, 'coins', 'coins']);
     w.build('s3', 'tower');
     d = w.describeSpot('s3');
     expect(d.building).toMatchObject({ type: 'tower', level: 0, state: 'building' });

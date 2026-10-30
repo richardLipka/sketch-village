@@ -3,6 +3,8 @@ import Phaser from 'phaser';
 import { useTranslation } from 'react-i18next';
 import GameScene from './GameScene.js';
 import { mapCanvas, gridFromCanvas, ruggedRoads } from '../maps/mapRuntime.js';
+import { texturedCanvas } from '../maps/textures.js';
+import { fitsTheme } from '../config/themes.js';
 import { loadImage } from '../assets/imageEncoding.js';
 import SelectionPanel from './SelectionPanel.jsx';
 import { Resources, Lives, WaveInfo, AttackBar, Equipment, Toolbar, Coach } from './GameOverlay.jsx';
@@ -48,6 +50,8 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
   // latest values for callbacks that the running scene / stable handlers call
   const live = useRef({});
   const lang = i18n.language;
+  // a themed map offers only the buildings of its theme (and those without one); the Town Hall always
+  const types = useMemo(() => buildings.types.filter((ty) => ty.core || fitsTheme(ty, map.theme)), [buildings, map.theme]);
   const typeName = useCallback((id) => buildings.types.find((ty) => ty.id === id)?.name?.[lang] ?? id, [buildings, lang]);
   live.current = { t, lang, typeName, tip, onSettings, weapons, onExit, wobble: !!settings.wobble, muted: !!settings.muted };
 
@@ -102,7 +106,8 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
     (async () => {
       const bg = await mapCanvas(map);
       const grid = gridFromCanvas(bg, map.palette); // walkability from the painted map…
-      const shown = ruggedRoads(bg, map.palette, map.id); // …the picture gets rugged road edges
+      // …the picture gets rugged road edges and the map's terrain textures
+      const shown = await texturedCanvas(ruggedRoads(bg, map.palette, map.id), map.textures, assets);
       const firstImage = (cat) => assets.find((a) => a.category === cat)?.images.find(Boolean);
       const images = { background: shown };
       const load = async (key, src) => { if (src) images[key] = await loadImage(src); };
@@ -113,7 +118,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
       // is one variant, picked at random per building; one texture per level,
       // a missing level uses the previous drawing
       const variants = {};
-      for (const type of buildings.types) {
+      for (const type of types) {
         const looks = buildings.looks[type.id] ?? [];
         variants[type.id] = looks.length;
         for (const [v, images] of looks.entries()) {
@@ -138,7 +143,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
       if (!alive) return;
 
       const world = new World({
-        map, grid, enemyTypes, buildingTypes: buildings.types, rules, weapons, coinTypes,
+        map, grid, enemyTypes, buildingTypes: types, rules, weapons, coinTypes,
         waves: wavesOf(map, rules.balance),
         heroPoints: hero?.stats ?? DEFAULT_HERO_POINTS,
       });
@@ -154,7 +159,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
         scene: [],
       });
       gameRef.current.scene.add('game', GameScene, true, {
-        world, map, images, variants, enemyTypes, buildingTypes: buildings.types, wobble: !!live.current.wobble,
+        world, map, images, variants, enemyTypes, buildingTypes: types, wobble: !!live.current.wobble,
         onHud: setHud, onEvent, onSelect: setSelection, onAnyEvent: anyEvent,
       });
       // dev-only handle for automated browser testing
@@ -168,7 +173,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
       worldRef.current = null;
     };
     // only things that change the game itself restart it
-  }, [map, hero, assets, enemyTypes, buildings, rules, weapons, restart, onEvent, anyEvent]);
+  }, [map, hero, assets, enemyTypes, buildings, types, rules, weapons, restart, onEvent, anyEvent]);
 
   const scene = () => gameRef.current?.scene.getScene('game');
   useEffect(() => { const s = scene(); if (s) s.wobble = wobble; }, [wobble, hud === null]);
@@ -277,7 +282,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
         {playing && selection && (
           <SelectionPanel
             worldRef={worldRef} selection={selection} version={panelVersion}
-            types={buildings.types} weapons={weapons} assets={assets}
+            types={types} weapons={weapons} assets={assets}
             onClose={closePanel} onBuild={onBuild} onUpgrade={onUpgrade} onSell={onSell}
             onUpgradeTownHall={onUpgradeTownHall} onUpgradeHero={onUpgradeHero} onBuyWeapon={onBuyWeapon}
           />

@@ -2,12 +2,13 @@
 // Pure logic – the IndexedDB side lives in store.js.
 
 export const SAVE_FORMAT = 'sketch-village';
-export const SAVE_VERSION = 2; // 2: components (data/migrate.js upgrades version 1 files)
+export const SAVE_VERSION = 3; // 2: components (data/migrate.js upgrades version 1 files), 3: themes
 
-// Collections of id-keyed records. `assets` holds all components; enemyTypes,
+// Collections of id-keyed records. `assets` holds all components, `themes` the
+// worlds (config/themes.js); enemyTypes,
 // buildingTypes and weapons are only read from version-1 files and are turned
 // into components after the import (data/migrate.js).
-export const COLLECTIONS = ['assets', 'maps', 'enemyTypes', 'buildingTypes', 'rules', 'weapons'];
+export const COLLECTIONS = ['assets', 'maps', 'themes', 'enemyTypes', 'buildingTypes', 'rules', 'weapons'];
 
 export function newId() {
   if (globalThis.crypto?.randomUUID) return crypto.randomUUID();

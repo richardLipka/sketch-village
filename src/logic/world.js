@@ -5,7 +5,8 @@
 //              all spawned and all dead → reward → next prep … → won
 //   enemies:   ground ones follow the flow field to the Town Hall, flying ones fly
 //              straight; on the way they attack anything in range (hero, soldiers,
-//              buildings, Town Hall)
+//              buildings, Town Hall); summoners (necromancer, spider queen...) call
+//              minions now and then and when they die
 //   hero:      walks on roads, melee / ranged / magic (player's choice; magic needs
 //              a magic weapon), 5 lives; every lost life = 10 s absence, then back
 //              at the Town Hall, which also heals it; auto-attacks what is in range
@@ -14,9 +15,11 @@
 //              weapons takes 2 s; items from chests or the Town Hall shop
 //   town hall: shoots arrows like a weak tower (stronger with each level)
 //   coins:     drop on roads, must be picked up, vanish after 30 s
-//   buildings: built/upgraded on the 10 spots when the hero is near; houses give
-//              workers (faster building), towers shoot the enemy nearest to the
-//              centre, castles send up to 3 soldiers; slow self-repair; destroyed
+//   buildings: built/upgraded on the spots when the hero is near; what they do
+//              comes from their features (FEATURE_BEHAVIOUR below): workers
+//              (faster building), arrows at the enemy nearest to the centre,
+//              catapult stones on the biggest group, soldiers, coins, healing;
+//              slow self-repair; destroyed
 //              → ruin, rebuild at level 1. Town Hall level caps building levels
 //              and hero upgrades.
 //   lost:      Town Hall destroyed, or the hero lost all lives
@@ -46,6 +49,19 @@ export function mulberry32(seed) {
 }
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+const CATAPULT_MIN_RANGE = 50; // px: a stone can't land right next to the catapult
+
+// What each building feature (config/features.js) does every frame for a ready
+// building or the Town Hall. A new feature = its numbers in features.js + one
+// line here. `workers` and `income` have no frame behaviour: they are counted
+// in buildSpeed and endRound.
+const FEATURE_BEHAVIOUR = {
+  shoots: (w, b, s, dt) => { if (s.damage > 0 && s.range > 0) w.towerShoot(b, s, dt); },
+  lobs: (w, b, s, dt) => { if (s.lobDamage > 0 && s.lobRange > 0) w.catapultShoot(b, s, dt); },
+  soldiers: (w, b, s, dt) => w.castleSpawn(b, s, dt),
+  healHero: (w, b, s, dt) => w.healHero(b, s, dt),
+};
 
 export class World {
   /**
@@ -654,13 +670,12 @@ export class World {
 
   /** What a ready building (or the Town Hall) does every frame, by its features. */
   useFeatures(b, type, stats, dt) {
-    if (hasFeature(type, 'shoots') && stats.damage > 0 && stats.range > 0) this.towerShoot(b, stats, dt);
-    if (hasFeature(type, 'soldiers')) this.castleSpawn(b, stats, dt);
-    if (hasFeature(type, 'healHero')) {
-      const h = this.hero;
-      if (!h.dead && h.hp < h.maxHp && dist(h, b) <= (stats.healRange ?? 80)) h.hp = Math.min(h.maxHp, h.hp + (stats.heal ?? 0) * dt);
-    }
-    // workers and income are counted elsewhere (buildSpeed, endRound)
+    for (const f of type.features ?? []) FEATURE_BEHAVIOUR[f]?.(this, b, stats, dt);
+  }
+
+  healHero(b, stats, dt) {
+    const h = this.hero;
+    if (!h.dead && h.hp < h.maxHp && dist(h, b) <= (stats.healRange ?? 80)) h.hp = Math.min(h.maxHp, h.hp + (stats.heal ?? 0) * dt);
   }
 
   // distance along the road (ground) or straight (flying) to the Town Hall
@@ -683,6 +698,27 @@ export class World {
     if (!best) return;
     b.cooldown = stats.cooldown;
     this.shoot(b, best, stats.damage, 'tower');
+  }
+
+  /**
+   * Catapult: a stone at the walking enemy in range with the most other walking
+   * enemies around it (ties: the one nearest to the centre). The stone flies to
+   * where the enemy stood and hurts every walking enemy where it lands.
+   */
+  catapultShoot(b, stats, dt) {
+    b.lobCooldown = Math.max(0, (b.lobCooldown ?? 0) - dt);
+    if (b.lobCooldown > 0) return;
+    const inRange = this.enemies.filter((e) => !e.flying && dist(b, e) <= stats.lobRange && dist(b, e) >= CATAPULT_MIN_RANGE);
+    if (!inRange.length) return;
+    let best = null, bn = -1, bv = Infinity;
+    for (const e of inRange) {
+      let n = 0;
+      for (const o of inRange) if (dist(e, o) <= stats.lobSplash) n++;
+      const v = this.toCentre(e);
+      if (n > bn || (n === bn && v < bv)) { best = e; bn = n; bv = v; }
+    }
+    b.lobCooldown = stats.lobCooldown;
+    this.lob(b, { x: best.x, y: best.y }, stats.lobDamage, stats.lobSplash);
   }
 
   castleSpawn(b, stats, dt) {
@@ -750,19 +786,54 @@ export class World {
 
   // ---------------- enemies ----------------
 
+  /** A wave entry comes out of its cave. */
   spawn({ enemy, cave }) {
-    const type = this.types[enemy];
     const c = this.caves.find((x) => x.id === cave);
-    if (!type || !c) return;
+    if (c) this.spawnEnemy(enemy, c);
+  }
+
+  /** A new enemy at `at` (ground ones step onto the nearest road); `summoner` = who called it. */
+  spawnEnemy(typeId, at, summoner = null) {
+    const type = this.types[typeId];
+    if (!type) return null;
     const hp = Math.round(type.hp * hpScale(this.b, this.round));
-    const start = type.flying ? { x: c.x, y: c.y } : this.snapToRoad(c);
+    const start = type.flying ? { x: at.x, y: at.y } : this.snapToRoad(at);
     const e = {
       id: this.nextId++, kind: 'enemy', type: type.id, x: start.x, y: start.y,
-      hp, maxHp: hp, flying: !!type.flying, radius: type.boss ? this.b.bossRadius : this.b.enemyRadius,
+      hp, maxHp: hp, flying: !!type.flying, radius: (type.boss ? this.b.bossRadius : this.b.enemyRadius) * (type.size ?? 1),
       cooldown: 0, next: null, offset: (this.rng() * 2 - 1) * SEPARATION, dead: false, attacking: false,
+      summoner: summoner?.id ?? null, summonTimer: type.minionEvery ?? 0,
     };
     this.enemies.push(e);
-    this.emit('spawn', { id: e.id, enemy: type.id });
+    this.emit('spawn', { id: e.id, enemy: type.id, summoned: !!summoner });
+    return e;
+  }
+
+  /** Minion types an enemy can call, or none (minions never call minions). */
+  minionsOf(e, type) {
+    if (e.summoner) return [];
+    return (type.minions ?? []).filter((id) => this.types[id] && id !== type.id);
+  }
+
+  /** Call `n` minions around enemy `e` (one random type each). */
+  callMinions(e, kinds, n) {
+    for (let i = 0; i < n; i++) {
+      const a = this.rng() * Math.PI * 2;
+      const kind = kinds[Math.floor(this.rng() * kinds.length)];
+      this.spawnEnemy(kind, { x: e.x + Math.cos(a) * 14, y: e.y + Math.sin(a) * 14 }, e);
+    }
+    if (n > 0) this.emit('summon', { id: e.id, x: e.x, y: e.y, count: n });
+  }
+
+  /** Summoners call minions every `minionEvery` s while fewer than `minionMax` of theirs live. */
+  summon(e, type, dt) {
+    const kinds = this.minionsOf(e, type);
+    if (!kinds.length || !(type.minionEvery > 0)) return;
+    e.summonTimer -= dt;
+    if (e.summonTimer > 0) return;
+    e.summonTimer = type.minionEvery;
+    const alive = this.enemies.filter((m) => m.summoner === e.id && !m.dead).length;
+    this.callMinions(e, kinds, Math.max(0, Math.min(type.minionCount ?? 1, (type.minionMax ?? 6) - alive)));
   }
 
   // The nearest thing an enemy can hit right now, or null.
@@ -782,6 +853,7 @@ export class World {
   updateEnemy(e, dt) {
     const type = this.types[e.type];
     e.cooldown = Math.max(0, e.cooldown - dt);
+    this.summon(e, type, dt);
     const target = this.enemyTarget(e, type);
     e.attacking = !!target;
     e.victim = target;
@@ -920,6 +992,9 @@ export class World {
       this.emit('chestDropped', { x: spot.x, y: spot.y });
     }
     if (this.hero.target === e.id) this.hero.target = null;
+    // a spider queen leaves her young behind
+    const kinds = this.minionsOf(e, type);
+    if (kinds.length && type.minionOnDeath > 0) this.callMinions(e, kinds, type.minionOnDeath);
     this.emit('enemyDied', { id: e.id, x: e.x, y: e.y, coins: n });
   }
 
@@ -945,12 +1020,23 @@ export class World {
 
   // ---------------- projectiles ----------------
 
-  // owner: 'tower' (also the Town Hall), 'hero', 'magic' (hero spell), 'enemy'
+  // owner: 'tower' (also the Town Hall), 'hero', 'magic' (hero spell), 'enemy',
+  // 'stone' (catapult - flies to a spot on the ground, see lob)
   shoot(from, target, damage, owner, splash = 0) {
     this.projectiles.push({
       id: this.nextId++, owner, x: from.x, y: from.y - (owner === 'tower' ? 30 : 0),
       target, damage, splash, speed: this.b.projectileSpeed * (owner === 'magic' ? 0.7 : 1),
     });
+  }
+
+  /** A catapult stone: flies in an arc to a spot and hurts walking enemies around it. */
+  lob(from, spot, damage, splash) {
+    const target = { kind: 'ground', x: spot.x, y: spot.y };
+    this.projectiles.push({
+      id: this.nextId++, owner: 'stone', x: from.x, y: from.y - 20, sx: from.x, sy: from.y - 20,
+      total: Math.max(1, dist(from, spot)), target, damage, splash, groundOnly: true, speed: this.b.projectileSpeed * 0.55,
+    });
+    this.emit('lob', { x: from.x, y: from.y });
   }
 
   targetGone(t) {
@@ -959,6 +1045,7 @@ export class World {
       case 'townhall': return t.hp <= 0;
       case 'building': return t.state === 'ruin';
       case 'soldier': return t.dead;
+      case 'ground': return false;
       default: return t.dead || !this.enemies.includes(t);
     }
   }
@@ -971,9 +1058,12 @@ export class World {
       if (dist(p, t) <= step) {
         p.done = true;
         if (p.splash > 0) {
-          // a spell hurts every enemy around the target, flying ones too
-          for (const e of [...this.enemies]) if (dist(e, t) <= p.splash + e.radius) this.damageEnemy(e, p.damage);
-          this.emit('splash', { x: t.x, y: t.y, radius: p.splash });
+          // a spell hurts every enemy around the target, flying ones too; a stone only walking ones
+          for (const e of [...this.enemies]) {
+            if (p.groundOnly && e.flying) continue;
+            if (dist(e, t) <= p.splash + e.radius) this.damageEnemy(e, p.damage);
+          }
+          this.emit('splash', { x: t.x, y: t.y, radius: p.splash, owner: p.owner });
         } else {
           this.damage(t, p.damage);
         }

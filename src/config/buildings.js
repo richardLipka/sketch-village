@@ -54,6 +54,15 @@ export const DEFAULT_BUILDING_TYPES = [
       { cost: 90, time: 22, hp: 1500, round: 16, soldierCount: 3, soldierHp: 60, soldierDamage: 12, soldierCooldown: 1.0, soldierRespawn: 8 },
     ],
   },
+  {
+    // area attack: slow, but every stone hurts a whole group on the road
+    id: 'catapult', name: { cs: 'Katapult', en: 'Catapult' }, features: ['lobs'],
+    levels: [
+      { cost: 45, time: 16, hp: 550, round: 6, lobDamage: 14, lobRange: 230, lobCooldown: 3.2, lobSplash: 45 },
+      { cost: 65, time: 18, hp: 800, round: 10, lobDamage: 22, lobRange: 250, lobCooldown: 3.0, lobSplash: 50 },
+      { cost: 95, time: 22, hp: 1100, round: 15, lobDamage: 32, lobRange: 270, lobCooldown: 2.8, lobSplash: 55 },
+    ],
+  },
 ];
 
 export const TOWN_HALL_LEVELS = DEFAULT_BUILDING_TYPES[0].levels;

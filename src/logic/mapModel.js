@@ -66,6 +66,8 @@ export function emptyMap(name = '') {
     caves: [], // [{ id, x, y, asset? }]
     heroRespawn: null, // unused since v1.1 – the hero always (re)spawns at the Town Hall
     decorations: [], // [{ id, asset, x, y, scale }]
+    theme: null, // theme (world) id – config/themes.js
+    textures: {}, // { '#rrggbb': textureId } – maps/textures.js
     waves: null, // filled in M3
     createdAt: now,
     updatedAt: now,

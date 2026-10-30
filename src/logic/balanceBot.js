@@ -45,7 +45,7 @@ export function testMap() {
 const PLAN = [
   ['build', 's1', 'tower'], ['build', 's2', 'house'], ['build', 's3', 'tower'], ['th'],
   ['build', 's4', 'castle'], ['up', 's1'], ['up', 's3'], ['hero', 'ranged'], ['build', 's5', 'tower'],
-  ['build', 's6', 'tower'], ['up', 's2'], ['th'], ['up', 's1'], ['up', 's3'], ['up', 's4'],
+  ['build', 's6', 'catapult'], ['up', 's2'], ['th'], ['up', 's1'], ['up', 's3'], ['up', 's4'],
   ['hero', 'armor'], ['build', 's7', 'tower'], ['build', 's8', 'tower'], ['up', 's5'], ['up', 's6'],
   ['up', 's4'], ['up', 's5'], ['up', 's6'], ['build', 's9', 'castle'], ['hero', 'ranged'],
   ['up', 's7'], ['up', 's8'], ['build', 's10', 'house'], ['up', 's7'], ['up', 's8'], ['hero', 'armor'], ['hero', 'ranged'],

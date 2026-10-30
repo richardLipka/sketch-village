@@ -138,6 +138,7 @@ export default class GameScene extends Phaser.Scene {
       hexagon: (g, lvl) => { poly(g, 32, 32, 27, 6, 0, 0xc4b5fd); dots(g, lvl, 32, 32); },
       diamond: (g, lvl) => { poly(g, 32, 32, 28, 4, 0, 0xfcd34d); dots(g, lvl, 32, 32); },
       pentagon: (g, lvl) => { poly(g, 32, 33, 27, 5, -Math.PI / 2, 0x86efac); dots(g, lvl, 32, 34); },
+      octagon: (g, lvl) => { poly(g, 32, 32, 27, 8, Math.PI / 8, 0xd6d3d1); dots(g, lvl, 32, 32); },
     };
     for (const type of this.cfg.buildingTypes ?? []) {
       const shape = shapeOf(type);
@@ -172,6 +173,11 @@ export default class GameScene extends Phaser.Scene {
       g.fillStyle(0xc084fc, 0.5).fillCircle(16, 16, 13);
       g.fillStyle(0xa855f7).fillCircle(16, 16, 8);
       g.fillStyle(0xffffff).fillCircle(13, 13, 3);
+    });
+    tex('stone', 32, (g) => {
+      g.fillStyle(0x78716c).fillCircle(16, 16, 10);
+      g.lineStyle(3, INK).strokeCircle(16, 16, 10);
+      g.fillStyle(0xa8a29e).fillCircle(13, 13, 3);
     });
     tex('projectile', 32, (g) => {
       g.lineStyle(3, 0x78350f).lineBetween(4, 16, 26, 16);
@@ -335,7 +341,8 @@ export default class GameScene extends Phaser.Scene {
     if (e.type === 'coinPicked') this.floatText(e.x, e.y - 16, `+${e.value ?? 1}`, '#a16207');
     if (e.type === 'cantHit') this.cfg.onEvent?.(e);
     if (e.type === 'buildingDestroyed') { const s = this.world.spots.find((p) => p.id === e.spotId); if (s) this.puff(s.x, s.y); }
-    if (e.type === 'splash') this.splash(e.x, e.y, e.radius);
+    if (e.type === 'splash') this.splash(e.x, e.y, e.radius, e.owner === 'stone' ? 0x78716c : 0xa855f7);
+    if (e.type === 'summon') { this.splash(e.x, e.y, 36, 0x4c1d95); this.floatText(e.x, e.y - 36, `+${e.count}`, '#4c1d95'); }
     if (e.type === 'chestOpened') this.floatText(e.x, e.y - 24, e.weapon ? '🎁' : `+${e.coins}`, '#7c3aed');
     if (e.type === 'sold') { this.puff(e.x, e.y); if (e.refund) this.floatText(e.x, e.y - 30, `+${e.refund}`, '#a16207'); }
     if (['waveStart', 'roundEnd', 'won', 'lost', 'heroDown', 'heroRespawn', 'bonus', 'heroLostLife', 'built', 'upgraded', 'buildingDestroyed', 'sold', 'heroUpgraded', 'unlocked', 'chestOpened', 'weaponBought'].includes(e.type)) this.cfg.onEvent?.(e);
@@ -356,15 +363,20 @@ export default class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: t, y: y - 26, alpha: 0, duration: 700, onComplete: () => { t.setVisible(false); this.textPool.push(t); } });
   }
 
-  // purple ring where a spell lands (drawn once at 0,0 with radius 1, then scaled)
-  splash(x, y, r) {
+  // a ring where a spell or a catapult stone lands, or where minions are called
+  // (drawn once at 0,0 with radius 50 in white, then scaled and tinted)
+  splash(x, y, r, color = 0xa855f7) {
     const g = this.pooled(this.splashPool, () => {
       const n = this.add.graphics().setDepth(9300);
-      n.fillStyle(0xa855f7, 0.25).fillCircle(0, 0, 50);
-      n.lineStyle(3, 0x7e22ce, 0.8).strokeCircle(0, 0, 50);
+      n.fillStyle(0xffffff, 0.3).fillCircle(0, 0, 50);
+      n.lineStyle(3, 0xffffff, 0.9).strokeCircle(0, 0, 50);
       return n;
     });
     g.setPosition(x, y).setScale(r / 50);
+    if (g.ringColor !== color) {
+      g.clear().fillStyle(color, 0.28).fillCircle(0, 0, 50).lineStyle(3, color, 0.85).strokeCircle(0, 0, 50);
+      g.ringColor = color;
+    }
     this.tweens.add({ targets: g, alpha: 0, duration: 400, onComplete: () => { g.setVisible(false); this.splashPool.push(g); } });
   }
 
@@ -411,7 +423,7 @@ export default class GameScene extends Phaser.Scene {
 
     for (const e of w.enemies) {
       const type = w.types[e.type];
-      const size = type.boss ? 84 : 48;
+      const size = (type.boss ? 84 : 48) * (type.size ?? 1);
       const s = this.sprite(e.id, () => ({
         img: this.add.image(e.x, e.y, this.textures.exists(`enemy:${type.id}`) ? `enemy:${type.id}` : 'hero').setDisplaySize(size, size).setOrigin(0.5, 0.75),
         bar: this.add.graphics().setDepth(9000),
@@ -465,9 +477,15 @@ export default class GameScene extends Phaser.Scene {
     }
 
     for (const p of w.projectiles) {
-      const key = p.owner === 'magic' ? 'magic' : 'projectile';
-      const s = this.sprite(`p${p.id}`, () => ({ img: this.add.image(p.x, p.y, key).setDisplaySize(26, 26).setDepth(9100) }));
-      s.img.setPosition(p.x, p.y).setRotation(key === 'magic' ? this.time.now / 100 : p.angle ?? 0);
+      const key = p.owner === 'magic' ? 'magic' : p.owner === 'stone' ? 'stone' : 'projectile';
+      const s = this.sprite(`p${p.id}`, () => ({ img: this.add.image(p.x, p.y, key).setDisplaySize(key === 'stone' ? 22 : 26, key === 'stone' ? 22 : 26).setDepth(9100) }));
+      if (key === 'stone') {
+        // a stone flies in an arc: highest half way
+        const k = Math.min(1, Math.hypot(p.x - p.sx, p.y - p.sy) / p.total);
+        s.img.setPosition(p.x, p.y - Math.sin(k * Math.PI) * Math.min(120, p.total * 0.45)).setRotation(this.time.now / 120);
+      } else {
+        s.img.setPosition(p.x, p.y).setRotation(key === 'magic' ? this.time.now / 100 : p.angle ?? 0);
+      }
     }
 
     for (const c of w.chests) {

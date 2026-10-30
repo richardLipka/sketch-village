@@ -17,6 +17,13 @@ export const FEATURES = {
   workers: { icon: '👷', fields: [['workers', 0, 20, 1]], defaults: { workers: 1 } },
   // towers (and the Town Hall): shoot the enemy in range nearest to the centre
   shoots: { icon: '🏹', fields: [['damage', 0, 500, 1], ['range', 30, 600, 10], ['cooldown', 0.1, 10, 0.05]], defaults: { damage: 8, range: 180, cooldown: 1 } },
+  // catapults: throw a stone at the biggest group of walking enemies in range;
+  // it hurts every walking enemy where it lands (not flying ones, not too close)
+  lobs: {
+    icon: '🪨',
+    fields: [['lobDamage', 0, 500, 1], ['lobRange', 60, 700, 10], ['lobCooldown', 0.5, 15, 0.1], ['lobSplash', 10, 200, 5]],
+    defaults: { lobDamage: 14, lobRange: 230, lobCooldown: 3.2, lobSplash: 45 },
+  },
   // castles: keep soldiers that fight ground enemies around them
   soldiers: {
     icon: '🛡️',
@@ -44,6 +51,7 @@ export function newLevel(features, from = {}) {
 export function shapeOf(type) {
   if (type?.core) return 'circle';
   if (hasFeature(type, 'soldiers')) return 'hexagon';
+  if (hasFeature(type, 'lobs')) return 'octagon';
   if (hasFeature(type, 'shoots')) return 'triangle';
   if (hasFeature(type, 'workers')) return 'square';
   if (hasFeature(type, 'income')) return 'diamond';

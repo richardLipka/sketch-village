@@ -50,7 +50,7 @@ export default function DataPanel({ db, onReplaceDb }) {
     if (!confirm(t('data.confirm_purge_all'))) return;
     await purgeAll();
     // the built-in components come back (the game needs a Town Hall, enemies…)
-    const next = { ...db, settings: { ...db.settings, componentsSeeded: false } };
+    const next = { ...db, settings: { ...db.settings, builtInsSeeded: [], themesSeeded: false } };
     for (const c of COLLECTIONS) next[c] = [];
     onReplaceDb(next);
     setMessage({ ok: true, text: t('data.purged') });

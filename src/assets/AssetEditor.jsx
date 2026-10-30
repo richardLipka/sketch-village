@@ -12,11 +12,13 @@ import { DEFAULT_HERO_POINTS } from '../config/heroStats.js';
 import { defaultItemStats } from '../config/weapons.js';
 import { newLevel } from '../config/features.js';
 import { DEFAULT_ENEMY_STATS, defaultComponent, compName } from '../config/components.js';
+import { themeName } from '../config/themes.js';
 import { newId } from '../data/saveFile.js';
 
 // The component editor (SPEC §3.4): one game thing – its name, its pictures and
 // ALL its properties together (a hero's skill points, an enemy's numbers, a
-// building type's features and levels, a weapon's damage, a coin's value…).
+// building type's features and levels, a weapon's damage, a coin's value…) and,
+// for enemies and buildings, the themes (worlds) it belongs to.
 
 const AUTHOR_KEY = 'sv:lastAuthor';
 
@@ -54,7 +56,26 @@ function pictureCount(draft, cat, types) {
   return draft.stats?.levels?.length ?? 1;
 }
 
-export default function AssetEditor({ asset, isNew, heroRules, buildingTypes = [], onSave, onDelete, onCancel }) {
+/** Toggle chips: which themes a component belongs to (none = every world). */
+export function ThemeChips({ value = [], themes, onChange }) {
+  const { t, i18n } = useTranslation();
+  const toggle = (id) => onChange(value.includes(id) ? value.filter((x) => x !== id) : [...value, id]);
+  return (
+    <div>
+      <div className="row" style={{ gap: 6 }}>
+        <b className="small">🏷️ {t('themes.label')}</b>
+        {themes.map((th) => (
+          <button key={th.id} type="button" className={`btn chip ${value.includes(th.id) ? 'active' : ''}`} onClick={() => toggle(th.id)}>
+            {th.icon} {themeName(th, i18n.language)}
+          </button>
+        ))}
+      </div>
+      <p className="small muted" style={{ margin: '2px 0 0' }}>{t('themes.component_hint')}</p>
+    </div>
+  );
+}
+
+export default function AssetEditor({ asset, isNew, heroRules, buildingTypes = [], enemyTypes = [], themes = [], onSave, onDelete, onCancel }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const cat = getCategory(asset.category);
@@ -89,7 +110,7 @@ export default function AssetEditor({ asset, isNew, heroRules, buildingTypes = [
   };
   const restore = () => {
     if (!confirm(t('component.confirm_restore'))) return;
-    set({ name: builtIn.name, stats: structuredClone(builtIn.stats) });
+    set({ name: builtIn.name, stats: structuredClone(builtIn.stats), themes: [...(builtIn.themes ?? [])] });
   };
 
   return (
@@ -100,6 +121,10 @@ export default function AssetEditor({ asset, isNew, heroRules, buildingTypes = [
         <label>{t('editor.author')} <input type="text" value={draft.author ?? ''} onChange={(e) => set({ author: e.target.value })} /></label>
         {builtIn && <span className="small muted">⭐ {t('component.built_in')}</span>}
       </div>
+
+      {cat.themed && themes.length > 0 && (
+        <div style={{ marginBottom: 12 }}><ThemeChips value={draft.themes ?? []} themes={themes} onChange={(v) => set({ themes: v })} /></div>
+      )}
 
       <div className="slots">
         {images.map((img, i) => {
@@ -118,7 +143,7 @@ export default function AssetEditor({ asset, isNew, heroRules, buildingTypes = [
         <div style={{ marginTop: 12 }}>
           {cat.stats === 'hero' && <HeroStatsEditor points={draft.stats} rules={heroRules} onChange={(stats) => set({ stats })} />}
           {cat.stats === 'item' && <ItemStatsEditor category={asset.category} stats={draft.stats} onChange={(stats) => set({ stats })} />}
-          {cat.stats === 'enemy' && <EnemyStatsEditor stats={draft.stats} onChange={(stats) => set({ stats })} />}
+          {cat.stats === 'enemy' && <EnemyStatsEditor id={draft.id} stats={draft.stats} enemies={enemyTypes} onChange={(stats) => set({ stats })} />}
           {cat.stats === 'building' && <BuildingStatsEditor id={draft.id} stats={draft.stats} types={buildingTypes} onChange={(stats) => set({ stats })} />}
           {cat.stats === 'coin' && (
             <NumField label={`🪙 ${t('editor.coin_value')}`} value={draft.stats.value} min={1} max={999} onChange={(v) => set({ stats: { value: Math.round(v) } })} />

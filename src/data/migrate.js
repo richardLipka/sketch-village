@@ -6,13 +6,25 @@
 //  levels / building unlock rounds in the rules become components; drawings of
 //  the old house / tower / castle / townhall kinds become extra looks of those
 //  building types; the built-in components are added once.
+//  v2 → v3: built-in components are tracked by id (`settings.builtInsSeeded`), so
+//  built-ins added in later versions (catapult, skeleton, necromancer, spider…)
+//  arrive in existing browsers too – but one a kid deleted never comes back;
+//  the default themes are added once; built-ins get their default themes.
 
 import { DEFAULT_COMPONENTS, defaultComponent } from '../config/components.js';
+import { DEFAULT_THEMES } from '../config/themes.js';
 import { DEFAULT_BUILDING_TYPES } from '../config/buildings.js';
 import { RULES_ID } from '../config/rules.js';
 import { isWeapon, normalizeItem } from '../config/weapons.js';
 
-export const DATA_VERSION = 2;
+export const DATA_VERSION = 3;
+
+// the built-ins of version 2, which seeded them all at once (`componentsSeeded`)
+const V2_BUILT_INS = [
+  'townhall', 'house', 'tower', 'castle', 'goblin', 'wolf', 'archer', 'orc', 'bat', 'troll', 'dragon',
+  'stick', 'shortbow', 'sword', 'axe', 'longbow', 'crossbow', 'wand', 'firestaff', 'woodshield', 'ironshield', 'leather', 'chainmail',
+  'coin1', 'coin5',
+];
 
 const OLD_BUILDING_KINDS = { townhall: 'townhall', house: 'house', tower: 'tower', castle: 'castle' };
 const LEGACY_FEATURES = { house: ['workers'], tower: ['shoots'], castle: ['soldiers'] };
@@ -42,10 +54,31 @@ export function migrateDb(db) {
   const oldUnlocks = Object.fromEntries((rulesRec?.unlocks ?? []).map((u) => [u.key, u.round]));
   const soldierCount = rulesRec?.build?.soldier?.max;
 
-  // 1) built-in components, once (before old data, which then overrides them)
-  if (!settings.componentsSeeded) {
-    for (const c of DEFAULT_COMPONENTS) if (!byId.has(c.id)) upsert(structuredClone(c));
-    settings.componentsSeeded = true;
+  // 1) built-in components, each once (before old data, which then overrides them)
+  const seeded = new Set(settings.builtInsSeeded ?? (settings.componentsSeeded ? V2_BUILT_INS : []));
+  for (const c of DEFAULT_COMPONENTS) {
+    if (seeded.has(c.id)) continue;
+    if (!byId.has(c.id)) upsert(structuredClone(c));
+    seeded.add(c.id);
+    changed = true;
+  }
+  if (!settings.builtInsSeeded || settings.builtInsSeeded.length !== seeded.size) {
+    settings.builtInsSeeded = [...seeded];
+    changed = true;
+  }
+  delete settings.componentsSeeded;
+  // built-ins from before themes existed get their default themes
+  for (const [i, a] of assets.entries()) {
+    const def = defaultComponent(a.id);
+    if (a.builtIn && a.themes === undefined && def) { assets[i] = { ...a, themes: [...(def.themes ?? [])] }; changed = true; }
+  }
+
+  // 1b) the default themes, once
+  let themes = db.themes ?? [];
+  if (!settings.themesSeeded) {
+    const have = new Set(themes.map((th) => th.id));
+    themes = [...themes, ...DEFAULT_THEMES.filter((th) => !have.has(th.id)).map((th) => structuredClone(th))];
+    settings.themesSeeded = true;
     changed = true;
   }
 
@@ -142,6 +175,6 @@ export function migrateDb(db) {
 
   return {
     changed,
-    db: { ...db, settings, assets, rules, enemyTypes: [], buildingTypes: [], weapons: [] },
+    db: { ...db, settings, assets, rules, themes, enemyTypes: [], buildingTypes: [], weapons: [] },
   };
 }

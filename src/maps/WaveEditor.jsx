@@ -3,15 +3,34 @@ import { useTranslation } from 'react-i18next';
 import { wavesOf, defaultWaves } from '../config/waves.js';
 import { roundSummary, roundDuration, roundReward } from '../logic/waves.js';
 import { BALANCE } from '../config/balance.js';
+import { themeName } from '../config/themes.js';
 
 // Wave editor for one map (SPEC §10): rounds → groups of enemies; each round can
-// override its reward and the prep time before it.
-export default function WaveEditor({ map, enemyTypes, balance = BALANCE, onSave, onCancel }) {
+// override its reward and the prep time before it. On a themed map the enemies
+// of that theme are listed first.
+export default function WaveEditor({ map, enemyTypes, themes = [], balance = BALANCE, onSave, onCancel }) {
   const { t, i18n } = useTranslation();
   const [waves, setWaves] = useState(() => structuredClone(wavesOf(map, balance)));
   const [open, setOpen] = useState(0);
   const lang = i18n.language;
   const name = (id) => enemyTypes.find((e) => e.id === id)?.name?.[lang] ?? id;
+  const theme = themes.find((th) => th.id === map.theme);
+  const ofTheme = theme ? enemyTypes.filter((e) => e.themes?.includes(theme.id)) : [];
+  const otherEnemies = enemyTypes.filter((e) => !ofTheme.includes(e));
+  const enemyOptions = (
+    <>
+      {ofTheme.length > 0 && (
+        <optgroup label={`${theme.icon} ${themeName(theme, lang)}`}>
+          {ofTheme.map((et) => <option key={et.id} value={et.id}>{et.name?.[lang] ?? et.id}</option>)}
+        </optgroup>
+      )}
+      {ofTheme.length > 0 ? (
+        <optgroup label={t('themes.others')}>
+          {otherEnemies.map((et) => <option key={et.id} value={et.id}>{et.name?.[lang] ?? et.id}</option>)}
+        </optgroup>
+      ) : otherEnemies.map((et) => <option key={et.id} value={et.id}>{et.name?.[lang] ?? et.id}</option>)}
+    </>
+  );
 
   const setTop = (k, v) => setWaves((w) => ({ ...w, [k]: v }));
   const setRounds = (fn) => setWaves((w) => ({ ...w, rounds: fn(w.rounds) }));
@@ -22,7 +41,7 @@ export default function WaveEditor({ map, enemyTypes, balance = BALANCE, onSave,
     return v === undefined ? rest : { ...rest, [k]: v };
   }));
   const setGroup = (ri, gi, patch) => setRounds((rs) => rs.map((r, i) => (i !== ri ? r : { ...r, groups: r.groups.map((g, j) => (j === gi ? { ...g, ...patch } : g)) })));
-  const addGroup = (ri) => setRounds((rs) => rs.map((r, i) => (i !== ri ? r : { ...r, groups: [...r.groups, { enemy: enemyTypes[0].id, count: 5, interval: 1.5, delay: 0, spawn: 'all' }] })));
+  const addGroup = (ri) => setRounds((rs) => rs.map((r, i) => (i !== ri ? r : { ...r, groups: [...r.groups, { enemy: (ofTheme[0] ?? enemyTypes[0]).id, count: 5, interval: 1.5, delay: 0, spawn: 'all' }] })));
   const delGroup = (ri, gi) => setRounds((rs) => rs.map((r, i) => (i !== ri ? r : { ...r, groups: r.groups.filter((_, j) => j !== gi) })));
   const addRound = () => { setRounds((rs) => [...rs, structuredClone(rs.at(-1) ?? { groups: [] })]); setOpen(waves.rounds.length); };
   const dupRound = (ri) => setRounds((rs) => [...rs.slice(0, ri + 1), structuredClone(rs[ri]), ...rs.slice(ri + 1)]);
@@ -75,7 +94,7 @@ export default function WaveEditor({ map, enemyTypes, balance = BALANCE, onSave,
                 {r.groups.map((g, gi) => (
                   <div key={gi} className="row small" style={{ gap: 10, marginBottom: 6 }}>
                     <select value={g.enemy} onChange={(e) => setGroup(ri, gi, { enemy: e.target.value })}>
-                      {enemyTypes.map((et) => <option key={et.id} value={et.id}>{et.name?.[lang] ?? et.id}</option>)}
+                      {enemyOptions}
                     </select>
                     <label>{t('waves.count')} <input type="number" min={1} max={100} value={g.count} onChange={(e) => setGroup(ri, gi, { count: num(e.target.value, 1, 100) })} style={{ width: 55 }} /></label>
                     <label>{t('waves.interval')} <input type="number" min={0.2} max={20} step={0.1} value={g.interval} onChange={(e) => setGroup(ri, gi, { interval: num(e.target.value, 0.2, 20) })} style={{ width: 55 }} /></label>

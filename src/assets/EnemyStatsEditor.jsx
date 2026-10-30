@@ -3,21 +3,34 @@ import { useTranslation } from 'react-i18next';
 import NumField from './NumField.jsx';
 import { DEFAULT_ENEMY_STATS } from '../config/components.js';
 
-// Properties of an enemy component, next to its picture.
+// Properties of an enemy component, next to its picture: its numbers, what it
+// is (flies, shoots, boss), its size, and – for summoners like a necromancer or
+// a spider queen – which other enemies it calls, how many and how often.
 
 const FIELDS = [
   ['hp', 1, 5000, 1],
-  ['speed', 5, 200, 1],
+  ['speed', 0, 200, 1],
   ['damage', 0, 200, 1],
   ['cooldown', 0.2, 5, 0.1],
   ['range', 10, 300, 5],
 ];
 
-export default function EnemyStatsEditor({ stats: raw, onChange }) {
-  const { t } = useTranslation();
+const MINION_FIELDS = [
+  ['minionCount', 1, 10, 1],
+  ['minionEvery', 1, 60, 0.5],
+  ['minionMax', 1, 30, 1],
+  ['minionOnDeath', 0, 10, 1],
+];
+
+export default function EnemyStatsEditor({ id, stats: raw, enemies = [], onChange }) {
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language;
   const stats = { ...DEFAULT_ENEMY_STATS, ...raw };
   const set = (patch) => onChange({ ...stats, ...patch });
   const [lo, hi] = stats.coins ?? [1, 1];
+  const minions = stats.minions ?? [];
+  const others = enemies.filter((e) => e.id !== id);
+  const toggleMinion = (mid) => set({ minions: minions.includes(mid) ? minions.filter((x) => x !== mid) : [...minions, mid] });
 
   return (
     <div className="sketch-card" style={{ padding: 10 }}>
@@ -32,6 +45,7 @@ export default function EnemyStatsEditor({ stats: raw, onChange }) {
           <NumField value={lo} min={0} max={99} onChange={(v) => set({ coins: [v, Math.max(v, hi)] })} width={56} />–
           <NumField value={hi} min={0} max={99} onChange={(v) => set({ coins: [Math.min(lo, v), v] })} width={56} />
         </label>
+        <NumField label={t('enemies.f_size')} value={stats.size} min={0.4} max={2.5} step={0.05} pct onChange={(v) => set({ size: v })} />
       </div>
       <div className="row small" style={{ gap: 14, marginTop: 8 }}>
         {[['flying', '🪽'], ['ranged', '🏹'], ['boss', '👑']].map(([k, icon]) => (
@@ -39,6 +53,24 @@ export default function EnemyStatsEditor({ stats: raw, onChange }) {
         ))}
         <label>{t('enemies.color')} <input type="color" value={stats.color} onChange={(e) => set({ color: e.target.value })} style={{ width: 48, height: 36 }} /></label>
       </div>
+
+      <h3 style={{ margin: '12px 0 4px' }}>💀 {t('enemies.minions')}</h3>
+      <p className="small muted" style={{ margin: '0 0 6px' }}>{t('enemies.minions_hint')}</p>
+      <div className="row" style={{ gap: 6 }}>
+        {others.map((e) => (
+          <button key={e.id} type="button" className={`btn chip ${minions.includes(e.id) ? 'active' : ''}`} onClick={() => toggleMinion(e.id)}>
+            {e.image ? <img src={e.image} alt="" className="chip-img" /> : <span className="chip-dot" style={{ background: e.color }} />}
+            {e.name?.[lang] ?? e.id}
+          </button>
+        ))}
+      </div>
+      {minions.length > 0 && (
+        <div className="row" style={{ gap: 14, marginTop: 8 }}>
+          {MINION_FIELDS.map(([f, min, max, step]) => (
+            <NumField key={f} label={t(`enemies.f_${f}`)} value={stats[f]} min={min} max={max} step={step} onChange={(v) => set({ [f]: v })} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

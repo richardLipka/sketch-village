@@ -110,6 +110,8 @@ One screen with two modes:
    - Live overlay toggle: shows the computed walkability grid on top of the painting.
 2. **Place** – put the **village centre / Town Hall**, **10 building spots** (around centre), **caves** on edges, **hero respawn point**. Drag to move, click to delete, validation messages (spot not next to a path, cave not connected, fewer than 10 spots).
 - Reuses SketchPad tools (fill, eraser, undo) generalized to a non-square, large canvas.
+3. **Terrain** – every colour the map is painted with (road, grass and every bigger colour area) can be **covered by a texture in the game**: built-in ones (grass, flower meadow, dirt road, sand, cobblestones, rock, water, snow – drawn procedurally, `maps/textures.js`) or the kids' own photos / drawings (studio kind *Textures*). Painting stays in plain colours, so the bucket fills exactly and the road colour still decides walkability. "Preview textures" shows the map as the game will (rugged road edges + textures). Stored as `map.textures = { '#rrggbb': textureId }`; darker / lighter shades of a colour (the rugged road rim, pebbles) keep their shading on the texture, pencil lines stay as drawn.
+- **Theme** – a map can have a theme (world, §7.2): only buildings of that theme or without any theme can be built on it, and the wave editor lists the theme's enemies first.
 
 ## 6. Hero (main character)
 
@@ -186,7 +188,7 @@ Every game part is one **component** – a record in `assets` with its pictures 
 | Category | Numbers edited with the pictures |
 |---|---|
 | `building` | features + a table of levels (1–5); or `variantOf: <type>` = just another look of an existing type |
-| `enemy` | hp, speed, damage, cooldown, range, armor, coin drop, flying / ranged / boss, colour |
+| `enemy` | hp, speed, damage, cooldown, range, armor, coin drop, flying / ranged / boss, size, colour, **minions** (which enemies it calls, how many at once, how often, at most alive, more when it dies) |
 | `weapon`, `shield`, `armor` | class, one/two hands, damage / range / cooldown / splash or armor, price, shop round, chest drop weight, starter |
 | `coin` | value |
 | `hero` | skill points (+ drawings per weapon class) |
@@ -199,11 +201,18 @@ Building **features** (`config/features.js`) – each adds its own columns to th
 |---|---|---|
 | 👷 workers | workers | speeds up all construction |
 | 🏹 shoots | damage, range, cooldown | arrows at the enemy nearest to the centre |
+| 🪨 lobs (catapult) | lobDamage, lobRange, lobCooldown, lobSplash | a slow stone at the biggest group of walking enemies in range; hurts every walking enemy where it lands (not flying ones, not closer than 50 px) |
 | 🛡️ soldiers | soldierCount, soldierHp, soldierDamage, soldierCooldown, soldierRespawn | keeps up to N soldiers alive |
 | 🪙 income | income | coins at the end of every round |
 | ❤️ healHero | heal, healRange | heals the hero standing nearby |
 
 Every level also has `cost`, `time`, `hp` and `round` (the round from which that level can be built). The **Town Hall** is the building type marked `core` – it uses the same features (default: shoots + healHero) and cannot be deleted. Without a picture a type is drawn as a shape picked from its main feature.
+
+What a feature does every frame is one entry in `FEATURE_BEHAVIOUR` (logic/world.js); a new feature = its numbers in `features.js` + one line there + its texts.
+
+### 7.2 Themes (worlds)
+
+Editable list in the studio (🏷️ Themes): **plains, goblin forest, graveyard, necromancy** by default; kids rename them, change the sign (emoji), add and delete their own. Stored in the `themes` collection (exported). Enemies and buildings tick the themes they belong to (none = every world); maps pick one theme. Effects: a themed map offers only buildings of its theme (and untagged ones; the Town Hall always), the wave editor groups the theme's enemies first, the studio can show one theme at a time.
 
 **Rules editor** keeps only what belongs to no single component: economy and timing, selling / repair, soldier movement, the hero point table, hero upgrade prices and their unlock rounds.
 
@@ -286,7 +295,7 @@ Everything is downloadable as **one JSON file** and importable on another comput
 ```json
 {
   "format": "sketch-village",
-  "version": 2,
+  "version": 3,
   "exportedAt": "2026-10-29T12:00:00Z",
   "settings": { "language": "cs" },
   "assets": [
@@ -315,6 +324,7 @@ Everything is downloadable as **one JSON file** and importable on another comput
 ```
 
 - Storage at runtime: IndexedDB; the JSON is the exchange format.
+- Version 3 adds the `themes` collection, `themes` on components and `theme` / `textures` on maps. Built-in components are tracked by id (`settings.builtInsSeeded`), so built-ins added in a later version arrive in existing browsers, but one a kid deleted never comes back.
 - Version field + migration (`data/migrate.js`): version-1 files (separate `enemyTypes`, `buildingTypes`, `weapons`, `rules.townHallLevels`, per-type drawing categories) are converted into components on load and after import.
 - Export can also be per map (map + the assets it uses) `TBD`.
 
@@ -324,11 +334,11 @@ Everything is downloadable as **one JSON file** and importable on another comput
 src/
   main.jsx, App.jsx
   ui/            sketch.css (CSS wobble instead of Rough.js), LanguageSwitcher, FullscreenButton, Modal
-  assets/        categories.js, CameraCapture, AssetCropper, BackgroundRemover + bgRemoval.js, SketchPad, ImageSlot, AssetStudio, AssetEditor (component editor), BuildingStatsEditor, EnemyStatsEditor, ItemStatsEditor, HeroStatsEditor, NumField
+  assets/        categories.js, CameraCapture, AssetCropper, BackgroundRemover + bgRemoval.js, SketchPad, ImageSlot, AssetStudio, AssetEditor (component editor), BuildingStatsEditor, EnemyStatsEditor, ItemStatsEditor, HeroStatsEditor, ThemesEditor, NumField
   data/          saveFile.js (JSON + merge), migrate.js (v1 → components), store.js (IndexedDB), defaultData.js (class pack), DataPanel
-  config/        components.js (built-in components + derived lists), features.js, balance, buildings, heroStats, enemies, weapons, waves (defaults) + rules.js (global rules over defaults)
+  config/        components.js (built-in components + derived lists), features.js, themes.js, balance, buildings, heroStats, enemies, weapons, waves (defaults) + rules.js (global rules over defaults)
   logic/         pathGrid, pathfinding, mapModel, waves, world (whole simulation), balanceBot  ← pure, unit-tested
-  maps/          MapList, MapPainter, WaveEditor, mapRuntime (canvas helpers, sample map)
+  maps/          MapList, MapPainter, WaveEditor, mapRuntime (canvas helpers, sample map), textures.js (terrain textures)
   game/          PlaySetup, GameView (React ↔ Phaser), GameScene, GameOverlay, BuildPanel, RulesEditor, sound.js, tutorial.js
   locales/       cs.json, en.json
 public/default-data.json   class pack (empty by default)
@@ -348,6 +358,7 @@ public/default-data.json   class pack (empty by default)
 5e. **v1.2** ✅ – **equipment**: backpack + right hand (weapon), left hand (shield, +armor), body armor; two-handed weapons (bows, battle axe, fire staff) take both hands; the hero starts with a weak wooden sword (in hand) and a short bow; changing weapons takes **2 s** (no attacks meanwhile); the attack buttons pick a weapon of that class. Weapons, shields and armor **drawn in the studio are items** with their numbers set next to the drawing (class, one/two hands, damage, reach, speed, splash / damage absorbed, price, shop round, chest chance); the Weapons editor keeps the built-in ones. **Coins have values**: every coin drawing has its own value; drops are paid in the biggest coins that fit (default 1 and 5 without drawings). **Ready** also advances buildings/upgrades in progress by the skipped prep time. Selling asks "Really?" again; upgrades are one click. **Game controls laid over the map**: coins/workers/Town Hall top left, lives top centre, wave info top right, attack types bottom right with equipment above, tools bottom centre. **Rugged road edges** generated from the map (picture only). Decorations: picture list of every drawing, only on grass. Drawing editor: crop, load from disk, magic-wand strength (all undoable). **Performance**: HUD snapshot sent to React only when it changes (~10× fewer renders), memoized overlay pieces with stable callbacks, the build panel refreshes itself, the Phaser game is no longer recreated by language changes or new callbacks, health bars / rings / scaffolding redrawn only when their value changes, pooled floating texts and effects, Phaser's unused audio disabled.
 5f. **Components** ✅ – every game part is one component (pictures + all numbers) edited in the studio, which became the general component editor (§7.1). Buildings are made from **features** (workers, arrows, soldiers, income, hero healing) with a table of 1–5 levels whose fields follow the features; the Town Hall is the `core` building type with the same features; "another look" components add drawings to an existing type. Enemies, weapons/shields/armor and coins carry their numbers next to their drawings; the separate Enemies and Weapons screens are gone and the Rules editor keeps only global rules. Old data and version-1 save files are migrated automatically. Tests cover new building kinds made only from data (market, well, 4-level tower).
 5g. **Lives & backpack** ✅ – every lost life sends the hero away for 10 s and back to the Town Hall; losing all 5 loses the game (the end screen says why). The bot now walks back to heal below 40 % HP and still wins every seed without losing a life; the same bot without healing loses every seed (new test). Small retune: dragon 280 HP / speed 36, rounds 14–15 spawns. **Backpack** rebuilt: three slots (right hand, left hand, armor) with the hero's attack / reach / armor shown live, items dragged onto slots with mouse or finger (or tap item → tap slot), wrong slots refused, worn items dragged back to take them off.
+5h. **Summoners, catapult, themes, terrain** ✅ – enemies can **call minions** (any enemies, several kinds mixed; how many, how often, at most alive, more on death; minions never summon): new built-ins **necromancer** → skeletons, **spider queen** → spiderlings (more when she dies), plus skeleton and spiderling. New building feature **lobs** and built-in **catapult** (rounds 6 / 10 / 15): area damage to walking enemies. **Themes** (§7.2) with an editor; maps have a theme. **Terrain textures** in the map editor with preview (§5.1). Waves: spider queen in rounds 8 and 19, necromancers in 12 and 17; necromancer tuned to 90 HP / every 8 s; the bot builds a catapult – all seeds won, waves 40–60 s. Architecture: building features run from a behaviour table, one spawn path for caves and summoners, ground-target projectiles, built-ins seeded by id.
 6. **Later** – rotating decorations, a "+" mark on reused level drawings, a round-summary card, per-map export, playtests on a real tablet and with kids, animated sprites (frame sheets photographed from a printed template), longbowmen soldiers that can hit flying enemies, walls.
 
 ## 15. Open questions

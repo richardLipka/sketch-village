@@ -122,7 +122,8 @@
     "weapon": "Weapons",
     "shield": "Shields",
     "armor": "Armor",
-    "chest": "Chest"
+    "chest": "Chest",
+    "texture": "Textures"
   },
   "catHint": {
     "hero": "The main character. Give it skill points.",
@@ -140,7 +141,8 @@
     "weapon": "Swords, bows, magic wands. Every drawn weapon is playable: set its kind, one or two hands and damage next to the drawing.",
     "shield": "Shields for the left hand – set how much damage they absorb.",
     "armor": "Armor for the body – set how much damage it absorbs.",
-    "chest": "Treasure chest dropped by enemies – it holds a weapon."
+    "chest": "Treasure chest dropped by enemies – it holds a weapon.",
+    "texture": "Photos or drawings of surfaces – grass, stones, sand, a carpet… In the map editor (Terrain) a colour of the map can be covered with them."
   },
   "import": {
     "done": "Imported: {{added}} new, {{updated}} updated, {{skipped}} unchanged.",
@@ -224,7 +226,21 @@
     "problem_cave_too_close": "Cave {{n}} is too close to the town hall.",
     "problem_cave_off_path": "Cave {{n}} is not next to a road.",
     "problem_cave_not_connected": "No road leads from cave {{n}} to the town hall.",
-    "problem_respawn_off_path": "The hero start must be next to a road."
+    "problem_respawn_off_path": "The hero start must be next to a road.",
+    "mode_terrain": "Terrain",
+    "terrain_hint": "Every colour of the map can look like a texture in the game – grass, stones, water… You still paint with colours here, so the bucket fills correctly.",
+    "terrain_none": "Paint some areas first.",
+    "texture_none": "Just the colour",
+    "preview": "Preview textures",
+    "my_textures": "Your textures",
+    "tex_grass": "Grass",
+    "tex_meadow": "Flower meadow",
+    "tex_dirt": "Dirt road",
+    "tex_sand": "Sand",
+    "tex_cobble": "Cobblestones",
+    "tex_stone": "Rock",
+    "tex_water": "Water",
+    "tex_snow": "Snow"
   },
   "play": {
     "title": "Play",
@@ -364,7 +380,14 @@
     "f_soldierRespawn": "New soldier after (s)",
     "f_income": "Coins per round",
     "f_heal": "Healing per s",
-    "f_healRange": "Healing reach"
+    "f_healRange": "Healing reach",
+    "name_lobs": "Throws stones (catapult)",
+    "hint_lobs": "Throws a stone at the biggest group of walking enemies – it hurts all of them where it lands. It can’t hit flying enemies or enemies right next to it.",
+    "line_lobs": "stone {{lobDamage}} on area {{lobSplash}}, range {{lobRange}}, every {{lobCooldown}} s",
+    "f_lobDamage": "Stone power",
+    "f_lobRange": "Throw range",
+    "f_lobCooldown": "Throw every (s)",
+    "f_lobSplash": "Area (px)"
   },
   "weapons": {
     "title": "Weapons",
@@ -447,7 +470,14 @@
     "new_name": "Monster",
     "name": "Name",
     "color": "Colour (used until there is a drawing)",
-    "confirm_delete": "Delete enemy “{{name}}”? Waves that use it will skip it."
+    "confirm_delete": "Delete enemy “{{name}}”? Waves that use it will skip it.",
+    "f_size": "Size",
+    "minions": "Calls minions",
+    "minions_hint": "Pick which enemies it calls – each time one of them at random. Minions never call minions themselves.",
+    "f_minionCount": "How many at once",
+    "f_minionEvery": "Every (s)",
+    "f_minionMax": "At most alive",
+    "f_minionOnDeath": "More when it dies"
   },
   "waves": {
     "edit": "Waves",
@@ -564,5 +594,22 @@
     "g_soldier_max": "Soldiers per castle",
     "g_soldier_speed": "Soldier speed",
     "g_soldier_aggro": "Soldier reach"
+  },
+  "themes": {
+    "title": "Themes",
+    "button": "Themes",
+    "hint": "Worlds like plains, graveyard or goblin forest. Enemies and buildings can belong to themes, and every map can have one: on a map only buildings of its theme (or without a theme) can be built, and the wave editor shows the theme’s enemies first.",
+    "add": "New theme",
+    "new_name": "New world",
+    "icon": "Sign",
+    "confirm_delete": "Delete the theme “{{name}}”? Things and maps that use it stay, only without this theme.",
+    "used": "used {{n}}×",
+    "all": "All",
+    "label": "Themes",
+    "component_hint": "Which worlds it belongs to. None ticked = it fits every world.",
+    "map_theme": "Theme",
+    "no_theme": "– no theme –",
+    "fits": "Fits the theme",
+    "others": "Other enemies"
   }
 }

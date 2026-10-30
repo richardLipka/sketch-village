@@ -1,6 +1,8 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { mapCanvas, gridFromCanvas } from './mapRuntime.js';
+import { mapCanvas, gridFromCanvas, ruggedRoads } from './mapRuntime.js';
+import { BUILT_IN_IDS, builtInTexture, terrainColours, texturedCanvas, textureSwatch } from './textures.js';
+import { themeName } from '../config/themes.js';
 import { validateMap, placeCave, MAX_SPOTS, CENTRE_RADIUS } from '../logic/mapModel.js';
 import { floodFill, hexToRgba } from '../assets/pixelOps.js';
 import { loadImage } from '../assets/imageEncoding.js';
@@ -9,6 +11,9 @@ import { newId } from '../data/saveFile.js';
 // Map Painter & Map Editor (SPEC §5.1).
 //   Paint – yellow road brush, grass brush (erases road), decoration pencil, bucket fill.
 //   Place – town hall (village centre), any number of building spots, caves anywhere beside a road, decorations.
+//   Terrain – which texture covers each painted colour in the game (with a preview);
+//             painting itself stays in plain colours so the bucket fills exactly.
+// The map also has a theme (world): it decides which buildings can be built on it.
 // Everything is point-and-click; markers can also be dragged.
 
 const DECOR_COLORS = ['#1f2937', '#78350f', '#166534', '#2563eb', '#dc2626', '#ffffff'];
@@ -18,9 +23,10 @@ const UNDO_LIMIT = 15;
 const HIT = 28; // px radius for grabbing a marker
 const DECOR_BASE = 64; // decoration size at scale 1
 
-export default function MapPainter({ map: initial, assets, onSave, onCancel }) {
-  const { t } = useTranslation();
+export default function MapPainter({ map: initial, assets, themes = [], onSave, onCancel }) {
+  const { t, i18n } = useTranslation();
   const baseRef = useRef(null); // the bitmap
+  const previewRef = useRef(null); // the bitmap as the game shows it (rugged roads + textures)
   const overRef = useRef(null); // markers, decorations, grid overlay
   const undo = useRef([]);
   const stroke = useRef(null);
@@ -37,6 +43,8 @@ export default function MapPainter({ map: initial, assets, onSave, onCancel }) {
   const [decorScale, setDecorScale] = useState(1);
   const [showGrid, setShowGrid] = useState(true);
   const [grid, setGrid] = useState(null);
+  const [colours, setColours] = useState([]); // the painted colours (terrain mode)
+  const [preview, setPreview] = useState(false);
   const [, force] = useState(0);
   const { width: W, height: H } = map.world;
 
@@ -57,7 +65,31 @@ export default function MapPainter({ map: initial, assets, onSave, onCancel }) {
   const townhallImg = [core, ...assets.filter((a) => core && a.stats?.variantOf === core.id)].map((a) => a?.images?.find(Boolean)).find(Boolean);
   const caveImg = firstImage('cave');
 
-  const recomputeGrid = useCallback(() => setGrid(gridFromCanvas(baseRef.current, map.palette)), [map.palette]);
+  // after every change of the bitmap: walkable grid + the colours it is painted with
+  const recomputeGrid = useCallback(() => {
+    const c = baseRef.current;
+    setGrid(gridFromCanvas(c, map.palette));
+    setColours(terrainColours(c.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, c.width, c.height), map.palette));
+  }, [map.palette]);
+
+  // textures to choose from: built-in ones and the kids' texture components
+  const textureChoices = useMemo(() => [
+    ...BUILT_IN_IDS.map((id) => ({ id, name: t(`maps.tex_${id}`), swatch: textureSwatch(builtInTexture(id, 64)) })),
+    ...assets.filter((a) => a.category === 'texture' && a.images?.[0]).map((a) => ({ id: a.id, name: typeof a.name === 'string' ? a.name : a.name?.cs, swatch: a.images[0], mine: true })),
+  ], [assets, t]);
+
+  // the preview: what the game will show (rugged road edges + textures); redrawn after changes
+  useEffect(() => {
+    if (!preview || !grid) return;
+    let alive = true;
+    texturedCanvas(ruggedRoads(baseRef.current, map.palette, map.id), map.textures ?? {}, assets).then((shown) => {
+      if (!alive || !previewRef.current) return;
+      const c = previewRef.current;
+      c.width = W; c.height = H;
+      c.getContext('2d').drawImage(shown, 0, 0);
+    });
+    return () => { alive = false; };
+  }, [preview, grid, map.textures, map.palette, map.id, assets, W, H]);
 
   // load the bitmap once
   useEffect(() => {
@@ -224,6 +256,7 @@ export default function MapPainter({ map: initial, assets, onSave, onCancel }) {
   };
 
   const onDown = (e) => {
+    if (mode === 'terrain') return; // nothing to paint or place here
     e.currentTarget.setPointerCapture(e.pointerId);
     const p = toWorld(e);
     if (mode === 'paint') {
@@ -280,6 +313,18 @@ export default function MapPainter({ map: initial, assets, onSave, onCancel }) {
     onSave({ ...map, background, valid: !!validation?.ok, updatedAt: new Date().toISOString() });
   };
 
+  const setTexture = (colour, id) => {
+    const next = { ...(map.textures ?? {}) };
+    if (id) next[colour] = id; else delete next[colour];
+    update({ textures: next });
+  };
+  const pickMode = (m) => {
+    setMode(m);
+    if (m === 'terrain') setPreview(true);
+    else if (m === 'paint') setPreview(false); // paint on the real colours
+  };
+  const colourLabel = (c) => (c === map.palette.path ? t('maps.tool_road') : c === map.palette.grass ? t('maps.tool_grass') : c);
+
   const PAINT_TOOLS = [['road', '🟨'], ['grass', '🟩'], ['pencil', '✏️'], ['fill', '🪣']];
   const PLACE_TOOLS = [['centre', '🏛️'], ['spot', '⬚'], ['cave', '🕳️'], ['decoration', '🌳'], ['erase', '✕']];
 
@@ -288,21 +333,56 @@ export default function MapPainter({ map: initial, assets, onSave, onCancel }) {
       <div className="row" style={{ marginBottom: 10 }}>
         <label>{t('maps.name')} <input type="text" value={map.name} onChange={(e) => update({ name: e.target.value })} /></label>
         <label>{t('editor.author')} <input type="text" value={map.author ?? ''} onChange={(e) => update({ author: e.target.value })} /></label>
+        <label>🏷️ {t('themes.map_theme')}{' '}
+          <select value={map.theme ?? ''} onChange={(e) => update({ theme: e.target.value || null })}>
+            <option value="">{t('themes.no_theme')}</option>
+            {themes.map((th) => <option key={th.id} value={th.id}>{th.icon} {themeName(th, i18n.language)}</option>)}
+          </select>
+        </label>
         <span className="spacer" />
         <button className="btn" onClick={onCancel}>{t('common.cancel')}</button>
         <button className="btn primary" onClick={save} disabled={!map.name.trim()}>✓ {t('common.save')}</button>
       </div>
 
       <div className="row" style={{ marginBottom: 8 }}>
-        <button className={`tab ${mode === 'paint' ? 'on' : ''}`} onClick={() => setMode('paint')}>🖌️ {t('maps.mode_paint')}</button>
-        <button className={`tab ${mode === 'place' ? 'on' : ''}`} onClick={() => setMode('place')}>📍 {t('maps.mode_place')}</button>
+        <button className={`tab ${mode === 'paint' ? 'on' : ''}`} onClick={() => pickMode('paint')}>🖌️ {t('maps.mode_paint')}</button>
+        <button className={`tab ${mode === 'place' ? 'on' : ''}`} onClick={() => pickMode('place')}>📍 {t('maps.mode_place')}</button>
+        <button className={`tab ${mode === 'terrain' ? 'on' : ''}`} onClick={() => pickMode('terrain')}>🧱 {t('maps.mode_terrain')}</button>
         <span className="spacer" />
+        <label className="small"><input type="checkbox" checked={preview} onChange={(e) => setPreview(e.target.checked)} /> {t('maps.preview')}</label>
         <label className="small"><input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} /> {t('maps.show_grid')}</label>
         <button className="btn icon" onClick={doUndo} disabled={!undo.current.length} title={t('sketch.undo')}>↶</button>
       </div>
 
-      <div className="row" style={{ marginBottom: 8, minHeight: 44 }}>
-        {mode === 'paint' ? (
+      {mode === 'terrain' && (
+        <div className="sketch-card terrain-panel" style={{ marginBottom: 8 }}>
+          <p className="small muted" style={{ margin: '0 0 6px' }}>{t('maps.terrain_hint')}</p>
+          {!colours.length && <span className="small muted">{t('maps.terrain_none')}</span>}
+          {colours.map((c) => {
+            const chosen = textureChoices.find((x) => x.id === map.textures?.[c]);
+            return (
+              <div key={c} className="row terrain-row">
+                <span className="swatch on" style={{ background: c }} title={c} />
+                <span className="small" style={{ minWidth: 70 }}>{colourLabel(c)}</span>
+                <span>→</span>
+                {chosen ? <img className="tex-swatch" src={chosen.swatch} alt="" /> : <span className="tex-swatch" style={{ background: c }} />}
+                <select value={map.textures?.[c] ?? ''} onChange={(e) => setTexture(c, e.target.value)}>
+                  <option value="">{t('maps.texture_none')}</option>
+                  {textureChoices.filter((x) => !x.mine).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                  {textureChoices.some((x) => x.mine) && (
+                    <optgroup label={t('maps.my_textures')}>
+                      {textureChoices.filter((x) => x.mine).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                    </optgroup>
+                  )}
+                </select>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="row" style={{ marginBottom: 8, minHeight: mode === 'terrain' ? 0 : 44 }}>
+        {mode === 'terrain' ? null : mode === 'paint' ? (
           <>
             {PAINT_TOOLS.map(([id, icon]) => (
               <button key={id} className={`btn icon ${tool === id ? 'active' : ''}`} onClick={() => setTool(id)}>{icon} {t(`maps.tool_${id}`)}</button>
@@ -358,15 +438,16 @@ export default function MapPainter({ map: initial, assets, onSave, onCancel }) {
       )}
 
       <p className="small muted" style={{ margin: '0 0 6px' }}>
-        {t(mode === 'paint' ? `maps.hint_${tool}` : `maps.hint_place_${placeTool}`)}
+        {mode !== 'terrain' && t(mode === 'paint' ? `maps.hint_${tool}` : `maps.hint_place_${placeTool}`)}
         {mode === 'place' && placeMsg && <b className="error-text"> {placeMsg}</b>}
       </p>
 
       <div style={{ position: 'relative', width: '100%', aspectRatio: `${W} / ${H}`, border: '2.5px solid var(--ink)', borderRadius: 6, overflow: 'hidden' }}>
         <canvas ref={baseRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
+        <canvas ref={previewRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: preview ? 'block' : 'none' }} />
         <canvas
           ref={overRef}
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', touchAction: 'none', cursor: mode === 'paint' ? 'crosshair' : 'pointer' }}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', touchAction: 'none', cursor: mode === 'paint' ? 'crosshair' : mode === 'place' ? 'pointer' : 'default' }}
           onPointerDown={onDown}
           onPointerMove={onMove}
           onPointerUp={onUp}

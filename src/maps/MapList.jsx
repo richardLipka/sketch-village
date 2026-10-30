@@ -7,8 +7,9 @@ import { emptyMap } from '../logic/mapModel.js';
 import { newId } from '../data/saveFile.js';
 
 // All maps (= levels): create blank or sample, edit, duplicate, delete.
-export default function MapList({ maps, assets, enemyTypes, balance, onChange }) {
+export default function MapList({ maps, assets, enemyTypes, themes = [], balance, onChange }) {
   const { t } = useTranslation();
+  const themeIcon = (id) => themes.find((th) => th.id === id)?.icon ?? '';
   const [editing, setEditing] = useState(null);
   const [wavesFor, setWavesFor] = useState(null);
 
@@ -39,6 +40,7 @@ export default function MapList({ maps, assets, enemyTypes, balance, onChange })
       <WaveEditor
         map={wavesFor}
         enemyTypes={enemyTypes}
+        themes={themes}
         balance={balance}
         onCancel={() => setWavesFor(null)}
         onSave={(waves) => { save({ ...wavesFor, waves, updatedAt: new Date().toISOString() }); setWavesFor(null); }}
@@ -47,7 +49,7 @@ export default function MapList({ maps, assets, enemyTypes, balance, onChange })
   }
 
   if (editing) {
-    return <MapPainter key={editing.id} map={editing} assets={assets} onSave={save} onCancel={() => setEditing(null)} />;
+    return <MapPainter key={editing.id} map={editing} assets={assets} themes={themes} onSave={save} onCancel={() => setEditing(null)} />;
   }
 
   return (
@@ -62,7 +64,7 @@ export default function MapList({ maps, assets, enemyTypes, balance, onChange })
         {maps.map((m) => (
           <div key={m.id} className="asset-tile" onClick={() => setEditing(m)}>
             {m.background && <img src={m.background} alt="" style={{ maxWidth: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: 4 }} />}
-            <div className="name">{m.name}</div>
+            <div className="name">{themeIcon(m.theme)} {m.name}</div>
             <div className="author">{m.author && `✎ ${m.author}`}</div>
             <div className="small">{m.valid ? `✓ ${t('maps.ready')}` : `⚠ ${t('maps.not_ready')}`}</div>
             <div className="row" style={{ justifyContent: 'center', gap: 4 }}>
