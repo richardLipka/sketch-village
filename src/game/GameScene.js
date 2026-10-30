@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import Phaser from './phaser.js';
 import { hasFeature, shapeOf } from '../config/features.js';
 import { frameAt } from '../assets/animation.js';
 

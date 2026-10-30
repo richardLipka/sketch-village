@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import Phaser from 'phaser';
+import Phaser from './phaser.js';
 import { useTranslation } from 'react-i18next';
 import GameScene from './GameScene.js';
 import { mapCanvas, gridFromCanvas, ruggedRoads } from '../maps/mapRuntime.js';
