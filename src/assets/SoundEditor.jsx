@@ -3,11 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { SOUND_KINDS, MAX_RECORD_SECONDS, MAX_FILE_BYTES, findTrim, clampTrim, waveform, recorderMime, canRecord } from './audioClip.js';
 import { decodeSound, loadClip, playClip } from '../game/sound.js';
 import { blobToDataUrl } from './clipboard.js';
+import SoundPreview from './SoundPreview.jsx';
 
 // A monster's own sounds (SPEC §3.2b): a growl now and then while walking, an
 // attack and a death. Record with the microphone (up to 3 s) or load a file;
 // the silence around is cut automatically and the two handles under the
-// waveform trim it by hand. The game plays them sparingly (game/monsterVoices.js).
+// waveform trim it by hand; ▶ plays it with a moving playhead. "🎧 Hear it as
+// in the game" plays a little wave the way the game would – sparingly
+// (game/monsterVoices.js).
 
 const ICON = { walk: '🗣️', attack: '⚔️', death: '💀' };
 
@@ -24,6 +27,7 @@ export default function SoundEditor({ sounds = {}, onChange }) {
       <h3 style={{ margin: '0 0 4px' }}>🔊 {t('sounds.title')}</h3>
       <p className="small muted" style={{ margin: '0 0 8px' }}>{t('sounds.hint')}</p>
       {SOUND_KINDS.map((kind) => <SoundRow key={kind} kind={kind} sound={sounds[kind]} onChange={(s) => set(kind, s)} />)}
+      {SOUND_KINDS.some((k) => sounds[k]?.data) && <SoundPreview sounds={sounds} />}
     </div>
   );
 }
@@ -35,6 +39,7 @@ function SoundRow({ kind, sound, onChange }) {
   const [buffer, setBuffer] = useState(null);
   const [recording, setRecording] = useState(null); // seconds so far
   const [error, setError] = useState(null);
+  const [playedAt, setPlayedAt] = useState(null); // performance.now() when ▶ was pressed
 
   // decode for the waveform whenever the recording changes
   useEffect(() => {
@@ -98,7 +103,7 @@ function SoundRow({ kind, sound, onChange }) {
 
   const play = async () => {
     const key = `editor:${kind}`;
-    if (await loadClip(key, sound)) playClip(key, 1, true);
+    if (await loadClip(key, sound) && playClip(key, 1, true)) setPlayedAt(performance.now());
   };
 
   const trim = (patch) => buffer && onChange({ ...sound, ...clampTrim({ start: sound.start, end: sound.end, ...patch }, buffer.duration) });
@@ -108,7 +113,7 @@ function SoundRow({ kind, sound, onChange }) {
     <div className="sound-row">
       <b className="sound-kind">{ICON[kind]} {t(`sounds.${kind}`)}</b>
       <div className="sound-body">
-        {sound?.data && <Waveform buffer={buffer} start={sound.start} end={sound.end} />}
+        {sound?.data && <Waveform buffer={buffer} start={sound.start} end={sound.end} playedAt={playedAt} />}
         {sound?.data && buffer && (
           <div className="row small sound-trim">
             <label>{t('sounds.from')} <input type="range" min={0} max={duration} step={0.01} value={sound.start} onChange={(e) => trim({ start: Number(e.target.value) })} /></label>
@@ -134,8 +139,25 @@ function SoundRow({ kind, sound, onChange }) {
 }
 
 /** The recording as a pencil-drawn waveform; the part that plays is highlighted. */
-function Waveform({ buffer, start, end }) {
+function Waveform({ buffer, start, end, playedAt }) {
   const ref = useRef(null);
+  const head = useRef(null);
+  // the playhead runs over the part that plays while ▶ is playing it
+  useEffect(() => {
+    if (!buffer || playedAt === null) return undefined;
+    let frame = 0;
+    const step = () => {
+      const secs = (performance.now() - playedAt) / 1000;
+      const el = head.current;
+      if (!el) return;
+      if (secs > end - start) { el.style.display = 'none'; return; }
+      el.style.display = 'block';
+      el.style.left = `${((start + secs) / buffer.duration) * 100}%`;
+      frame = requestAnimationFrame(step);
+    };
+    step();
+    return () => cancelAnimationFrame(frame);
+  }, [buffer, start, end, playedAt]);
   useEffect(() => {
     const c = ref.current;
     if (!c) return;
@@ -151,5 +173,10 @@ function Waveform({ buffer, start, end }) {
       g.fillRect(x, H / 2 + lo * H * 0.48, 1, Math.max(1, (hi - lo) * H * 0.48));
     });
   }, [buffer, start, end]);
-  return <canvas ref={ref} className="waveform" width={260} height={44} />;
+  return (
+    <div className="waveform-box">
+      <canvas ref={ref} className="waveform" width={260} height={44} />
+      <div ref={head} className="playhead" style={{ display: 'none' }} />
+    </div>
+  );
 }

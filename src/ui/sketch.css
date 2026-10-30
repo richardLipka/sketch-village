@@ -432,3 +432,18 @@ label { display: inline-flex; gap: 8px; align-items: center; }
   .sound-row { grid-template-columns: 1fr auto; }
   .sound-body { grid-column: 1 / -1; grid-row: 2; }
 }
+/* playhead on a sound's waveform, and the "as in the game" preview (SoundPreview) */
+.waveform-box { position: relative; width: 100%; max-width: 260px; }
+.waveform-box .waveform { display: block; }
+.playhead { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--danger); pointer-events: none; }
+.sound-preview { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #d6cdb6; }
+.preview-timeline { margin: 8px 0 4px; padding: 0 0.9em 0 2.3em; border: 1.5px solid var(--ink-soft); border-radius: 6px; background: #fffdf7; }
+.preview-timeline .track-area { position: relative; }
+.preview-timeline .lane { position: relative; height: 26px; border-top: 1px dashed #e6dfcc; }
+.preview-timeline .lane-spawn { border-top: none; }
+.preview-timeline .lane-icon { position: absolute; left: -2.1em; top: 2px; font-size: 15px; }
+.preview-timeline .mark { position: absolute; top: 2px; transform: translateX(-50%); font-size: 15px; line-height: 20px; opacity: 0.35; transition: opacity 0.2s, transform 0.2s; }
+.preview-timeline .mark.past { opacity: 0.6; }
+.preview-timeline .mark.played.past { opacity: 1; transform: translateX(-50%) scale(1.25); }
+.preview-timeline .mark.skipped { color: var(--ink-soft); font-size: 11px; }
+.preview-summary { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 4px 0; }

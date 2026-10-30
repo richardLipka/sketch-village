@@ -774,6 +774,18 @@
     "to": "do",
     "no_mic": "Mikrofon není k dispozici – povol ho v prohlížeči, nebo načti zvukový soubor.",
     "cant_play": "Tento prohlížeč tenhle zvuk neumí přehrát.",
-    "too_big": "Soubor je moc velký – použij krátký zvuk (do 600 kB)."
+    "too_big": "Soubor je moc velký – použij krátký zvuk (do 600 kB).",
+    "preview": "Poslechnout jako ve hře",
+    "preview_stop": "Zastavit",
+    "preview_hint": "malá vlna této příšery, jak hra zvuky pouští",
+    "preview_played": "zazní",
+    "preview_skipped": "vynecháno – moc brzy po jiném zvuku",
+    "preview_growls_one": "{{count}} zavrčení",
+    "preview_growls_few": "{{count}} zavrčení",
+    "preview_growls_many": "{{count}} zavrčení",
+    "preview_growls_other": "{{count}} zavrčení",
+    "preview_hits": "zazní {{n}} z {{total}} útoků",
+    "preview_deaths": "zazní {{n}} z {{total}} porážek",
+    "preview_why": "Přišlo {{monsters}} příšer. Hra vynechává zvuky, které by šly moc brzy po sobě, aby ani velká vlna nebyla jen rámus – a každá nahrávka zůstala výjimečná."
   }
 }

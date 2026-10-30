@@ -766,6 +766,16 @@
     "to": "to",
     "no_mic": "The microphone isn’t available – allow it in the browser, or load a sound file.",
     "cant_play": "This browser can’t play this sound.",
-    "too_big": "The file is too big – use a short sound (under 600 kB)."
+    "too_big": "The file is too big – use a short sound (under 600 kB).",
+    "preview": "Hear it as in the game",
+    "preview_stop": "Stop",
+    "preview_hint": "a little wave of this monster, the way the game plays the sounds",
+    "preview_played": "plays",
+    "preview_skipped": "left out – too soon after another sound",
+    "preview_growls_one": "{{count}} growl",
+    "preview_growls_other": "{{count}} growls",
+    "preview_hits": "{{n}} of {{total}} hits heard",
+    "preview_deaths": "{{n}} of {{total}} defeats heard",
+    "preview_why": "{{monsters}} monsters came. The game leaves out sounds that come too close together, so even a big wave doesn’t turn into noise – and each recording stays special."
   }
 }

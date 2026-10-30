@@ -93,3 +93,41 @@ test('Escape closes only the top dialog', async ({ page }) => {
   await page.keyboard.press('Escape');
   await expect(page.locator('.modal')).toHaveCount(0);
 });
+
+// a WAV with a tone in the middle (silence around it)
+function wav(freq, secs, rate = 22050) {
+  const n = Math.round((secs + 0.6) * rate);
+  const b = Buffer.alloc(44 + n * 2);
+  b.write('RIFF', 0); b.writeUInt32LE(36 + n * 2, 4); b.write('WAVE', 8); b.write('fmt ', 12);
+  b.writeUInt32LE(16, 16); b.writeUInt16LE(1, 20); b.writeUInt16LE(1, 22); b.writeUInt32LE(rate, 24); b.writeUInt32LE(rate * 2, 28);
+  b.writeUInt16LE(2, 32); b.writeUInt16LE(16, 34); b.write('data', 36); b.writeUInt32LE(n * 2, 40);
+  for (let i = Math.round(0.3 * rate); i < Math.round((0.3 + secs) * rate); i++) b.writeInt16LE(Math.round(12000 * Math.sin((2 * Math.PI * freq * i) / rate)), 44 + i * 2);
+  return { name: 'sound.wav', mimeType: 'audio/wav', buffer: b };
+}
+
+test('hear the monster sounds as in the game: a little wave with a timeline', async ({ page }) => {
+  test.setTimeout(90_000);
+  const errors = watchErrors(page);
+  await openGoblin(page);
+  const rows = page.locator('.sound-row');
+  for (const [i, f] of [[0, 220], [1, 440], [2, 130]]) {
+    await rows.nth(i).locator('input[type=file]').setInputFiles(wav(f, 0.4));
+    await expect(rows.nth(i).locator('canvas.waveform')).toBeVisible();
+  }
+  // ▶ shows a playhead running over the sound
+  await rows.first().getByTitle('Přehrát').click();
+  await expect(rows.first().locator('.waveform-box .playhead')).toBeVisible();
+
+  await page.getByRole('button', { name: /Poslechnout jako ve hře/ }).click();
+  await expect(page.getByRole('button', { name: /Zastavit/ })).toBeVisible();
+  await expect(page.locator('.preview-timeline .mark', { hasText: '👾' })).toHaveCount(8);
+  // the wave lasts 16 s; then the button comes back and the timeline tells what was heard
+  await expect(page.getByRole('button', { name: /Poslechnout jako ve hře/ })).toBeVisible({ timeout: 25_000 });
+  await expect(page.locator('.preview-summary')).toContainText(/z 12 útoků/);
+  await expect(page.locator('.preview-summary')).toContainText(/z 8 porážek/);
+  const played = await page.locator('.preview-timeline .mark.played').count();
+  const skipped = await page.locator('.preview-timeline .mark.skipped').count();
+  expect(played).toBeGreaterThan(2);
+  expect(skipped).toBeGreaterThan(played); // most hits and some defeats are left out
+  expect(errors).toEqual([]);
+});

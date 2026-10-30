@@ -85,3 +85,30 @@ describe('monster voices', () => {
     expect(director().onEvent(died('goblin'), 0, 60).volume).toBe(0.55);
   });
 });
+
+describe('preview in the editor', () => {
+  it('a little wave: the new monster growls, only some hits and deaths are heard', async () => {
+    const { previewWave, PREVIEW } = await import('./monsterVoices.js');
+    let seed = 3;
+    const rng = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const { duration, events } = previewWave({ walk: 0.6, attack: 0.4, death: 0.5 }, { rng });
+    expect(duration).toBe(PREVIEW.duration);
+    const of = (kind) => events.filter((e) => e.kind === kind);
+    expect(of('spawn')).toHaveLength(PREVIEW.monsters);
+    expect(of('walk')[0]).toMatchObject({ t: PREVIEW.firstAt, played: true }); // the introduction
+    expect(of('attack')).toHaveLength((PREVIEW.monsters - PREVIEW.onRoad) * PREVIEW.attacks);
+    expect(of('death')).toHaveLength(PREVIEW.monsters);
+    const heard = (kind) => of(kind).filter((e) => e.played).length;
+    expect(heard('attack')).toBeGreaterThan(0);
+    expect(heard('attack')).toBeLessThanOrEqual(5); // at most every 4 s
+    expect(heard('death')).toBeGreaterThan(1);
+    expect(heard('death')).toBeLessThan(PREVIEW.monsters);
+    for (const e of events) expect(e.t).toBeLessThanOrEqual(duration);
+  });
+
+  it('only the sounds the monster has show up', async () => {
+    const { previewWave } = await import('./monsterVoices.js');
+    const { events } = previewWave({ death: 0.5 }, { rng: () => 0 });
+    expect(new Set(events.map((e) => e.kind))).toEqual(new Set(['spawn', 'death']));
+  });
+});

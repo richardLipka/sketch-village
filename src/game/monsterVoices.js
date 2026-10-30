@@ -96,3 +96,57 @@ export class VoiceDirector {
     return this.start(candidates[Math.floor(this.rng() * candidates.length)], 'walk', now, alive);
   }
 }
+
+// ---------------- preview in the editor ----------------
+
+// eight monsters close together; the first half is defeated on the road, the rest reach the Town Hall
+export const PREVIEW = { monsters: 8, every: 0.9, firstAt: 0.5, onRoad: 4, killedAfter: 3.5, walk: 5, attacks: 3, attackEvery: 1, dieAfter: 0.5, duration: 16 };
+
+/**
+ * A little wave as the game would play it (SoundEditor's "hear it as in the
+ * game"): eight monsters of one kind come close together; four are defeated
+ * on the road, four reach the Town Hall, hit it three times each and are
+ * defeated there. The real VoiceDirector decides – the
+ * result lists every moment a sound could play and whether it did.
+ * @param {object} lengths  { walk?, attack?, death? } – seconds each sound plays
+ * @returns {{ duration, events: { t, kind: 'spawn'|'walk'|'attack'|'death', played }[] }}
+ */
+export function previewWave(lengths, { rng = Math.random, plan = PREVIEW } = {}) {
+  const type = 'preview';
+  const d = new VoiceDirector({ voices: { [type]: lengths }, rng });
+  const script = [];
+  for (let i = 0; i < plan.monsters; i++) {
+    const at = plan.firstAt + i * plan.every;
+    const arrive = at + plan.walk;
+    script.push({ t: at, e: { type: 'spawn', enemy: type }, kind: 'spawn', i });
+    if (i < plan.onRoad) {
+      script.push({ t: at + plan.killedAfter, e: { type: 'enemyDied', enemy: type }, kind: 'death', i, dies: true });
+      continue;
+    }
+    for (let k = 0; k < plan.attacks; k++) script.push({ t: arrive + k * plan.attackEvery, e: { type: 'enemyAttack', enemy: type }, kind: 'attack', i });
+    script.push({ t: arrive + (plan.attacks - 1) * plan.attackEvery + plan.dieAfter, e: { type: 'enemyDied', enemy: type }, kind: 'death', i, dies: true });
+  }
+  for (let t = 1; t < plan.duration; t++) script.push({ t, tick: true });
+  script.sort((a, b) => a.t - b.t || (a.tick ? 1 : 0) - (b.tick ? 1 : 0));
+
+  const events = [];
+  const born = new Set(), gone = new Set();
+  const aliveNow = () => born.size - gone.size;
+  for (const s of script) {
+    if (s.tick) {
+      const v = d.tick(s.t, { [type]: aliveNow() }, 'wave');
+      if (v) events.push({ t: s.t, kind: v.kind, played: true });
+      continue;
+    }
+    if (s.kind === 'spawn') born.add(s.i);
+    if (s.dies) gone.add(s.i);
+    const v = d.onEvent(s.e, s.t, aliveNow());
+    if (s.kind === 'spawn') {
+      events.push({ t: s.t, kind: 'spawn', played: false });
+      if (v) events.push({ t: s.t, kind: 'walk', played: true });
+    } else if (lengths[s.kind]) {
+      events.push({ t: s.t, kind: s.kind, played: !!v });
+    }
+  }
+  return { duration: plan.duration, events };
+}
