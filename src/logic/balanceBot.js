@@ -2,6 +2,10 @@
 // Used by balance.test.js to check that the numbers in the rules are fair:
 // a sensible build order should win, and buildings next to the roads should
 // not all be destroyed by enemies walking past.
+//
+// It also plays the kids' own maps and waves ("Let the robot try" in the wave
+// editor, maps/mapTest.js): the build order is then laid onto that map's spots
+// (nearest to the Town Hall first) and its building kinds (by what they do).
 
 import { World } from './world.js';
 import { DEFAULT_ENEMY_TYPES } from '../config/enemies.js';
@@ -53,11 +57,39 @@ const PLAN = [
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
+// the plan's building kinds and the feature that stands in for each on other data
+const ROLE_FEATURE = { tower: 'shoots', house: 'workers', castle: 'soldiers', catapult: 'lobs' };
+
+/** The build order laid onto a map's spots and the building types it has. */
+export function planFor(map, buildingTypes) {
+  const centre = map.centre;
+  const spots = [...map.spots].sort((a, b) => dist(a, centre) - dist(b, centre));
+  const spotOf = (id) => spots[Number(id.slice(1)) - 1]?.id;
+  const onSpots = buildingTypes.filter((t) => !t.core);
+  const typeOf = (role) => (onSpots.find((t) => t.id === role) ?? onSpots.find((t) => t.features?.includes(ROLE_FEATURE[role])))?.id;
+  return PLAN.flatMap((s) => {
+    if (s[0] === 'build') {
+      const spot = spotOf(s[1]), type = typeOf(s[2]);
+      return spot && type ? [['build', spot, type]] : [];
+    }
+    if (s[0] === 'up') { const spot = spotOf(s[1]); return spot ? [['up', spot]] : []; }
+    return [s];
+  });
+}
+
 /** Play one game; returns per-round stats and the result. */
 // careful = goes back to the Town Hall to heal when hurt; a careless bot runs out of lives
-export function playGame({ rules = DEFAULT_RULES, buildingTypes = DEFAULT_BUILDING_TYPES, seed = 1, plan = PLAN, careful = true, onTick } = {}) {
-  const { map, grid } = testMap();
-  const w = new World({ map, grid, enemyTypes: DEFAULT_ENEMY_TYPES, buildingTypes, rules, waves: defaultWaves(rules.balance), seed });
+// map / grid / waves / enemyTypes default to the test map with the built-in plan
+export function playGame({
+  rules = DEFAULT_RULES, buildingTypes = DEFAULT_BUILDING_TYPES, seed = 1, careful = true, onTick,
+  map: ownMap, grid: ownGrid, waves, enemyTypes = DEFAULT_ENEMY_TYPES, weapons, coinTypes, heroPoints, difficulty,
+  plan = ownMap ? planFor(ownMap, buildingTypes) : PLAN,
+} = {}) {
+  const { map, grid } = ownMap ? { map: ownMap, grid: ownGrid } : testMap();
+  const w = new World({
+    map, grid, enemyTypes, buildingTypes, rules, waves: waves ?? defaultWaves(rules.balance), seed, difficulty,
+    ...(weapons ? { weapons } : {}), ...(coinTypes ? { coinTypes } : {}), ...(heroPoints ? { heroPoints } : {}),
+  });
   w.setMode('ranged');
   const home = { x: w.townHall.x, y: w.townHall.y + 50 };
   const stats = [];
@@ -85,7 +117,8 @@ export function playGame({ rules = DEFAULT_RULES, buildingTypes = DEFAULT_BUILDI
   const near = (s) => (s[0] === 'th' || s[0] === 'hero' ? w.heroNear(w.townHall, w.townHall.radius) : w.heroNear(target(s)));
 
   const dt = 1 / 30;
-  for (let t = 0; t < 4000 && w.phase !== 'won' && w.phase !== 'lost'; t += dt) {
+  const limit = 200 * w.totalRounds; // game seconds – a stuck game ends as 'timeout'
+  for (let t = 0; t < limit && w.phase !== 'won' && w.phase !== 'lost'; t += dt) {
     w.update(dt);
     onTick?.(w);
     for (const e of w.drainEvents()) {
@@ -96,7 +129,7 @@ export function playGame({ rules = DEFAULT_RULES, buildingTypes = DEFAULT_BUILDI
       if (e.type === 'waveStart') cur.waveStart = w.time;
       if (e.type === 'unlocked') cur.unlocked = e.keys;
       if (e.type === 'roundEnd') {
-        stats.push({ round: e.round, ...cur, waveLength: w.time - cur.waveStart, coins: w.coins, buildings: w.buildings.filter((b) => b.state !== 'ruin').length });
+        stats.push({ round: e.round, ...cur, defeated: e.stats.defeated, waveLength: w.time - cur.waveStart, coins: w.coins, buildings: w.buildings.filter((b) => b.state !== 'ruin').length });
         cur = { destroyed: 0, minTownHall: w.townHall.hp, livesLost: 0, picked: 0, expired: 0 };
       }
     }

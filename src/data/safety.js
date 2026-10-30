@@ -37,10 +37,15 @@ export const snoozeBackup = (now = Date.now()) => ({ backupSnoozeUntil: new Date
 /** Download everything as one save file (the browser saves it to Downloads). */
 export function downloadSaveFile(db, language) {
   const file = buildSaveFile({ ...db, settings: { ...db.settings, language } });
-  const blob = new Blob([JSON.stringify(file)], { type: 'application/json' });
+  downloadJson(file, `sketch-village-${file.exportedAt.slice(0, 10)}.json`);
+}
+
+/** Let the browser save `data` as a JSON file. */
+export function downloadJson(data, fileName) {
+  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `sketch-village-${file.exportedAt.slice(0, 10)}.json`;
+  a.download = fileName;
   document.body.appendChild(a);
   a.click();
   a.remove();

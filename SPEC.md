@@ -296,11 +296,22 @@ Waves are data (JSON), editable in an in-game editor and importable.
 - **Progression**: something new unlocks after **every** wave (building levels: the `round` of each level in the component editor; hero upgrades: Rules editor): round 1 house + tower → 2 castle → 3 Town Hall 2 → 4 hero bow +1 → 5 tower L2 → 6 sword +1 → 7 house L2 → 8 armor +1 → 9 castle L2 → 10 speed +1 → 11 Town Hall 3 → 12 tower L3 → 13 bow +2 → 14 house L3 → 15 sword +2 → 16 castle L3 → 17 armor +2 → 18 speed +2 → 19 bow +3, sword +3 → 20 armor +3, speed +3. Locked buttons show 🔒 "Available from round N"; new items are announced and listed in the HUD while preparing.
 - Difficulty scaling: enemy HP × `(1 + hpScalePerRound × (round − 1))` (Rules editor).
 
+### 10a. Let the robot try (map test)
+
+The wave editor has **🤖 Let the robot try**: the balance bot (`logic/balanceBot.js`) plays **this map with the waves being edited** (saved or not), with the kids' components and rules, **3 times** like a careful player, in a Web Worker (`maps/mapTest.js`, `mapTest.worker.js`; ~3 s), at a chosen difficulty. Its build order is laid onto the map's spots (nearest to the Town Hall first) and onto the building kinds the map offers (by feature when a built-in kind is missing).
+
+- Verdict: **too hard** (never won), **hard** (won sometimes), **about right** (won, with some losses), **maybe too easy** (won every time without losing a building or a life); wins of 3 and the rounds where it lost.
+- Per round: average wave length, buildings and lives lost; flags **short** (< 20 s), **long** (> 90 s), **tough** (≥ 1 building or life lost on average). The same numbers appear next to each round in the editor.
+
 ## 11. Win / lose
 
 - **Win**: survive all **20 rounds** of the level.
 - **Lose**: the **Town Hall is destroyed**, or the **hero has lost all 5 lives**. The end screen says which.
-- End screen: simple **Victory / Defeat** drawing with the round reached. **No score, no stars.**
+- End screen: simple **Victory / Defeat** drawing with the round reached and the difficulty. **No score, no stars.**
+
+### 11a. Difficulty
+
+Chosen on the Play screen before the game (remembered, travels with the save file's settings): **🐣 Easy** – monsters 70 % health, 85 % speed, 70 % hits, 125 % start coins, 2 extra lives; **⚔️ Normal** – the numbers from the studio; **🔥 Hard** – 135 % health, 112 % speed, 115 % hits, 85 % start coins (`config/difficulty.js`; the World multiplies, the components stay as they are). Checked with the bot (5 seeds): easy – the careful bot loses nothing, a careless one (never heals) reaches round 18–20 instead of 14–17; hard – the careful bot loses ~10 buildings instead of ~1 and still wins most games.
 
 ## 12. Screens
 
@@ -308,7 +319,7 @@ Waves are data (JSON), editable in an in-game editor and importable.
 2. Asset Studio (library by category + capture/draw/edit)
 3. Hero select
 4. Game (map + HUD + build menu)
-5. Round summary / Victory / Defeat
+5. **Round summary card** after each wave (top centre, 9 s or tap): monsters defeated, coins picked up, the reward (+ income), how long the wave took, buildings / lives lost or "nothing lost!", and what's new next round. The World sends these numbers with `roundEnd` (`stats`). Then Victory / Defeat.
 6. Editors – **all open to kids**: Map Painter/Editor, **Wave editor** (rounds, groups, caves, timings), the studio's component editor (pictures + numbers of buildings, enemies, weapons, coins, heroes) and the Rules editor (global rules). "Reset to defaults" button in each editor so experiments are safe.
 7. **Chronicle** (📖) – every monster with its picture as big as in the component editor (160 px; the walking animation when it has one, the game's shape when nobody has drawn it), its **legend** (a short story) and a **hint for the player**, plus what it can do (health, speed, attack, flying, shooting, boss, which minions it calls). In the menu: all monsters, filtered by theme. **In the game** (📖 on the toolbar; the game pauses while it is open): the monsters of this map's waves and their minions, the ones not met yet faded. When a monster appears for the first time in a game, a short note shows its name and hint with "Read in the chronicle". Legends are written in the component editor (enemies: `legend = { story, hint }`, one text per language for the built-in monsters, one text for the kids' own); all built-in monsters come with a legend in Czech and English.
 
@@ -355,7 +366,7 @@ Everything is downloadable as **one JSON file** and importable on another comput
 - Storage at runtime: IndexedDB; the JSON is the exchange format.
 - Version 3 adds the `themes` collection, `themes` on components and `theme` / `textures` on maps. Built-in components are tracked by id (`settings.builtInsSeeded`), so built-ins added in a later version arrive in existing browsers, but one a kid deleted never comes back.
 - Version field + migration (`data/migrate.js`): version-1 files (separate `enemyTypes`, `buildingTypes`, `weapons`, `rules.townHallLevels`, per-type drawing categories) are converted into components on load and after import.
-- Export can also be per map (map + the assets it uses) `TBD`.
+- **Share one map** (📤 in the map list, `maps/shareMap.js`): a normal save file `map-<name>.json` with just the map, its theme and the components it uses – decorations, studio terrain textures, the enemies of its waves and the minions they call. A friend imports it like any file (new things added, changes reviewed).
 
 ## 13b. Keeping the drawings safe
 
@@ -375,7 +386,7 @@ src/
   data/          saveFile.js (JSON format), mergePlan.js + ImportReview (reviewed import), safety.js + SafetyCard (backup reminder, persistent storage), migrate.js (v1 → components), store.js (IndexedDB), defaultData.js (class pack), DataPanel
   config/        components.js (built-in components + derived lists), features.js, themes.js, legends.js (monster legends), balance, buildings, heroStats, enemies, weapons, waves (defaults) + rules.js (global rules over defaults)
   logic/         pathGrid, pathfinding, mapModel, waves, world (whole simulation), balanceBot  ← pure, unit-tested
-  maps/          MapList, MapPainter, WaveEditor, mapRuntime (canvas helpers, sample map), textures.js (terrain textures)
+  maps/          MapList, MapPainter, WaveEditor, MapTestPanel + mapTest.js + mapTest.worker.js (robot test), shareMap.js, mapRuntime (canvas helpers, sample map), textures.js (terrain textures)
   game/          PlaySetup, GameView (React ↔ Phaser), GameScene (incl. playing animations), GameOverlay, BuildPanel, Chronicle, RulesEditor, sound.js, tutorial.js
   locales/       cs.json, en.json
 public/default-data.json   class pack (empty by default)
@@ -398,6 +409,7 @@ e2e/                       Playwright browser tests (§15a)
 5f. **Components** ✅ – every game part is one component (pictures + all numbers) edited in the studio, which became the general component editor (§7.1). Buildings are made from **features** (workers, arrows, soldiers, income, hero healing) with a table of 1–5 levels whose fields follow the features; the Town Hall is the `core` building type with the same features; "another look" components add drawings to an existing type. Enemies, weapons/shields/armor and coins carry their numbers next to their drawings; the separate Enemies and Weapons screens are gone and the Rules editor keeps only global rules. Old data and version-1 save files are migrated automatically. Tests cover new building kinds made only from data (market, well, 4-level tower).
 5g. **Lives & backpack** ✅ – every lost life sends the hero away for 10 s and back to the Town Hall; losing all 5 loses the game (the end screen says why). The bot now walks back to heal below 40 % HP and still wins every seed without losing a life; the same bot without healing loses every seed (new test). Small retune: dragon 280 HP / speed 36, rounds 14–15 spawns. **Backpack** rebuilt: three slots (right hand, left hand, armor) with the hero's attack / reach / armor shown live, items dragged onto slots with mouse or finger (or tap item → tap slot), wrong slots refused, worn items dragged back to take them off.
 5h. **Summoners, catapult, themes, terrain** ✅ – enemies can **call minions** (any enemies, several kinds mixed; how many, how often, at most alive, more on death; minions never summon): new built-ins **necromancer** → skeletons, **spider queen** → spiderlings (more when she dies), plus skeleton and spiderling. New building feature **lobs** and built-in **catapult** (rounds 6 / 10 / 15): area damage to walking enemies. **Themes** (§7.2) with an editor; maps have a theme. **Terrain textures** in the map editor with preview (§5.1). Waves: spider queen in rounds 8 and 19, necromancers in 12 and 17; necromancer tuned to 90 HP / every 8 s; the bot builds a catapult – all seeds won, waves 40–60 s. Architecture: building features run from a behaviour table, one spawn path for caves and summoners, ground-target projectiles, built-ins seeded by id.
+5l. **Gameplay: difficulty, wave summary, robot map test, map sharing** ✅ – difficulty levels (§11a), a summary card after each wave (§12), "Let the robot try" in the wave editor (§10a), sharing one map with the drawings it uses (§13a). Bot checks per difficulty added to the balance tests.
 5k. **Data safety, installable app, notch, browser tests** ✅ – the browser is asked to keep the data, a backup reminder on the menu after 2 days of unsaved changes, a "Backup & keeping drawings safe" card (§13b); installable app that plays offline, updates wait for a reload outside the game (§2.2); iPhone notch / home bar safe areas (§4a); Playwright browser tests and ESLint run in CI before every deploy (§15a).
 5j. **Import review, shop overlay, phones** ✅ – import merges by name and shows what changed (update / keep / all), settings travel with the file (incl. language); the patrol distance is filled into older castles so it shows in the editor; "calls minions" is a checkbox (the choice is kept when switched off); the Town Hall shop is an overlay with backpack-sized tiles; automatic phone / tablet / PC layout (§4a); chronicle pictures at editor size.
 5i. **Animations, chronicle, patrols** ✅ – optional **animations** for heroes, enemies, soldiers (walk, attack) and buildings (attack, reload): a photographed strip of 4–12 frames is cut automatically (frame count guessed from the paper gaps), frames are lined up over the previous one (onion skin, drag or arrows), speed and preview in the component editor; the game plays them by what each thing does (§3.2a). **Chronicle** with legends and hints for every monster, in the menu and in the game, plus a "new monster" note (§12). **Soldiers patrol** only up to their castle's patrol distance and come back to their starting point (§7). World events for animations: `buildingAttack`, `soldierAttack`. Balance re-checked (round 16 retimed): all seeds won, waves 40–60 s.
@@ -410,6 +422,9 @@ e2e/                       Playwright browser tests (§15a)
 - every menu screen opens without errors; a game starts, runs and pauses;
 - import: a new element is added, one with the same name and a change is reviewed and kept;
 - backup reminder: appears for 3-day-old changes, "Later" hides it across a reload, "Download backup" downloads a valid save file and clears it;
+- difficulty: the choice is remembered across a reload;
+- the robot test in the wave editor finishes with a verdict and times for all 20 rounds;
+- sharing a map downloads a file with one map and only the components it uses;
 - phone with a pretend notch: game buttons big enough, inside the safe area, not overlapping (also with the ⋯ menu open), menus clear of the notch;
 - offline: after the first visit the game reloads and starts a game with the network switched off.
 

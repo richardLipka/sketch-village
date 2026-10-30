@@ -55,3 +55,23 @@ describe('balance (bot plays 20 rounds)', () => {
     for (const g of games) expect(g.stats.slice(0, 4).every((s) => s.destroyed === 0)).toBe(true);
   });
 }, 60000);
+
+describe('difficulty levels (bot plays 20 rounds)', () => {
+  const lost = (g) => g.stats.reduce((n, s) => n + s.destroyed, 0);
+  const avg = (gs, f) => gs.reduce((a, g) => a + f(g), 0) / gs.length;
+  const play = (difficulty, careful = true) => SEEDS.map((seed) => playGame({ seed, difficulty, careful }));
+
+  it('easy: the careful bot wins without losing a building; a careless one gets much further than on normal', () => {
+    const easy = play('easy');
+    for (const g of easy) { expect(g.result).toBe('won'); expect(lost(g)).toBe(0); }
+    const careless = avg(play('easy', false), (g) => g.round);
+    expect(careless).toBeGreaterThanOrEqual(17);
+    expect(careless).toBeGreaterThan(avg(play('normal', false), (g) => g.round) + 2);
+  });
+
+  it('hard: the same careful bot loses many more buildings than on normal', () => {
+    const hard = play('hard');
+    expect(avg(hard, lost)).toBeGreaterThan(avg(play('normal'), lost) + 4);
+    expect(hard.filter((g) => g.result === 'won').length).toBeGreaterThanOrEqual(3); // still winnable
+  });
+}, 120000);

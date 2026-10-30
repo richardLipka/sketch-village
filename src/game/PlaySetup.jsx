@@ -1,11 +1,12 @@
 import React, { useState, Suspense, lazy } from 'react';
 import { useTranslation } from 'react-i18next';
 import { enterFullscreen } from '../ui/FullscreenButton.jsx';
+import { DIFFICULTIES, DIFFICULTY_IDS, DEFAULT_DIFFICULTY } from '../config/difficulty.js';
 
 // Phaser is big – load it only when a game starts.
 const GameView = lazy(() => import('./GameView.jsx'));
 
-// Pick a level (map) and a hero, then play (fullscreen).
+// Pick a level (map), a hero and how hard it should be, then play (fullscreen).
 export default function PlaySetup({ maps, assets, enemyTypes, buildings, rules, weapons, themes = [], settings, onSettings }) {
   const { t } = useTranslation();
   const playable = maps.filter((m) => m.valid);
@@ -16,12 +17,13 @@ export default function PlaySetup({ maps, assets, enemyTypes, buildings, rules, 
 
   const map = playable.find((m) => m.id === mapId);
   const hero = heroes.find((h) => h.id === heroId) ?? null;
+  const difficulty = DIFFICULTIES[settings?.difficulty] ? settings.difficulty : DEFAULT_DIFFICULTY;
 
   if (playing && map) {
     return (
       <Suspense fallback={<p>{t('app.loading')}</p>}>
         <GameView
-          map={map} hero={hero} assets={assets} enemyTypes={enemyTypes} buildings={buildings} rules={rules} weapons={weapons} themes={themes}
+          map={map} hero={hero} assets={assets} enemyTypes={enemyTypes} buildings={buildings} rules={rules} weapons={weapons} themes={themes} difficulty={difficulty}
           settings={settings} onSettings={onSettings} onExit={() => setPlaying(false)}
         />
       </Suspense>
@@ -52,6 +54,16 @@ export default function PlaySetup({ maps, assets, enemyTypes, buildings, rules, 
             <div className="name">{h.name}</div>
             <div className="author">{h.author && `✎ ${h.author}`}</div>
           </div>
+        ))}
+      </div>
+
+      <h2>{t('difficulty.pick')}</h2>
+      <div className="difficulty-pick" role="radiogroup">
+        {DIFFICULTY_IDS.map((id) => (
+          <button key={id} role="radio" aria-checked={id === difficulty} className={`btn ${id === difficulty ? 'active' : ''}`} onClick={() => onSettings?.({ difficulty: id })}>
+            <span>{DIFFICULTIES[id].icon} <b>{t(`difficulty.${id}`)}</b></span>
+            <span className="small muted">{t(`difficulty.${id}_hint`)}</span>
+          </button>
         ))}
       </div>
 

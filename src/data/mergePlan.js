@@ -17,7 +17,7 @@ import { SAVE_VERSION } from './saveFile.js';
 
 export const REVIEW_COLLECTIONS = ['themes', 'assets', 'maps', 'rules'];
 /** Settings that travel with the save file (the rest is the browser's own bookkeeping). */
-export const PREF_KEYS = ['language', 'wobble', 'muted', 'tutorialStep'];
+export const PREF_KEYS = ['language', 'wobble', 'muted', 'tutorialStep', 'difficulty'];
 
 const IGNORE = new Set(['id', 'createdAt', 'updatedAt', 'builtIn', 'valid']);
 const MAX_DIFFS = 60;
@@ -110,7 +110,7 @@ export function planImport(db, file, { language } = {}) {
   }
 
   // 3) the settings that travel with the file
-  const mine = { wobble: false, muted: false, tutorialStep: 0, ...pickPrefs(db.settings), ...(language ? { language } : {}) };
+  const mine = { wobble: false, muted: false, tutorialStep: 0, difficulty: 'normal', ...pickPrefs(db.settings), ...(language ? { language } : {}) };
   const theirs = pickPrefs(incoming.settings);
   const prefDiff = diffRecords(Object.fromEntries(Object.keys(theirs).map((k) => [k, mine[k]])), theirs);
   if (prefDiff.length) changes.push({ collection: 'settings', id: 'settings', name: null, local: mine, record: theirs, diff: prefDiff });

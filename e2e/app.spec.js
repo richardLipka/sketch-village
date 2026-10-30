@@ -78,3 +78,44 @@ test('backup reminder: shown for old unsaved changes, "later" hides it, a backup
   await expect(page.getByText(/Poslední záloha/)).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test('difficulty: the choice is kept for the next game', async ({ page }) => {
+  await openMenu(page);
+  await page.getByRole('button', { name: /Hrát/ }).click();
+  const easy = page.getByRole('radio', { name: /Lehká/ });
+  await expect(page.getByRole('radio', { name: /Normální/ })).toHaveAttribute('aria-checked', 'true');
+  await easy.click();
+  await expect(easy).toHaveAttribute('aria-checked', 'true');
+  await page.reload();
+  await page.getByRole('button', { name: /Hrát/ }).click();
+  await expect(page.getByRole('radio', { name: /Lehká/ })).toHaveAttribute('aria-checked', 'true');
+});
+
+test('the robot plays a map in the wave editor and says how it went', async ({ page }) => {
+  test.setTimeout(120_000);
+  const errors = watchErrors(page);
+  await openMenu(page);
+  await page.getByRole('button', { name: /Mapy/ }).click();
+  await page.getByTitle('Vlny').first().click();
+  await page.getByRole('button', { name: /Zkusit/ }).click();
+  await expect(page.locator('.map-test-report .verdict')).toContainText(/vyhrál|Akorát|těžké|lehké/, { timeout: 90_000 });
+  await expect(page.locator('.map-test-round')).toHaveCount(20);
+  await expect(page.locator('.round-test').first()).toBeVisible(); // the rounds below show the robot's times
+  expect(errors).toEqual([]);
+});
+
+test('sharing one map downloads a file with just that map and what it uses', async ({ page }) => {
+  await openMenu(page);
+  await page.getByRole('button', { name: /Mapy/ }).click();
+  const downloading = page.waitForEvent('download');
+  await page.getByTitle(/Sdílet mapu/).first().click();
+  const download = await downloading;
+  expect(download.suggestedFilename()).toMatch(/^map-.*\.json$/);
+  const chunks = [];
+  for await (const c of await download.createReadStream()) chunks.push(c);
+  const file = JSON.parse(Buffer.concat(chunks).toString());
+  expect(file.format).toBe('sketch-village');
+  expect(file.maps).toHaveLength(1);
+  expect(file.assets.every((a) => a.category === 'enemy' || a.category === 'decoration' || a.category === 'texture')).toBe(true);
+  expect(file.assets.length).toBeGreaterThan(0); // the enemies of its waves
+});

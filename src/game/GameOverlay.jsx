@@ -285,3 +285,25 @@ export const Coach = memo(function Coach({ text, index, total, onSkip }) {
     </div>
   );
 });
+
+// After each wave: what happened in it, the reward and what's new next round.
+// Hides by itself after a few seconds or when the next wave starts; tap = close.
+export const RoundSummary = memo(function RoundSummary({ round, total, reward, income, stats, unlocked, onClose }) {
+  const { t } = useTranslation();
+  const s = stats ?? {};
+  return (
+    <div className="ov round-summary sketch-card" role="status" onClick={onClose}>
+      <b>🎉 {t('summary.title', { n: round, total })}</b>
+      <div className="summary-facts small">
+        <span title={t('summary.defeated')}>👾 {s.defeated ?? 0}</span>
+        <span title={t('summary.coins')}>🪙 +{s.coins ?? 0}</span>
+        <span title={t('summary.reward')}>🎁 +{reward}{income > 0 ? ` (🏠 ${income})` : ''}</span>
+        {s.waveTime > 0 && <span title={t('summary.time')}>⏱ {s.waveTime} s</span>}
+        {s.lost > 0 && <span className="error-text">🏚 {t('summary.lost', { count: s.lost })}</span>}
+        {s.livesLost > 0 && <span className="error-text">💔 {t('summary.lives', { count: s.livesLost })}</span>}
+        {!s.lost && !s.livesLost && <span>✨ {t('summary.perfect')}</span>}
+      </div>
+      {unlocked?.length > 0 && <div className="small">🆕 {t('summary.new', { list: unlocked.join(', ') })}</div>}
+    </div>
+  );
+});

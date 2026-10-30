@@ -265,7 +265,8 @@
     "tex_cobble": "Dlažba",
     "tex_stone": "Skála",
     "tex_water": "Voda",
-    "tex_snow": "Sníh"
+    "tex_snow": "Sníh",
+    "share": "Sdílet mapu (soubor s mapou a obrázky, které používá)"
   },
   "play": {
     "title": "Hrát",
@@ -305,7 +306,6 @@
     "from_caves": "z jeskyně {{list}}",
     "from_all_caves": "ze všech jeskyní",
     "msg_wave": "Vlna {{n}} přichází!",
-    "msg_round_end": "Kolo {{n}} ubráněno! +{{coins}} 🪙",
     "msg_bonus": "Bonus za odvahu: +{{coins}} 🪙",
     "msg_cant_hit": "Létající nepřátele zasáhneš jen lukem (2)!",
     "msg_life": "Au! Zbývá životů: {{n}}",
@@ -706,5 +706,47 @@
     "reminder_other": "Tvoje obrázky z doby před {{count}} dny jsou jen v tomhle prohlížeči. Stáhni si zálohu, ať se neztratí.",
     "backup_now": "Stáhnout zálohu",
     "refused": "Prohlížeč zatím nesouhlasil. Obvykle souhlasí, když je hra nainstalovaná nebo se hraje častěji – do té doby stahuj zálohy."
+  },
+  "difficulty": {
+    "label": "Obtížnost",
+    "pick": "Jak těžké?",
+    "easy": "Lehká",
+    "easy_hint": "slabší a pomalejší příšery, víc mincí, 2 životy navíc",
+    "normal": "Normální",
+    "normal_hint": "jak říkají čísla v ateliéru",
+    "hard": "Těžká",
+    "hard_hint": "silnější a rychlejší příšery, méně mincí"
+  },
+  "summary": {
+    "title": "Vlna {{n}} z {{total}} ubráněna!",
+    "defeated": "poražené příšery",
+    "coins": "sebrané mince",
+    "reward": "odměna za vlnu",
+    "time": "jak dlouho vlna trvala",
+    "lost_one": "ztracena {{count}} budova",
+    "lost_few": "ztraceny {{count}} budovy",
+    "lost_many": "ztraceno {{count}} budov",
+    "lost_other": "ztraceno {{count}} budov",
+    "lives_one": "ztracen {{count}} život",
+    "lives_few": "ztraceny {{count}} životy",
+    "lives_many": "ztraceno {{count}} životů",
+    "lives_other": "ztraceno {{count}} životů",
+    "perfect": "nic ztraceno!",
+    "new": "Nové: {{list}}"
+  },
+  "maptest": {
+    "title": "Nech robota zkusit",
+    "hint": "robot zahraje tuhle mapu s těmito vlnami třikrát, jako opatrný hráč",
+    "run": "Zkusit",
+    "running": "hraje… {{done}}/{{total}}",
+    "verdict_too_hard": "Moc těžké – robot ani jednou nevyhrál.",
+    "verdict_hard": "Těžké – robot vyhrál jen někdy.",
+    "verdict_ok": "Akorát – vyhrál, ale nebylo to zadarmo.",
+    "verdict_easy": "Možná moc lehké – vyhrál pokaždé a nic neztratil.",
+    "wins": "vyhrál {{wins}} z {{games}}",
+    "lost_at": "prohrál v kole {{rounds}}",
+    "flag_short": "krátké",
+    "flag_long": "dlouhé",
+    "flag_tough": "těžké"
   }
 }

@@ -265,7 +265,8 @@
     "tex_cobble": "Cobblestones",
     "tex_stone": "Rock",
     "tex_water": "Water",
-    "tex_snow": "Snow"
+    "tex_snow": "Snow",
+    "share": "Share this map (a file with the map and the drawings it uses)"
   },
   "play": {
     "title": "Play",
@@ -305,7 +306,6 @@
     "from_caves": "from cave {{list}}",
     "from_all_caves": "from all caves",
     "msg_wave": "Wave {{n}} is coming!",
-    "msg_round_end": "Round {{n}} survived! +{{coins}} 🪙",
     "msg_bonus": "Bravery bonus: +{{coins}} 🪙",
     "msg_cant_hit": "Flying enemies can only be hit with the bow (2)!",
     "msg_life": "Ouch! Lives left: {{n}}",
@@ -702,5 +702,43 @@
     "reminder_other": "Your drawings from {{count}} days ago are only in this browser. Download a backup so they can’t get lost.",
     "backup_now": "Download backup",
     "refused": "The browser said no for now. It usually agrees once the game is installed or played more often – until then, download backups."
+  },
+  "difficulty": {
+    "label": "Difficulty",
+    "pick": "How hard?",
+    "easy": "Easy",
+    "easy_hint": "weaker, slower monsters, more coins, 2 extra lives",
+    "normal": "Normal",
+    "normal_hint": "as the numbers in the studio say",
+    "hard": "Hard",
+    "hard_hint": "tougher, faster monsters, fewer coins"
+  },
+  "summary": {
+    "title": "Wave {{n}} of {{total}} survived!",
+    "defeated": "monsters defeated",
+    "coins": "coins picked up",
+    "reward": "reward for the wave",
+    "time": "how long the wave took",
+    "lost_one": "{{count}} building lost",
+    "lost_other": "{{count}} buildings lost",
+    "lives_one": "{{count}} life lost",
+    "lives_other": "{{count}} lives lost",
+    "perfect": "nothing lost!",
+    "new": "New: {{list}}"
+  },
+  "maptest": {
+    "title": "Let the robot try",
+    "hint": "a robot plays this map with these waves 3 times, like a careful player",
+    "run": "Try it",
+    "running": "playing… {{done}}/{{total}}",
+    "verdict_too_hard": "Too hard – the robot never won.",
+    "verdict_hard": "Hard – the robot won only sometimes.",
+    "verdict_ok": "About right – won, but not without trouble.",
+    "verdict_easy": "Maybe too easy – won every time without losing anything.",
+    "wins": "won {{wins}} of {{games}}",
+    "lost_at": "lost in round {{rounds}}",
+    "flag_short": "short",
+    "flag_long": "long",
+    "flag_tough": "tough"
   }
 }

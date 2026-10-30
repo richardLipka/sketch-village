@@ -13,7 +13,8 @@ import Modal from '../ui/Modal.jsx';
 import { useDevice } from '../ui/device.js';
 import AnimPreview from '../assets/AnimPreview.jsx';
 import { legendText } from '../config/legends.js';
-import { Resources, Lives, WaveInfo, AttackBar, Equipment, Toolbar, Coach } from './GameOverlay.jsx';
+import { Resources, Lives, WaveInfo, AttackBar, Equipment, Toolbar, Coach, RoundSummary } from './GameOverlay.jsx';
+import { difficultyOf } from '../config/difficulty.js';
 import { DEFAULT_HERO_POINTS } from '../config/heroStats.js';
 import { DEFAULT_RULES } from '../config/rules.js';
 import { wavesOf } from '../config/waves.js';
@@ -26,6 +27,7 @@ import { TUTORIAL_STEPS, TUTORIAL_DONE, advanceTutorial } from './tutorial.js';
 
 const MESSAGE_MS = 2600;
 const NEW_MONSTER_MS = 7000;
+const SUMMARY_MS = 9000;
 
 // React wrapper: prepares images, grid and the World, runs Phaser and lays the
 // controls over the map (GameOverlay). Fills the whole window.
@@ -36,7 +38,7 @@ const NEW_MONSTER_MS = 7000;
 // - the scene sends a HUD snapshot only when a visible value changed;
 // - overlay pieces are memoized with primitive props and stable callbacks;
 // - the build panel refreshes itself (SelectionPanel), not the whole screen.
-export default function GameView({ map, hero, assets, enemyTypes, buildings, weapons = DEFAULT_WEAPONS, rules = DEFAULT_RULES, themes = [], settings = {}, onSettings, onExit }) {
+export default function GameView({ map, hero, assets, enemyTypes, buildings, weapons = DEFAULT_WEAPONS, rules = DEFAULT_RULES, themes = [], difficulty, settings = {}, onSettings, onExit }) {
   const { t, i18n } = useTranslation();
   const hostRef = useRef(null);
   const gameRef = useRef(null);
@@ -55,6 +57,8 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
   const seen = useRef(new Set());
   const [newMonster, setNewMonster] = useState(null);
   const [chronicle, setChronicle] = useState(false);
+  // the card after each wave: what happened, the reward, what's new (World `roundEnd` + `unlocked`)
+  const [summary, setSummary] = useState(null);
   const monsters = useMemo(() => monstersOfWaves(wavesOf(map, rules.balance), enemyTypes), [map, rules, enemyTypes]);
   const wobble = !!settings.wobble;
   const muted = !!settings.muted;
@@ -94,6 +98,12 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
   }, []);
 
   useEffect(() => {
+    if (!summary) return undefined;
+    const id = setTimeout(() => setSummary(null), SUMMARY_MS);
+    return () => clearTimeout(id);
+  }, [summary]);
+
+  useEffect(() => {
     if (!newMonster) return undefined;
     const id = setTimeout(() => setNewMonster(null), NEW_MONSTER_MS);
     return () => clearTimeout(id);
@@ -102,11 +112,13 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
   // World events shown as a message
   const onEvent = useCallback((e) => {
     const { t: tr, weapons: items, lang, typeName } = live.current;
+    if (e.type === 'roundEnd') { setSummary({ ...e, unlocked: [], at: Date.now() }); return; }
+    if (e.type === 'unlocked') { setSummary((s) => (s ? { ...s, unlocked: e.keys } : s)); return; }
+    if (e.type === 'waveStart') setSummary(null);
     const name = () => typeName(e.building);
     const item = (id) => items.find((w) => w.id === id)?.name?.[lang] ?? id;
     const msg = {
       waveStart: () => tr('game.msg_wave', { n: e.round }),
-      roundEnd: () => tr('game.msg_round_end', { n: e.round, coins: e.reward }),
       bonus: () => tr('game.msg_bonus', { coins: e.amount }),
       cantHit: () => tr('game.msg_cant_hit'),
       heroDown: () => tr('game.msg_hero_down', { s: e.respawnIn, n: e.lives }),
@@ -117,7 +129,6 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
       sold: () => tr('build.msg_sold', { name: name(), coins: e.refund }),
       chestOpened: () => (e.weapon ? tr('weapons.msg_found', { name: item(e.weapon) }) : tr('weapons.msg_chest_coins', { coins: e.coins })),
       weaponBought: () => tr('weapons.msg_bought', { name: item(e.weapon) }),
-      unlocked: () => tr('unlock.msg', { list: e.keys.map((k) => unlockLabel(k, tr, typeName)).join(', ') }),
       heroUpgraded: () => tr('build.msg_hero_upgraded', { stat: tr(`hero.stat_${e.stat}`), n: e.level }),
     }[e.type];
     const text = msg?.();
@@ -128,6 +139,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
     let alive = true;
     setHud(null);
     setSelection(null);
+    setSummary(null);
     seen.current = new Set();
     setNewMonster(null);
     (async () => {
@@ -192,7 +204,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
       const world = new World({
         map, grid, enemyTypes, buildingTypes: types, rules, weapons, coinTypes,
         waves: wavesOf(map, rules.balance),
-        heroPoints: hero?.stats ?? DEFAULT_HERO_POINTS,
+        heroPoints: hero?.stats ?? DEFAULT_HERO_POINTS, difficulty,
       });
       worldRef.current = world;
 
@@ -220,7 +232,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
       worldRef.current = null;
     };
     // only things that change the game itself restart it
-  }, [map, hero, assets, enemyTypes, buildings, types, rules, weapons, restart, onEvent, anyEvent]);
+  }, [map, hero, assets, enemyTypes, buildings, types, rules, weapons, difficulty, restart, onEvent, anyEvent]);
 
   const scene = () => gameRef.current?.scene.getScene('game');
   const started = hud !== null; // the scene exists once the first HUD arrived
@@ -349,6 +361,10 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
           </Modal>
         )}
         {message && <div className="game-msg sketch-card" key={message.at}>{message.text}</div>}
+        {playing && summary && (
+          <RoundSummary key={summary.at} round={summary.round} total={hud.totalRounds} reward={summary.reward} income={summary.income} stats={summary.stats}
+            unlocked={summary.unlocked.map((k) => unlockLabel(k, t, typeName))} onClose={() => setSummary(null)} />
+        )}
         {playing && tip < TUTORIAL_DONE && <Coach text={t(`tips.${TUTORIAL_STEPS[tip].id}`)} index={tip} total={TUTORIAL_DONE} onSkip={skipTips} />}
         {playing && selection && (
           <SelectionPanel
@@ -364,6 +380,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
             <div className="sketch-card" style={{ textAlign: 'center' }}>
               <h1>{hud.phase === 'won' ? `🏆 ${t('game.won')}` : `💥 ${t(hud.lostBy === 'hero' ? 'game.lost_hero' : 'game.lost')}`}</h1>
               <p>{t('game.reached', { n: hud.round, total: hud.totalRounds })}</p>
+              <p className="small">{difficultyOf(difficulty).icon} {t('difficulty.label')}: {t(`difficulty.${difficulty ?? 'normal'}`)}</p>
               <div className="row" style={{ justifyContent: 'center' }}>
                 <button className="btn primary" onClick={() => { setPaused(false); setSpeed(1); setRestart((n) => n + 1); }}>↺ {t('game.again')}</button>
                 <button className="btn" onClick={exit}>{t('game.exit')}</button>

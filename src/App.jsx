@@ -128,7 +128,7 @@ export default function App() {
       )}
 
       {screen === 'maps' && (
-        <MapList maps={db.maps} assets={db.assets} enemyTypes={enemyTypes} themes={db.themes} balance={rules.balance} onChange={(m) => updateCollection('maps', m)} />
+        <MapList maps={db.maps} assets={db.assets} enemyTypes={enemyTypes} themes={db.themes} balance={rules.balance} buildingTypes={buildings.types} rules={rules} items={items} onChange={(m) => updateCollection('maps', m)} />
       )}
 
       {screen === 'chronicle' && (

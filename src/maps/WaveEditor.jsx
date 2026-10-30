@@ -4,14 +4,16 @@ import { wavesOf, defaultWaves } from '../config/waves.js';
 import { roundSummary, roundDuration, roundReward } from '../logic/waves.js';
 import { BALANCE } from '../config/balance.js';
 import { themeName } from '../config/themes.js';
+import MapTestPanel from './MapTestPanel.jsx';
 
 // Wave editor for one map (SPEC §10): rounds → groups of enemies; each round can
 // override its reward and the prep time before it. On a themed map the enemies
 // of that theme are listed first.
-export default function WaveEditor({ map, enemyTypes, themes = [], balance = BALANCE, onSave, onCancel }) {
+export default function WaveEditor({ map, enemyTypes, themes = [], balance = BALANCE, buildingTypes, rules, items, onSave, onCancel }) {
   const { t, i18n } = useTranslation();
   const [waves, setWaves] = useState(() => structuredClone(wavesOf(map, balance)));
   const [open, setOpen] = useState(0);
+  const [report, setReport] = useState(null); // the robot's last try (MapTestPanel)
   const lang = i18n.language;
   const name = (id) => enemyTypes.find((e) => e.id === id)?.name?.[lang] ?? id;
   const theme = themes.find((th) => th.id === map.theme);
@@ -65,13 +67,23 @@ export default function WaveEditor({ map, enemyTypes, themes = [], balance = BAL
         <button className="btn primary" onClick={() => onSave(waves)}>✓ {t('common.save')}</button>
       </div>
 
+      {buildingTypes && rules && (
+        <MapTestPanel map={map} waves={waves} enemyTypes={enemyTypes} buildingTypes={buildingTypes} rules={rules} items={items} onReport={setReport} />
+      )}
+
       {waves.rounds.map((r, ri) => {
+        const tried = report?.rounds[ri];
         const sum = Object.entries(roundSummary(r)).map(([id, n]) => `${n}× ${name(id)}`).join(', ');
         return (
           <div key={ri} className="sketch-card" style={{ padding: 10, marginBottom: 8 }}>
             <div className="row" onClick={() => setOpen(open === ri ? -1 : ri)} style={{ cursor: 'pointer' }}>
               <b>{open === ri ? '▾' : '▸'} {t('waves.round', { n: ri + 1 })}</b>
               <span className="small muted">{sum || t('waves.empty')} · ~{Math.ceil(roundDuration(r))} s · +{r.reward ?? roundReward(balance, ri)} 🪙</span>
+              {tried && (
+                <span className={`round-test ${tried.flags.length ? 'flagged' : ''}`} title={t('maptest.title')}>
+                  🤖 {tried.length} s{tried.lost > 0 ? ` 🏚 ${tried.lost}` : ''}{tried.flags.map((f) => ` · ${t(`maptest.flag_${f}`)}`).join('')}
+                </span>
+              )}
               <span className="spacer" />
               <button className="btn icon" onClick={(e) => { e.stopPropagation(); dupRound(ri); }} title={t('studio.duplicate')}>⧉</button>
               <button className="btn icon danger" onClick={(e) => { e.stopPropagation(); delRound(ri); }} title={t('common.delete')} disabled={waves.rounds.length < 2}>🗑</button>

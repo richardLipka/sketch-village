@@ -5,9 +5,11 @@ import WaveEditor from './WaveEditor.jsx';
 import { drawSampleMap } from './mapRuntime.js';
 import { emptyMap } from '../logic/mapModel.js';
 import { newId } from '../data/saveFile.js';
+import { downloadJson } from '../data/safety.js';
+import { mapPackage, mapFileName } from './shareMap.js';
 
 // All maps (= levels): create blank or sample, edit, duplicate, delete.
-export default function MapList({ maps, assets, enemyTypes, themes = [], balance, onChange }) {
+export default function MapList({ maps, assets, enemyTypes, themes = [], balance, buildingTypes, rules, items, onChange }) {
   const { t } = useTranslation();
   const themeIcon = (id) => themes.find((th) => th.id === id)?.icon ?? '';
   const [editing, setEditing] = useState(null);
@@ -42,6 +44,7 @@ export default function MapList({ maps, assets, enemyTypes, themes = [], balance
         enemyTypes={enemyTypes}
         themes={themes}
         balance={balance}
+        buildingTypes={buildingTypes} rules={rules} items={items}
         onCancel={() => setWavesFor(null)}
         onSave={(waves) => { save({ ...wavesFor, waves, updatedAt: new Date().toISOString() }); setWavesFor(null); }}
       />
@@ -70,6 +73,7 @@ export default function MapList({ maps, assets, enemyTypes, themes = [], balance
             <div className="row" style={{ justifyContent: 'center', gap: 4 }}>
               <button className="btn icon" onClick={(e) => { e.stopPropagation(); setWavesFor(m); }} title={t('waves.edit')}>🌊 {t('waves.edit')}</button>
               <button className="btn icon" onClick={(e) => { e.stopPropagation(); duplicate(m); }} title={t('studio.duplicate')}>⧉</button>
+              <button className="btn icon" onClick={(e) => { e.stopPropagation(); downloadJson(mapPackage(m, { assets, themes }, balance), mapFileName(m)); }} title={t('maps.share')}>📤</button>
               <button className="btn icon danger" onClick={(e) => { e.stopPropagation(); remove(m); }} title={t('common.delete')}>🗑</button>
             </div>
           </div>

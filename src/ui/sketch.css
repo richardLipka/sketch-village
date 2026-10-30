@@ -393,3 +393,24 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 /* app notes (update, offline) at the top, so they never cover a message at the bottom */
 .toast.toast-top { top: calc(12px + var(--sa-t)); bottom: auto; background: var(--hl-blue); }
 .update-toast { background: var(--hl-yellow); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* the card after each wave (GameOverlay RoundSummary) */
+/* below the line of short game messages (.game-msg), so both can show at once */
+.round-summary { top: calc(24px + 4.6em); left: 50%; transform: translateX(-50%) rotate(-0.5deg); z-index: 15; max-width: min(26em, 70%); padding: 0.4em 0.8em; background: var(--hl-green); text-align: center; cursor: pointer; }
+.summary-facts { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.3em 0.9em; margin: 0.2em 0; }
+.device-phone .round-summary { top: calc(14px + 5em); max-width: 50%; font-size: 0.85em; }
+/* difficulty choice before a game */
+.difficulty-pick { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 24px; }
+.difficulty-pick .btn { flex-direction: column; align-items: flex-start; min-width: 11em; text-align: left; }
+.difficulty-pick .btn.active { background: var(--hl-yellow); }
+.difficulty-pick .small { font-size: 15px; }
+/* robot test of a map (MapTestPanel) */
+.map-test-report .verdict { margin: 8px 0; }
+.verdict-too_hard, .verdict-hard { color: var(--danger); }
+.map-test-rounds { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5em, 1fr)); gap: 4px; }
+.map-test-round { display: flex; flex-wrap: wrap; gap: 2px 8px; font-size: 15px; padding: 2px 6px; border: 1.5px dashed #c9bfa5; border-radius: 6px; }
+.map-test-round.flagged { background: var(--hl-yellow); }
+.map-test-round .flag { font-size: 13px; color: var(--danger); }
+.round-test { font-size: 14px; padding: 0 6px; border-radius: 6px; background: var(--hl-blue); }
+.round-test.flagged { background: var(--hl-yellow); }
+.device-phone .game-stage:has(.round-summary) .coach { display: none; }

@@ -32,6 +32,7 @@ import { heroNumbers, clampPoints, HERO_STATS, DEFAULT_HERO_POINTS } from '../co
 import { worldToCell, cellCenter, nearestWalkable, isWalkable } from './pathGrid.js';
 import { findPath, smoothPath, flowField } from './pathfinding.js';
 import { expandRound, roundReward, roundCaves, hpScale } from './waves.js';
+import { difficultyOf } from '../config/difficulty.js';
 
 const REPATH_EVERY = 0.4;
 const SEPARATION = 10; // px sideways offset range for ground enemies, so groups don't stack
@@ -63,6 +64,8 @@ const FEATURE_BEHAVIOUR = {
   healHero: (w, b, s, dt) => w.healHero(b, s, dt),
 };
 
+const freshRoundStats = () => ({ defeated: 0, coins: 0, lost: 0, livesLost: 0 });
+
 export class World {
   /**
    * @param {object} o
@@ -76,7 +79,7 @@ export class World {
    * @param {object} [o.balance]      overrides rules.balance
    * @param {number} [o.seed]
    */
-  constructor({ map, grid, enemyTypes, waves, heroPoints = DEFAULT_HERO_POINTS, buildingTypes = DEFAULT_BUILDING_TYPES, rules = DEFAULT_RULES, balance = rules.balance, weapons = DEFAULT_WEAPONS, coinTypes = [{ value: 1, key: 'coin' }], seed = Date.now() }) {
+  constructor({ map, grid, enemyTypes, waves, heroPoints = DEFAULT_HERO_POINTS, buildingTypes = DEFAULT_BUILDING_TYPES, rules = DEFAULT_RULES, balance = rules.balance, weapons = DEFAULT_WEAPONS, coinTypes = [{ value: 1, key: 'coin' }], seed = Date.now(), difficulty }) {
     // coin denominations ({ value, key = texture }), biggest first; drops are split into them
     this.coinTypes = [...coinTypes].filter((c) => c.value > 0).sort((a, b) => b.value - a.value);
     if (!this.coinTypes.length) this.coinTypes = [{ value: 1, key: 'coin' }];
@@ -85,7 +88,9 @@ export class World {
     this.heroCosts = rules.heroUpgradeCosts;
     this.map = map;
     this.grid = grid;
-    this.types = Object.fromEntries(enemyTypes.map((t) => [t.id, t]));
+    // difficulty (easy / normal / hard) scales the monsters' health and speed
+    this.difficulty = difficultyOf(difficulty);
+    this.types = Object.fromEntries(enemyTypes.map((t) => [t.id, { ...t, speed: t.speed * this.difficulty.enemySpeed, damage: t.damage * this.difficulty.enemyDamage }]));
     // building types: the `core` one is the Town Hall in the centre, the rest go on spots;
     // what a building does comes from its features (config/features.js)
     this.coreType = buildingTypes.find((t) => t.core) ?? DEFAULT_BUILDING_TYPES.find((t) => t.core);
@@ -130,7 +135,7 @@ export class World {
     // the hero starts and always comes back at the Town Hall (next to it, on the road)
     this.respawnPoint = this.snapToRoad({ x: map.centre.x, y: map.centre.y + (map.centre.radius ?? 60) });
     this.hero = {
-      kind: 'hero', ...this.respawnPoint, hp: 0, maxHp: 0, lives: balance.heroLives,
+      kind: 'hero', ...this.respawnPoint, hp: 0, maxHp: 0, lives: balance.heroLives + this.difficulty.extraLives,
       mode: 'melee', path: [], target: null, cooldown: 0, invuln: 0, dead: false, respawnAt: 0, repath: 0, facing: 1,
       switching: 0, // s left while changing weapons (no attacks, no other change)
     };
@@ -145,7 +150,9 @@ export class World {
     this.soldiers = [];
     this.projectiles = [];
     this.coinsOnGround = [];
-    this.coins = waves.startCoins ?? balance.startCoins;
+    this.coins = Math.round((waves.startCoins ?? balance.startCoins) * this.difficulty.startCoins);
+    // what happened since the last round ended – sent with `roundEnd` for the summary card
+    this.roundStats = freshRoundStats();
     this.round = 0; // index of the next/current round
     this.phase = 'prep';
     this.prepLeft = waves.firstPrep ?? balance.firstPrep;
@@ -163,7 +170,16 @@ export class World {
   /** True once the current round (the one being prepared or fought) reaches the unlock. */
   unlocked(key) { return this.unlockRound(key) <= this.round + 1; }
 
-  emit(type, data = {}) { this.events.push({ ...data, type }); }
+  emit(type, data = {}) {
+    const s = this.roundStats;
+    if (s) {
+      if (type === 'enemyDied') s.defeated++;
+      else if (type === 'coinPicked') s.coins += data.value ?? 1;
+      else if (type === 'buildingDestroyed') s.lost++;
+      else if (type === 'heroLostLife') s.livesLost++;
+    }
+    this.events.push({ ...data, type });
+  }
   drainEvents() { const e = this.events; this.events = []; return e; }
 
   snapToRoad(p) {
@@ -413,7 +429,8 @@ export class World {
     if (hasFeature(this.coreType, 'income')) income += this.thLevels[this.townHall.level - 1].income ?? 0;
     const reward = (this.waves.rounds[this.round].reward ?? roundReward(this.b, this.round)) + income;
     this.coins += reward;
-    this.emit('roundEnd', { round: this.round + 1, reward, income });
+    this.emit('roundEnd', { round: this.round + 1, reward, income, stats: { ...this.roundStats, waveTime: Math.round(this.waveTime) } });
+    this.roundStats = freshRoundStats();
     this.round++;
     if (this.round >= this.totalRounds) {
       this.phase = 'won';
@@ -832,7 +849,7 @@ export class World {
   spawnEnemy(typeId, at, summoner = null) {
     const type = this.types[typeId];
     if (!type) return null;
-    const hp = Math.round(type.hp * hpScale(this.b, this.round));
+    const hp = Math.max(1, Math.round(type.hp * hpScale(this.b, this.round) * this.difficulty.enemyHp));
     const start = type.flying ? { x: at.x, y: at.y } : this.snapToRoad(at);
     const e = {
       id: this.nextId++, kind: 'enemy', type: type.id, x: start.x, y: start.y,
