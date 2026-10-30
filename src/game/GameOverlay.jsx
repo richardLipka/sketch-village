@@ -59,9 +59,9 @@ export const WaveInfo = memo(function WaveInfo({ phase, round, totalRounds, prep
           ⚑ {t('game.ready')}{earlyBonus > 0 && ` (+${earlyBonus} 🪙)`}
         </button>
       )}
-      {newThings.length > 0 && <div className="small">🎁 <b>{t('unlock.new')}</b> {newThings.map((k) => unlockLabel(k, t, typeName)).join(', ')}</div>}
+      {newThings.length > 0 && <div className="small wave-extra">🎁 <b>{t('unlock.new')}</b> {newThings.map((k) => unlockLabel(k, t, typeName)).join(', ')}</div>}
       {preview.length > 0 && (
-        <div className="small">
+        <div className="small wave-extra">
           {t('game.coming')}: {preview.map(([id, n]) => `${n}× ${name(id)}`).join(', ')}
           {nextCaves?.length > 0 && <span className="muted"> · {nextCaves.length === caveCount && caveCount > 1 ? t('game.from_all_caves') : t('game.from_caves', { list: nextCaves.join(', ') })}</span>}
           {flyingNext && <b style={{ color: 'var(--danger)' }}> · {t('game.flying_tip')}</b>}
@@ -180,9 +180,12 @@ export const Equipment = memo(function Equipment({ inventoryKey, right, left, ar
             <b>🎒 {t('weapons.inventory')}</b>
             <button className="btn icon" onClick={() => { setOpen(false); setPicked(null); }} title={t('common.done')}>✕</button>
           </div>
-          <div className="eq-slots">{SLOTS.map(slotBox)}</div>
-          <div className="small eq-stats">
-            {CLASS_ICON[isWeapon(byId(right)) ? byId(right).kind : 'melee']} {t('weapons.stat_attack', { v: attack })} · {t('weapons.stat_reach', { v: reach })} · 🛡️ {t('weapons.stat_armor', { v: armorPct })}
+          <div className="backpack-body">
+          <div className="eq-left">
+            <div className="eq-slots">{SLOTS.map(slotBox)}</div>
+            <div className="small eq-stats">
+              {CLASS_ICON[isWeapon(byId(right)) ? byId(right).kind : 'melee']} {t('weapons.stat_attack', { v: attack })} · {t('weapons.stat_reach', { v: reach })} · 🛡️ {t('weapons.stat_armor', { v: armorPct })}
+            </div>
           </div>
           <div className={`eq-bag ${moving && moving.from !== 'bag' ? 'drop-ok' : ''}`} data-drop="bag" onClick={tapBag}>
             {!owned.length && <p className="small muted">{t('weapons.empty')}</p>}
@@ -196,7 +199,8 @@ export const Equipment = memo(function Equipment({ inventoryKey, right, left, ar
               </div>
             ))}
           </div>
-          <p className="small muted" style={{ margin: '4px 0 0' }}>{t('weapons.drag_hint')}</p>
+          </div>
+          <p className="small muted drag-hint" style={{ margin: '4px 0 0' }}>{t('weapons.drag_hint')}</p>
         </div>
       )}
       {drag && (
@@ -229,8 +233,30 @@ export function itemLine(w, t) {
   ].filter(Boolean).join(' · ');
 }
 
-export const Toolbar = memo(function Toolbar({ paused, speed, wobble, muted, tipsOn, onExit, onPause, onSpeed, onZoom, onWobble, onMute, onTips, onChronicle }) {
+// On a phone (compact) only pause, speed and the chronicle stay on screen, in a
+// column under the left thumb; the rest is behind ⋯.
+export const Toolbar = memo(function Toolbar({ compact, paused, speed, wobble, muted, tipsOn, onExit, onPause, onSpeed, onZoom, onWobble, onMute, onTips, onChronicle }) {
   const { t } = useTranslation();
+  const [more, setMore] = useState(false);
+  if (compact) {
+    return (
+      <div className="ov toolbar toolbar-compact">
+        <button className={`btn icon ${paused ? 'active' : ''}`} onClick={onPause} title={t('game.pause')}>{paused ? '▶' : '⏸'}</button>
+        <button className={`btn icon ${speed === 2 ? 'active' : ''}`} onClick={onSpeed} title={t('game.speed')}>{speed}×</button>
+        <button className="btn icon" onClick={onChronicle} title={t('game.chronicle')}>📖</button>
+        <button className={`btn icon ${more ? 'active' : ''}`} onClick={() => setMore(!more)} title={t('game.more')}>⋯</button>
+        {more && (
+          <div className="toolbar-more sketch-card" onClick={() => setMore(false)}>
+            <button className="btn icon" onClick={onExit} title={t('game.exit')}>✕</button>
+            <button className={`btn icon ${tipsOn ? 'active' : ''}`} onClick={onTips} title={t(tipsOn ? 'tips.skip' : 'tips.restart')}>💡</button>
+            <button className="btn icon" onClick={onMute} title={t(muted ? 'game.sound_on' : 'game.sound_off')}>{muted ? '🔇' : '🔊'}</button>
+            <button className={`btn icon ${wobble ? 'active' : ''}`} onClick={onWobble} title={t('game.wobble')}>〰️</button>
+            <FullscreenButton />
+          </div>
+        )}
+      </div>
+    );
+  }
   return (
     <div className="ov ov-bc toolbar sketch-card">
       <button className="btn icon" onClick={onExit} title={t('game.exit')}>✕</button>

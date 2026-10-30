@@ -11,9 +11,12 @@
 //  arrive in existing browsers too – but one a kid deleted never comes back;
 //  the default themes are added once; built-ins get their default themes;
 //  built-in monsters get their default legends (once, when they have none).
+//  Always: building levels get the numbers of features added later (e.g. the
+//  soldiers' patrol distance) – a built-in its own default, otherwise the feature's.
 
 import { DEFAULT_COMPONENTS, defaultComponent } from '../config/components.js';
 import { DEFAULT_THEMES } from '../config/themes.js';
+import { FEATURES } from '../config/features.js';
 import { DEFAULT_BUILDING_TYPES } from '../config/buildings.js';
 import { RULES_ID } from '../config/rules.js';
 import { isWeapon, normalizeItem } from '../config/weapons.js';
@@ -74,6 +77,23 @@ export function migrateDb(db) {
     if (!a.builtIn || !def) continue;
     if (a.themes === undefined) { assets[i] = { ...assets[i], themes: [...(def.themes ?? [])] }; changed = true; }
     if (a.legend === undefined && def.legend) { assets[i] = { ...assets[i], legend: structuredClone(def.legend) }; changed = true; }
+  }
+
+  // 1a) numbers added to a feature later (soldierPatrol…) appear in every building level
+  for (const [i, a] of assets.entries()) {
+    if (a.category !== 'building' || !a.stats?.levels || a.stats.variantOf) continue;
+    const def = defaultComponent(a.id)?.stats?.levels;
+    let touched = false;
+    const levels = a.stats.levels.map((l, n) => {
+      const add = {};
+      for (const f of a.stats.features ?? []) {
+        for (const [k, v] of Object.entries(FEATURES[f]?.defaults ?? {})) if (l[k] === undefined) add[k] = def?.[n]?.[k] ?? v;
+      }
+      if (!Object.keys(add).length) return l;
+      touched = true;
+      return { ...l, ...add };
+    });
+    if (touched) { assets[i] = { ...a, stats: { ...a.stats, levels } }; changed = true; }
   }
 
   // 1b) the default themes, once

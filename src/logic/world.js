@@ -539,7 +539,7 @@ export class World {
     const next = this.thLevels[th.level];
     return {
       kind: 'townhall', type: th.type, level: th.level, maxLevel: this.thLevels.length, hp: Math.ceil(th.hp), maxHp: th.maxHp,
-      near: this.heroNear(th, th.radius),
+      near: this.heroNear(th, th.radius), coins: this.coins,
       progress: th.upgrade ? th.upgrade.progress / th.upgrade.time : null,
       upgrade: next ? { toLevel: th.level + 1, cost: next.cost, hp: next.hp, reason: this.townHallUpgradeCheck(), stats: next, round: this.unlockRound(`${th.type}:${th.level + 1}`) } : null,
       stats: this.thLevels[th.level - 1],
@@ -847,7 +847,7 @@ export class World {
 
   /** Minion types an enemy can call, or none (minions never call minions). */
   minionsOf(e, type) {
-    if (e.summoner) return [];
+    if (e.summoner || type.summons === false) return [];
     return (type.minions ?? []).filter((id) => this.types[id] && id !== type.id);
   }
 

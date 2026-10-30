@@ -4,7 +4,9 @@ import WeaponIcon from './WeaponIcon.jsx';
 import { itemLine } from './GameOverlay.jsx';
 import { FEATURES } from '../config/features.js';
 
-// Panel for the selected building spot or the Town Hall (SPEC §7).
+// Panel for the selected building spot or the Town Hall (SPEC §7). The Town
+// Hall's shop (hero upgrades + items) opens as an overlay over the map with
+// tiles as big as the backpack's; the game keeps running meanwhile.
 // `info` comes from World.describeSpot / describeTownHall; every option carries a
 // `reason` (null = allowed) so kids see *why* a button is disabled.
 // One click builds or upgrades; only selling asks "Really?" first.
@@ -24,6 +26,8 @@ export function featureLine(type, s, t) {
   return (type.features ?? []).map((f) => `${FEATURES[f]?.icon ?? ''} ${t(`feature.line_${f}`, s)}`).join(' · ');
 }
 
+const STAT_ICON = { melee: '⚔️', ranged: '🏹', armor: '🛡️', speed: '👟' };
+
 const iconOf = (type) => (type?.core ? '🏛️' : FEATURES[type?.features?.[0]]?.icon ?? '🏗️');
 
 export default function BuildPanel({ info, types = [], weapons = [], assets = [], onClose, onBuild, onUpgrade, onSell, onUpgradeTownHall, onUpgradeHero, onBuyWeapon }) {
@@ -31,8 +35,9 @@ export default function BuildPanel({ info, types = [], weapons = [], assets = []
   const lang = i18n.language;
   const why = (reason, round) => (reason ? t(`build.reason_${reason}`, { n: round }) : null);
   const [confirmSell, setConfirmSell] = useState(false);
+  const [shop, setShop] = useState(false);
   const spotKey = info.kind === 'spot' ? info.id : 'th';
-  useEffect(() => setConfirmSell(false), [spotKey]);
+  useEffect(() => { setConfirmSell(false); setShop(false); }, [spotKey]);
   const typeOf = (id) => types.find((ty) => ty.id === id);
   const nameOf = (id) => typeOf(id)?.name?.[lang] ?? id;
   const statLine = (id, s) => featureLine(typeOf(id), s, t);
@@ -47,9 +52,55 @@ export default function BuildPanel({ info, types = [], weapons = [], assets = []
     </div>
   );
 
-  let body;
+  let body, overlay = null;
   if (info.kind === 'townhall') {
     const weaponName = (id) => weapons.find((w) => w.id === id)?.name?.[lang] ?? id;
+    overlay = shop && (
+      <div className="shop-overlay sketch-card ov" onPointerDown={(e) => e.stopPropagation()}>
+        <div className="row shop-head">
+          <h3 style={{ margin: 0 }}>🛒 {t('shop.title')}</h3>
+          <span className="hud-num">🪙 {info.coins}</span>
+          <span className="spacer" />
+          <button className="btn icon" onClick={() => setShop(false)} aria-label={t('common.done')}>✕</button>
+        </div>
+        {!info.near && <p className="small muted" style={{ margin: '2px 0' }}>🚶 {t('shop.go_to_hall')}</p>}
+        <h4>🦸 {t('build.hero_upgrades')}</h4>
+        <div className="eq-bag shop-grid">
+          {info.heroUpgrades.map((u) => (
+            <div key={u.stat} className="eq-item shop-tile">
+              <span className="shop-icon">{STAT_ICON[u.stat]}</span>
+              <span className="small eq-name">{t(`hero.stat_${u.stat}`)}</span>
+              <span className="small">{'●'.repeat(u.level)}{'○'.repeat(u.maxLevel - u.level)}</span>
+              {u.cost !== null ? (
+                <button className="btn" disabled={!!u.reason} onClick={() => onUpgradeHero(u.stat)}>{u.reason === 'locked' ? '🔒 ' : ''}+1 · {u.cost} 🪙</button>
+              ) : <span className="small muted">{t('build.max_level')}</span>}
+              {u.reason && u.reason !== 'max' && <span className={`small ${u.reason === 'locked' ? 'muted' : 'error-text'}`}>{why(u.reason, u.round)}</span>}
+            </div>
+          ))}
+        </div>
+        {info.shop?.length > 0 && (
+          <>
+            <h4>⚔️ {t('weapons.shop')}</h4>
+            <div className="eq-bag shop-grid">
+              {info.shop.map((s) => {
+                const w = weapons.find((x) => x.id === s.id) ?? {};
+                return (
+                  <div key={s.id} className={`eq-item shop-tile ${s.reason === 'owned' ? 'owned' : ''}`}>
+                    <WeaponIcon weapon={w} assets={assets} size="2em" />
+                    <span className="small eq-name">{weaponName(s.id)}</span>
+                    <span className="small muted">{itemLine(w, t)}</span>
+                    {s.reason === 'owned' ? <span className="small">✓ {t('weapons.owned')}</span> : (
+                      <button className="btn" disabled={!!s.reason} onClick={() => onBuyWeapon(s.id)}>{s.reason === 'locked' ? '🔒 ' : ''}{s.price} 🪙</button>
+                    )}
+                    {s.reason && s.reason !== 'owned' && <span className={`small ${s.reason === 'locked' ? 'muted' : 'error-text'}`}>{why(s.reason, s.round)}</span>}
+                  </div>
+    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        );
     body = (
       <>
         <h3>🏛️ {nameOf(info.type)} · {t('build.level', { n: info.level, max: info.maxLevel })}</h3>
@@ -61,35 +112,7 @@ export default function BuildPanel({ info, types = [], weapons = [], assets = []
           round: info.upgrade.round, sub: t('build.th_sub', { hp: info.upgrade.hp, n: info.upgrade.toLevel }), onClick: onUpgradeTownHall,
         }) : <p className="small muted">{t('build.max_level')}</p>}
 
-        <h3 style={{ marginTop: 10 }}>{t('build.hero_upgrades')}</h3>
-        {info.heroUpgrades.map((u) => (
-          <div key={u.stat} className="row small" style={{ gap: 8, marginBottom: 4 }}>
-            <span style={{ minWidth: 92 }}>{t(`hero.stat_${u.stat}`)}</span>
-            <span>{'●'.repeat(u.level)}{'○'.repeat(u.maxLevel - u.level)}</span>
-            {u.cost !== null ? (
-              <button className="btn icon" disabled={!!u.reason} onClick={() => onUpgradeHero(u.stat)} title={why(u.reason, u.round) ?? ''}>{u.reason === 'locked' ? '🔒 ' : ''}+1 · {u.cost} 🪙</button>
-            ) : <span className="muted">{t('build.max_level')}</span>}
-            {u.reason && u.reason !== 'max' && <span className={u.reason === 'locked' ? 'muted' : 'error-text'}>{why(u.reason, u.round)}</span>}
-          </div>
-        ))}
-
-        {info.shop?.length > 0 && (
-          <>
-            <h3 style={{ marginTop: 10 }}>🛒 {t('weapons.shop')}</h3>
-            {info.shop.map((s) => (
-              <div key={s.id} className="row small" style={{ gap: 8, marginBottom: 4 }}>
-                <WeaponIcon weapon={weapons.find((w) => w.id === s.id)} assets={assets} size={28} />
-                <span style={{ minWidth: 110 }} title={itemLine(weapons.find((w) => w.id === s.id) ?? {}, t)}>{weaponName(s.id)}</span>
-                {s.reason === 'owned' ? <span className="muted">✓ {t('weapons.owned')}</span> : (
-                  <button className="btn icon" disabled={!!s.reason} onClick={() => onBuyWeapon(s.id)} title={why(s.reason, s.round) ?? ''}>
-                    {s.reason === 'locked' ? '🔒 ' : ''}{s.price} 🪙
-                  </button>
-                )}
-                {s.reason && s.reason !== 'owned' && <span className={s.reason === 'locked' ? 'muted' : 'error-text'}>{why(s.reason, s.round)}</span>}
-              </div>
-            ))}
-          </>
-        )}
+        <button className="btn big-action" onClick={() => setShop(true)}>🛒 {t('shop.open')}</button>
       </>
     );
   } else {
@@ -133,10 +156,13 @@ export default function BuildPanel({ info, types = [], weapons = [], assets = []
   }
 
   return (
-    <div className="build-panel sketch-card" onPointerDown={(e) => e.stopPropagation()}>
-      <button className="btn icon" style={{ float: 'right' }} onClick={onClose} aria-label={t('common.cancel')}>✕</button>
-      {body}
-      {!info.near && <p className="small muted" style={{ marginTop: 6 }}>🚶 {t('build.walking')}</p>}
-    </div>
+    <>
+      {overlay}
+      <div className="build-panel sketch-card" onPointerDown={(e) => e.stopPropagation()}>
+        <button className="btn icon" style={{ float: 'right' }} onClick={onClose} aria-label={t('common.cancel')}>✕</button>
+        {body}
+        {!info.near && <p className="small muted" style={{ marginTop: 6 }}>🚶 {t('build.walking')}</p>}
+      </div>
+    </>
   );
 }

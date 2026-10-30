@@ -150,16 +150,37 @@
     "error_not_json": "This is not a game data file.",
     "error_wrong_format": "This is not a Sketch Village file.",
     "error_newer_version": "The file is from a newer version of the game.",
-    "error_generic": "The file could not be loaded."
+    "error_generic": "The file could not be loaded.",
+    "done_review": "Done: {{added}} added, {{updated}} updated, {{kept}} kept as yours, {{unchanged}} already the same.",
+    "cancelled": "Import cancelled – nothing changed.",
+    "review_title": "What changed?",
+    "review_counts": "{{added}} new things will be added. {{changes}} things you already have are different in the file – check them:",
+    "change_n": "{{n}} of {{total}}",
+    "col_what": "What",
+    "col_mine": "Yours now",
+    "col_theirs": "In the file",
+    "accept": "Update",
+    "reject": "Keep mine",
+    "accept_all": "Update all",
+    "reject_all": "Keep all mine",
+    "cancel": "Cancel import",
+    "cancel_hint": "nothing is added or changed",
+    "nothing": "(nothing)",
+    "pictures": "{{n}} pictures",
+    "more": "+{{n}} more changes",
+    "kind_maps": "Map",
+    "kind_themes": "Theme",
+    "kind_rules": "Rules",
+    "kind_settings": "Settings"
   },
   "data": {
     "title": "Save & load",
     "summary": "{{assets}} drawings, {{maps}} maps, about {{kb}} kB",
     "export_title": "Download everything",
-    "export_hint": "One file with all drawings, maps and settings. Take it to another computer.",
+    "export_hint": "One file with everything: all drawings with their animations and numbers, enemies with legends, buildings, maps with waves and terrain, themes, rules and settings. Take it to another computer.",
     "export": "Download file",
     "import_title": "Load a file",
-    "import_hint": "Adds drawings and maps from the file. Nothing is deleted; the newer version wins.",
+    "import_hint": "New things from the file are added. Things you already have (found by name) that are different in the file are shown with what changed, and you decide: update or keep yours. Nothing is deleted.",
     "import": "Choose file",
     "purge_title": "Delete data",
     "purge_hint": "Download everything first, just in case.",
@@ -288,7 +309,9 @@
     "msg_hero_down": "The hero fell! Back at the town hall in {{s}} s. Lives left: {{n}}",
     "msg_hero_back": "The hero is back!",
     "respawn_in": "Hero back in {{s}} s",
-    "chronicle": "Chronicle – monsters of this map"
+    "chronicle": "Chronicle – monsters of this map",
+    "more": "More",
+    "turn_phone": "Turn the phone sideways to play."
   },
   "build": {
     "type_house": "House",
@@ -650,5 +673,10 @@
     "more": "Read in the chronicle",
     "calls": "calls",
     "no_story": "No story yet – write one in the studio!"
+  },
+  "shop": {
+    "open": "Shop & hero upgrades",
+    "title": "Town hall shop",
+    "go_to_hall": "The hero must stand at the town hall to buy – tap the town hall to walk there."
   }
 }

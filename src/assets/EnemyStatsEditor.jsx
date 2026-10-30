@@ -29,6 +29,8 @@ export default function EnemyStatsEditor({ id, stats: raw, enemies = [], onChang
   const set = (patch) => onChange({ ...stats, ...patch });
   const [lo, hi] = stats.coins ?? [1, 1];
   const minions = stats.minions ?? [];
+  // the ability is switched on with a checkbox; switching it off keeps the choice for later
+  const summons = stats.summons ?? minions.length > 0;
   const others = enemies.filter((e) => e.id !== id);
   const toggleMinion = (mid) => set({ minions: minions.includes(mid) ? minions.filter((x) => x !== mid) : [...minions, mid] });
 
@@ -54,17 +56,20 @@ export default function EnemyStatsEditor({ id, stats: raw, enemies = [], onChang
         <label>{t('enemies.color')} <input type="color" value={stats.color} onChange={(e) => set({ color: e.target.value })} style={{ width: 48, height: 36 }} /></label>
       </div>
 
-      <h3 style={{ margin: '12px 0 4px' }}>💀 {t('enemies.minions')}</h3>
-      <p className="small muted" style={{ margin: '0 0 6px' }}>{t('enemies.minions_hint')}</p>
-      <div className="row" style={{ gap: 6 }}>
+      <label className="row" style={{ gap: 8, margin: '12px 0 4px' }}>
+        <input type="checkbox" checked={summons} onChange={(e) => set({ summons: e.target.checked })} />
+        <b>💀 {t('enemies.minions')}</b>
+      </label>
+      {summons && <p className="small muted" style={{ margin: '0 0 6px' }}>{t('enemies.minions_hint')}</p>}
+      {summons && <div className="row" style={{ gap: 6 }}>
         {others.map((e) => (
           <button key={e.id} type="button" className={`btn chip ${minions.includes(e.id) ? 'active' : ''}`} onClick={() => toggleMinion(e.id)}>
             {e.image ? <img src={e.image} alt="" className="chip-img" /> : <span className="chip-dot" style={{ background: e.color }} />}
             {e.name?.[lang] ?? e.id}
           </button>
         ))}
-      </div>
-      {minions.length > 0 && (
+      </div>}
+      {summons && minions.length > 0 && (
         <div className="row" style={{ gap: 14, marginTop: 8 }}>
           {MINION_FIELDS.map(([f, min, max, step]) => (
             <NumField key={f} label={t(`enemies.f_${f}`)} value={stats[f]} min={min} max={max} step={step} onChange={(v) => set({ [f]: v })} />

@@ -57,7 +57,7 @@ export default function AssetStudio({ assets, heroRules, buildingTypes = [], ene
 
   // a line under the name saying what the component is
   const describe = (a) => {
-    if (a.category === 'enemy' && a.stats?.minions?.length) {
+    if (a.category === 'enemy' && a.stats?.minions?.length && a.stats.summons !== false) {
       const names = a.stats.minions.map((id) => compName(assets.find((x) => x.id === id), lang)).filter(Boolean);
       return `💀 ${a.stats.minionCount ?? 1}× ${names.join(', ')}`;
     }

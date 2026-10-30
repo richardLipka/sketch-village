@@ -32,7 +32,7 @@ The shipped file is empty, so a fresh browser gets the built-in sample map inste
 ## Code map
 
 - `src/assets/` – studio, the general component editor: `categories.js` (registry), `CameraCapture`, `AssetCropper`, `BackgroundRemover` + `bgRemoval.js`, `SketchPad`, `ImageSlot` (pipeline), `AssetStudio` (library), `AssetEditor` (pictures + all numbers of one component), `BuildingStatsEditor` (features + levels), `EnemyStatsEditor` (numbers + minions), `AnimationEditor` + `AnimPreview` + `animation.js` (animation strips: cutting, lining up, speed, preview), `ThemesEditor`, `ItemStatsEditor`, `HeroStatsEditor`, `NumField`
-- `src/data/` – `saveFile.js` (JSON format + merge), `migrate.js` (old data → components), `store.js` (IndexedDB), `defaultData.js` (class pack), `DataPanel`
+- `src/data/` – `saveFile.js` (JSON format), `mergePlan.js` + `ImportReview` (import: add new, review changed – matched by name), `migrate.js` (old data → components), `store.js` (IndexedDB), `defaultData.js` (class pack), `DataPanel`
 - `src/config/` – `components.js` (built-in components + `buildingsOf` / `enemyTypesOf` / `itemsOf` / `coinTypesOf`), `features.js` (what a building can do), `themes.js` (worlds), `legends.js` (monster stories and hints), default numbers `balance.js`, `buildings.js`, `heroStats.js`, `enemies.js`, `weapons.js`, `waves.js`; `rules.js` merges the kids' global rules over them
 
 Every game part – building type, enemy, weapon, shield, armor, coin, hero – is one **component** (a record in `assets`) holding its pictures and all its numbers. A new kind of building is just a component with a different set of features; no code change is needed.
@@ -40,4 +40,4 @@ Every game part – building type, enemy, weapon, shield, armor, coin, hero – 
 - `src/maps/` – `MapList`, `MapPainter` (paint + place + terrain, theme), `WaveEditor`, `mapRuntime.js` (canvas helpers, sample/starter map), `textures.js` (terrain textures)
 - `src/game/` – `PlaySetup` (pick map + hero), `GameView` (React ↔ Phaser, fullscreen layout), `GameScene` (draws the World, placeholders, animations, wobble), `GameOverlay` (HUD), `BuildPanel`, `Chronicle` (monster legends), `RulesEditor` (global rules only), `sound.js` (WebAudio effects), `tutorial.js` (first-game tips)
 - `src/locales/` – `cs.json`, `en.json` (a test checks both have the same keys)
-- `src/ui/` – `sketch.css` (pen-and-pencil look), `LanguageSwitcher`, `FullscreenButton`, `Modal`
+- `src/ui/` – `sketch.css` (pen-and-pencil look, phone layout), `device.js` (phone / tablet / PC detection), `LanguageSwitcher`, `FullscreenButton`, `Modal`

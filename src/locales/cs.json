@@ -150,16 +150,37 @@
     "error_not_json": "Tohle není soubor s daty hry.",
     "error_wrong_format": "Tohle není soubor Kreslené vesnice.",
     "error_newer_version": "Soubor je z novější verze hry.",
-    "error_generic": "Soubor se nepodařilo nahrát."
+    "error_generic": "Soubor se nepodařilo nahrát.",
+    "done_review": "Hotovo: {{added}} přidáno, {{updated}} aktualizováno, {{kept}} necháno tvoje, {{unchanged}} už stejné.",
+    "cancelled": "Nahrávání zrušeno – nic se nezměnilo.",
+    "review_title": "Co se změnilo?",
+    "review_counts": "{{added}} nových věcí se přidá. {{changes}} věcí, které už máš, je v souboru jinak – projdi je:",
+    "change_n": "{{n}} z {{total}}",
+    "col_what": "Co",
+    "col_mine": "Teď máš",
+    "col_theirs": "V souboru",
+    "accept": "Aktualizovat",
+    "reject": "Nechat moje",
+    "accept_all": "Aktualizovat vše",
+    "reject_all": "Nechat vše moje",
+    "cancel": "Zrušit nahrávání",
+    "cancel_hint": "nic se nepřidá ani nezmění",
+    "nothing": "(nic)",
+    "pictures": "{{n}} obrázků",
+    "more": "+{{n}} dalších změn",
+    "kind_maps": "Mapa",
+    "kind_themes": "Téma",
+    "kind_rules": "Pravidla",
+    "kind_settings": "Nastavení"
   },
   "data": {
     "title": "Uložit a nahrát",
     "summary": "{{assets}} obrázků, {{maps}} map, asi {{kb}} kB",
     "export_title": "Stáhnout vše",
-    "export_hint": "Jeden soubor se všemi obrázky, mapami a nastavením. Přenes ho na jiný počítač.",
+    "export_hint": "Jeden soubor se vším: všechny obrázky s animacemi a čísly, nepřátelé s legendami, budovy, mapy s vlnami a povrchy, témata, pravidla a nastavení. Přenes ho na jiný počítač.",
     "export": "Stáhnout soubor",
     "import_title": "Nahrát soubor",
-    "import_hint": "Přidá obrázky a mapy ze souboru. Nic se nesmaže, novější verze vyhraje.",
+    "import_hint": "Nové věci ze souboru se přidají. U věcí, které už máš (pozná je podle jména) a v souboru jsou jiné, uvidíš, co se změnilo, a rozhodneš: aktualizovat, nebo nechat svoje. Nic se nesmaže.",
     "import": "Vybrat soubor",
     "purge_title": "Smazat data",
     "purge_hint": "Než smažeš, raději si vše stáhni.",
@@ -288,7 +309,9 @@
     "msg_hero_down": "Hrdina padl! Vrátí se na radnici za {{s}} s. Zbývá životů: {{n}}",
     "msg_hero_back": "Hrdina je zpět!",
     "respawn_in": "Hrdina se vrátí za {{s}} s",
-    "chronicle": "Kronika – příšery této mapy"
+    "chronicle": "Kronika – příšery této mapy",
+    "more": "Další",
+    "turn_phone": "Otoč telefon na šířku a hraj."
   },
   "build": {
     "type_house": "Dům",
@@ -650,5 +673,10 @@
     "more": "Přečíst v kronice",
     "calls": "svolává",
     "no_story": "Zatím bez příběhu – napiš ho v ateliéru!"
+  },
+  "shop": {
+    "open": "Obchod a vylepšení hrdiny",
+    "title": "Obchod na radnici",
+    "go_to_hall": "Nakupovat může hrdina jen u radnice – ťukni na radnici a dojde tam."
   }
 }

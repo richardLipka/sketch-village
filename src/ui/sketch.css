@@ -293,7 +293,7 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 }
 
 /* toggle chips: themes, minion kinds */
-.btn.chip { min-height: 40px; padding: 4px 12px; font-size: 0.95em; border-radius: 999px; gap: 6px; }
+.btn.chip { min-height: 44px; padding: 4px 12px; font-size: 0.95em; border-radius: 999px; gap: 6px; }
 .btn.chip.active { background: var(--hl-yellow); }
 .chip-img { width: 26px; height: 26px; object-fit: contain; }
 .chip-dot { display: inline-block; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--ink); }
@@ -313,10 +313,68 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 .onion { border: 2px solid var(--ink); border-radius: 8px; }
 
 /* the chronicle */
-.chronicle-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr)); gap: 12px; }
-.chronicle-card { display: grid; grid-template-columns: 100px 1fr; gap: 10px; padding: 10px; align-items: start; }
+.chronicle-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(420px, 100%), 1fr)); gap: 12px; }
+.chronicle-card { display: grid; grid-template-columns: 164px 1fr; gap: 12px; padding: 10px; align-items: start; }
 .chronicle-card.unmet { opacity: 0.6; }
-.chronicle-pic { display: grid; place-items: center; width: 100px; min-height: 96px; }
-.chronicle-dot { width: 56px; height: 56px; border-radius: 50%; border: 3px solid var(--ink); }
+.chronicle-pic { display: grid; place-items: center; width: 164px; height: 164px; border: 2px dashed var(--ink); border-radius: var(--wobble-b); overflow: hidden; }
+@media (max-width: 460px) { .chronicle-card { grid-template-columns: 1fr; } .chronicle-pic { margin: 0 auto; } }
 .chronicle-hint { background: var(--hl-yellow); border-radius: 6px; padding: 2px 6px; margin: 4px 0; }
 .monster-note { top: calc(16px + 4.6em); left: 50%; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; max-width: min(30em, 90%); z-index: 20; }
+
+/* the Town Hall's shop: an overlay over the map, tiles as big as the backpack's */
+.big-action { width: 100%; margin-top: 6px; justify-content: center; }
+.shop-overlay { left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 25; width: min(40em, calc(100% - 16px)); max-height: calc(100% - 16px); overflow: auto; padding: 0.4em 0.7em; }
+.shop-overlay h4 { margin: 0.5em 0 0.3em; font-size: 1em; }
+.shop-head { gap: 0.6em; }
+.shop-grid { border-style: solid; border-color: transparent; padding: 0; }
+.shop-tile { cursor: default; touch-action: manipulation; padding: 0.4em 0.3em; }
+.shop-tile.owned { opacity: 0.6; }
+.shop-tile .btn { min-height: max(44px, calc(2em)); padding: 0.1em 0.5em; }
+.shop-icon { font-size: 2em; line-height: 1.1; }
+
+/* import review */
+.review-table-wrap { overflow-x: auto; }
+.review-table { border-collapse: collapse; width: 100%; margin-top: 6px; }
+.review-table th { text-align: left; font-weight: normal; color: var(--ink-soft); padding: 2px 8px; }
+.review-table td { border-top: 1px dashed #d6cdb6; padding: 4px 8px; vertical-align: middle; }
+.review-pic { width: 72px; height: 72px; object-fit: contain; border: 1.5px solid var(--ink); border-radius: 6px; }
+.review-pic.small { width: 40px; height: 40px; }
+.review-actions { gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
+.turn-phone { position: absolute; inset: 30% 10% auto; z-index: 60; text-align: center; font-size: 1.2em; padding: 1em; background: var(--hl-yellow); }
+
+/* ---- phones held sideways (ui/device.js): the map fills the middle, the
+   left thumb has the tool column, the right thumb the attack / equipment
+   buttons, a thin info bar runs along the top; backpack and shop fill the screen */
+.game-screen.device-phone { --u: 17px; --btn: 48px; }
+.device-phone .ov-tl { top: 4px; left: 4px; gap: 0.5em; padding: 0.1em 0.4em; font-size: 0.9em; }
+.device-phone .ov-tc { top: 4px; left: 50%; transform: translateX(-50%); padding: 0.1em 0.5em; font-size: 0.9em; }
+.device-phone .ov-tr { top: 4px; right: 4px; max-width: 30%; padding: 0.15em 0.4em; font-size: 0.85em; }
+.device-phone .ov-tr .btn { min-height: 44px; padding: 0 0.5em; }
+.device-phone .wave-extra { display: none; }
+.device-phone .toolbar-compact { left: 4px; bottom: 4px; display: flex; flex-direction: column-reverse; gap: 6px; }
+.device-phone .toolbar-compact > .btn { width: var(--btn); height: var(--btn); padding: 0; justify-content: center; }
+.toolbar-more { position: absolute; left: calc(var(--btn) + 8px); bottom: 0; display: flex; gap: 6px; padding: 6px; }
+/* right thumb: attack types in a column at the edge (first one lowest), the
+   equipment slots in a column beside it – both in the margin beside the map */
+.device-phone .ov-br { right: 4px; bottom: 4px; gap: 6px; flex-direction: column-reverse; }
+.device-phone .btn.attack { width: 56px; height: 56px; }
+.device-phone .ov-br-eq { right: calc(4px + 56px + 6px); bottom: 4px; gap: 6px; }
+.device-phone .eq-row { gap: 6px; flex-direction: column-reverse; }
+.device-phone .btn.eq-slot { width: var(--btn); height: var(--btn); }
+.device-phone .build-panel { left: calc(var(--btn) + 12px); bottom: 4px; top: auto; width: min(19em, 46%); max-height: calc(100% - 8px - 2.4em); font-size: 0.85em; }
+.device-phone .coach { top: calc(8px + 2.6em); bottom: auto; left: 50%; transform: translateX(-50%); max-width: 44%; font-size: 0.8em; }
+.device-phone .game-msg { top: calc(8px + 2.6em); max-width: 50%; white-space: normal; text-align: center; font-size: 0.85em; }
+.device-phone .monster-note { top: calc(8px + 2.6em); max-width: 52%; font-size: 0.85em; }
+/* full-screen backpack: slots on the left, items on the right */
+.device-phone .backpack { position: fixed; inset: 6px; width: auto; max-height: none; z-index: 30; display: flex; flex-direction: column; }
+.device-phone .backpack-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(15em, 42%) 1fr; gap: 8px; }
+.device-phone .backpack-body .eq-bag { overflow: auto; align-content: start; }
+.device-phone .eq-big { min-height: 5em; }
+.device-phone .drag-hint { display: none; }
+.device-phone .shop-overlay { position: fixed; inset: 6px; transform: none; width: auto; max-height: none; }
+.device-phone .eq-ghost { transform: translate(-50%, -110%) rotate(-6deg); } /* above the finger */
+/* the backpack lives inside the equipment strip: lift the strip above the other controls while it is open */
+.ov-br-eq:has(.backpack) { z-index: 40; }
+/* phones: no room for a tip next to an open building panel – it comes back when the panel closes */
+.device-phone .game-stage:has(.build-panel) .coach { display: none; }

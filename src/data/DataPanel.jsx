@@ -1,19 +1,24 @@
 import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { buildSaveFile, parseSaveFile, mergeSaveFile, COLLECTIONS } from './saveFile.js';
+import { buildSaveFile, parseSaveFile, COLLECTIONS } from './saveFile.js';
+import { planImport, applyImport } from './mergePlan.js';
+import ImportReview from './ImportReview.jsx';
 import { saveDb, purgeAll, saveCollection } from './store.js';
 import { CATEGORY_IDS } from '../assets/categories.js';
 import { fetchDefaultData } from './defaultData.js';
 
-// Export everything to one JSON file, merge-import, purge (SPEC §13a).
+// Export everything to one JSON file (components with their pictures and
+// animations, maps, themes, rules, settings incl. the language), import with a
+// review of changed elements (data/mergePlan.js), purge (SPEC §13a).
 export default function DataPanel({ db, onReplaceDb }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const fileRef = useRef(null);
+  const [review, setReview] = useState(null); // an import plan waiting for the kid's decisions
   const [message, setMessage] = useState(null);
   const [purgeCat, setPurgeCat] = useState('');
 
   const doExport = () => {
-    const file = buildSaveFile(db);
+    const file = buildSaveFile({ ...db, settings: { ...db.settings, language: i18n.language } });
     const blob = new Blob([JSON.stringify(file)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -22,11 +27,19 @@ export default function DataPanel({ db, onReplaceDb }) {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
 
-  const mergeIn = async (file) => {
-    const { db: next, summary } = mergeSaveFile(db, file);
+  // new elements are added at once; changed ones are reviewed first
+  const finish = async (plan, accept) => {
+    setReview(null);
+    const { db: next, language, summary } = applyImport(db, plan, accept);
     await saveDb(next);
     onReplaceDb(next);
-    setMessage({ ok: true, text: t('import.done', summary) });
+    if (language && language !== i18n.language) i18n.changeLanguage(language);
+    setMessage({ ok: true, text: t('import.done_review', summary) });
+  };
+  const mergeIn = async (file) => {
+    const plan = planImport(db, file, { language: i18n.language });
+    if (plan.changes.length) setReview(plan);
+    else await finish(plan, () => true);
   };
 
   const doImport = async (e) => {
@@ -111,6 +124,8 @@ export default function DataPanel({ db, onReplaceDb }) {
           <button className="btn danger" onClick={doPurgeAll}>🗑 {t('data.purge_all')}</button>
         </div>
       </div>
+
+      {review && <ImportReview plan={review} onDone={(accept) => finish(review, accept)} onCancel={() => { setReview(null); setMessage({ ok: false, text: t('import.cancelled') }); }} />}
 
       {message && (
         <div className={`toast sketch-card ${message.ok ? '' : 'error-text'}`} style={message.ok ? undefined : { background: 'var(--hl-red)' }} onClick={() => setMessage(null)}>

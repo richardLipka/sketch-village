@@ -10,6 +10,7 @@ import { composeFrame, firstFrame, DEFAULT_FPS } from '../assets/animation.js';
 import SelectionPanel from './SelectionPanel.jsx';
 import Chronicle, { monstersOfWaves } from './Chronicle.jsx';
 import Modal from '../ui/Modal.jsx';
+import { useDevice } from '../ui/device.js';
 import AnimPreview from '../assets/AnimPreview.jsx';
 import { legendText } from '../config/legends.js';
 import { Resources, Lives, WaveInfo, AttackBar, Equipment, Toolbar, Coach } from './GameOverlay.jsx';
@@ -48,6 +49,8 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
   const [restart, setRestart] = useState(0);
   const [selection, setSelection] = useState(null);
   const [panelVersion, setPanelVersion] = useState(0); // bumped after an action → panel re-reads at once
+  // phone (held sideways) / tablet / pc – the controls are laid out for it (ui/device.js, sketch.css)
+  const { device, portrait } = useDevice();
   // the chronicle of this map's monsters: who has been met in this game, the newest one
   const seen = useRef(new Set());
   const [newMonster, setNewMonster] = useState(null);
@@ -315,7 +318,8 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
   const playing = hud && hud.phase !== 'won' && hud.phase !== 'lost';
 
   return (
-    <section className="game-screen">
+    <section className={`game-screen device-${device}`}>
+      {device === 'phone' && portrait && <div className="turn-phone sketch-card">📱↻ {t('game.turn_phone')}</div>}
       <div className="game-stage">
         <div ref={hostRef} className="game-host" />
         {error && <p className="error-text ov ov-tc">{error}</p>}
@@ -334,7 +338,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
             <AttackBar mode={hud.hero.mode} hasMelee={has.melee} hasRanged={has.ranged} hasMagic={has.magic} switching={hud.hero.switching} onMode={setMode} />
           </>
         )}
-        <Toolbar paused={paused} speed={speed} wobble={wobble} muted={muted} tipsOn={tip < TUTORIAL_DONE}
+        <Toolbar compact={device === 'phone'} paused={paused} speed={speed} wobble={wobble} muted={muted} tipsOn={tip < TUTORIAL_DONE}
           onExit={exit} onPause={togglePause} onSpeed={changeSpeed} onZoom={zoom} onWobble={toggleWobble} onMute={toggleMute} onTips={toggleTips} onChronicle={openChronicle} />
         {playing && newMonster && <MonsterNote enemy={enemyTypes.find((e) => e.id === newMonster.id)} key={newMonster.at} onMore={openChronicle} onClose={() => setNewMonster(null)} />}
         {chronicle && (

@@ -5,7 +5,8 @@
 //   size = drawing / body size (1 = normal),
 //   minions = enemy ids it calls (one at random each time): minionCount every
 //   minionEvery s while fewer than minionMax of its minions live; minionOnDeath
-//   more when it dies. Minions never call minions themselves.
+//   more when it dies. Minions never call minions themselves. summons = false
+//   switches the ability off (the choice of minions is kept).
 //   themes = which worlds it belongs to (config/themes.js); empty = every world.
 
 export const DEFAULT_ENEMY_TYPES = [
