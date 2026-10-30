@@ -81,7 +81,7 @@ export class Combat {
     // a spider queen leaves her young behind
     const kinds = this.minionsOf(e, type);
     if (kinds.length && type.minionOnDeath > 0) this.callMinions(e, kinds, type.minionOnDeath);
-    this.emit('enemyDied', { id: e.id, x: e.x, y: e.y, coins: n });
+    this.emit('enemyDied', { id: e.id, enemy: e.type, x: e.x, y: e.y, coins: n });
   }
 
   /** Every lost life takes the hero away for a while (back at the Town Hall); the last one loses the game. */

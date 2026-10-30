@@ -22,12 +22,15 @@ import { unlockLabel } from '../config/unlocks.js';
 import { DEFAULT_WEAPONS, isWeapon } from '../config/weapons.js';
 import { coinTypesOf } from '../config/components.js';
 import { World } from '../logic/world.js';
-import { play, setMuted, soundFor } from './sound.js';
+import { play, setMuted, soundFor, loadClip, playClip } from './sound.js';
+import { VoiceDirector } from './monsterVoices.js';
+import { SOUND_KINDS } from '../assets/audioClip.js';
 import { TUTORIAL_STEPS, TUTORIAL_DONE, advanceTutorial } from './tutorial.js';
 
 const MESSAGE_MS = 2600;
 const NEW_MONSTER_MS = 7000;
 const SUMMARY_MS = 9000;
+const voiceKey = (v) => `voice:${v.type}:${v.kind}`;
 
 // React wrapper: prepares images, grid and the World, runs Phaser and lays the
 // controls over the map (GameOverlay). Fills the whole window.
@@ -84,9 +87,15 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
     return () => clearTimeout(id);
   }, [message]);
 
+  // the kids' monster sounds: the director decides when one may play (monsterVoices.js)
+  const voices = useRef(null);
+
   // every World event (and a few UI ones): sound + tutorial progress
   const anyEvent = useCallback((e) => {
-    play(soundFor(e));
+    const voice = voices.current?.onEvent(e, performance.now() / 1000, worldRef.current?.enemies.length ?? 0);
+    if (voice) playClip(voiceKey(voice), voice.volume);
+    // a monster's own death sound replaces the game's
+    if (!(voice?.kind === 'death' && e.type === 'enemyDied')) play(soundFor(e));
     const { tip: step, onSettings: save } = live.current;
     const next = advanceTutorial(step, e);
     if (next !== step) save?.({ tutorialStep: next });
@@ -193,6 +202,15 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
         }
         if (Object.keys(info).length) anims[base] = info;
       };
+      // recorded monster sounds → the voice director knows how long each one plays
+      const lengths = {};
+      for (const et of enemyTypes) {
+        for (const kind of SOUND_KINDS) {
+          const secs = await loadClip(`voice:${et.id}:${kind}`, et.sounds?.[kind]);
+          if (secs) (lengths[et.id] ??= {})[kind] = secs;
+        }
+      }
+      const director = new VoiceDirector({ voices: lengths });
       await loadAnims('hero', hero?.anims);
       await loadAnims('soldier', soldier?.anims);
       for (const et of enemyTypes) await loadAnims(`enemy:${et.id}`, et.anims);
@@ -200,6 +218,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
         for (const [v, set] of (buildings.lookAnims?.[type.id] ?? []).entries()) await loadAnims(`${type.id}#${v}`, set);
       }
       if (!alive) return;
+      voices.current = director;
 
       const world = new World({
         map, grid, enemyTypes, buildingTypes: types, rules, weapons, coinTypes,
@@ -222,7 +241,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
         onHud: setHud, onEvent, onSelect: setSelection, onAnyEvent: anyEvent,
       });
       // dev-only handle for automated browser testing
-      if (import.meta.env.DEV) window.__sv = { game: gameRef.current, world };
+      if (import.meta.env.DEV) window.__sv = { game: gameRef.current, world, voices: voices.current };
     })().catch((e) => setError(String(e)));
 
     return () => {
@@ -237,6 +256,20 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
   const scene = () => gameRef.current?.scene.getScene('game');
   const started = hud !== null; // the scene exists once the first HUD arrived
   useEffect(() => { const s = scene(); if (s) s.wobble = wobble; }, [wobble, started]);
+
+  // about once a second: a monster may growl while walking (only in a wave, not when paused)
+  useEffect(() => {
+    if (paused) return undefined;
+    const id = setInterval(() => {
+      const w = worldRef.current, d = voices.current;
+      if (!w || !d || d.empty) return;
+      const alive = {};
+      for (const e of w.enemies) alive[e.type] = (alive[e.type] ?? 0) + 1;
+      const voice = d.tick(performance.now() / 1000, alive, w.phase);
+      if (voice) playClip(voiceKey(voice), voice.volume);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [paused]);
 
   // ---- stable handlers (memoized children don't re-render because of them) ----
   const setMode = useCallback((m) => {

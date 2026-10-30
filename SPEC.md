@@ -89,10 +89,26 @@ Heroes, enemies and soldiers can have a **walking** and an **attack** animation,
 - Stored as `component.anims = { walk: { frames: [dataURL…], fps, offsets: [[dx, dy]…] }, attack: {…}, reload: {…} }` (exported with everything else).
 - **In the game**: walking loops while the thing moves; an attack plays once on every hit / shot (buildings: attack, then reload); otherwise the still picture. Animations run on game time (they follow 2× speed and stop when paused); walkers don't step in sync.
 
+### 3.2b Monster sounds (optional)
+
+Enemies can have their own recorded sounds (`categories.js` → `sounds`; `assets/SoundEditor`): a **growl on the road**, an **attack** and **defeated**.
+
+- **Record** with the microphone (🎤, stops by itself after 3 s; Opus in Chrome / Firefox, AAC in Safari – a few kB) or **load a sound file** (📁, up to 600 kB). The silence before and after is **cut automatically**; the waveform shows the part that plays, and two handles (from / to) **trim** it by hand (at most 3 s). ▶ plays it.
+- Stored as `component.sounds = { walk|attack|death: { data: dataURL, start, end } }` – trimming never re-encodes, so it can always be undone. Exported, imported (the import review can play a changed sound) and shared with a map like everything else.
+- **In the game** (`game/monsterVoices.js`, `VoiceDirector`) the sounds play **sparingly**, so a wave of forty monsters doesn't become noise and every recording is heard:
+  - priority death > attack > growl; at most **2** monster sounds at once and **0.35 s** between two starts;
+  - **death**: when it happens, the same kind at most every 1.5 s – the recording then replaces the game's own death sound;
+  - **attack**: about a third of the hits, the same kind at most every 4 s;
+  - **growl on the road**: only during a wave, at most one every **6 s** in the whole game, the same kind again after 12–18 s, on some of the once-a-second checks;
+  - **introduction**: the first time a kind appears in a game, its growl plays at once (or within 3 s), next to the "new monster" note;
+  - many monsters on the map → a little quieter; each recording is played at an even loudness (its peak scaled to the same level); 🔇 silences them too.
+
 ### 3.3 Asset flow
 ```
-[Photo | Upload | Draw] → Crop (category aspect) → Remove background → Touch-up in SketchPad → Name + author → Save to library
+[Photo | Upload | Paste | Draw] → Crop (category aspect) → Remove background → Touch-up in SketchPad → Name + author → Save to library
 ```
+- **Paste** (📋, `assets/clipboard.js`, `PasteButton`): a picture copied anywhere (a screenshot, "Copy image" in a browser, another app) goes the same way as a photo or an upload – crop, remove paper, touch up. The 📋 button reads the clipboard where the browser allows it; otherwise (or with no picture in it) a small box waits for **Ctrl+V / ⌘V**, or a long press → Paste on a phone or tablet. In the drawing pad, Ctrl+V works at once (the picture is cropped, then drawn on); the animation editor can paste a whole strip. Text fields keep their normal paste.
+- Escape closes only the top dialog (a paste box or cropper over the component editor leaves the editor open).
 
 ## 4. Visual style – "pen and pencil"
 - Paper background (subtle grain), graph-paper or notebook lines in menus.
@@ -382,13 +398,13 @@ All data lives only in the browser, which may clear it (low disk space; Safari a
 src/
   main.jsx, App.jsx
   ui/            sketch.css (CSS wobble instead of Rough.js, safe areas), device.js (phone / tablet / pc), install.js (install prompt, iOS, standalone), UpdateToast (new version / offline ready), LanguageSwitcher, FullscreenButton, Modal
-  assets/        categories.js, CameraCapture, AssetCropper, BackgroundRemover + bgRemoval.js, SketchPad, ImageSlot, AssetStudio, AssetEditor (component editor), BuildingStatsEditor, EnemyStatsEditor, ItemStatsEditor, HeroStatsEditor, ThemesEditor, AnimationEditor + AnimPreview + animation.js (frames, strip cutting, frame-count guess), NumField
+  assets/        categories.js, clipboard.js + PasteButton (paste pictures), SoundEditor + audioClip.js (monster sounds: record, trim), CameraCapture, AssetCropper, BackgroundRemover + bgRemoval.js, SketchPad, ImageSlot, AssetStudio, AssetEditor (component editor), BuildingStatsEditor, EnemyStatsEditor, ItemStatsEditor, HeroStatsEditor, ThemesEditor, AnimationEditor + AnimPreview + animation.js (frames, strip cutting, frame-count guess), NumField
   data/          saveFile.js (JSON format), mergePlan.js + ImportReview (reviewed import), safety.js + SafetyCard (backup reminder, persistent storage), migrate.js (v1 → components), store.js (IndexedDB), defaultData.js (class pack), DataPanel
   config/        components.js (built-in components + derived lists), features.js, themes.js, legends.js (monster legends), balance, buildings, heroStats, enemies, weapons, waves (defaults) + rules.js (global rules over defaults)
   logic/         pathGrid, pathfinding, mapModel, waves, world (the simulation's core: setup, rounds, events, HUD), balanceBot  ← pure, unit-tested
   logic/world/   the rest of the World by topic, mixed into the class: equipment, buildings (+ FEATURE_BEHAVIOUR), soldiers, enemies, combat (damage, projectiles), hero (+ walking on roads), coins, shared
   maps/          MapList, MapPainter, WaveEditor, MapTestPanel + mapTest.js + mapTest.worker.js (robot test), shareMap.js, mapRuntime (canvas helpers, sample map), textures.js (terrain textures)
-  game/          PlaySetup, GameView (React ↔ Phaser), GameScene (incl. playing animations), GameOverlay, BuildPanel, Chronicle, RulesEditor, sound.js, tutorial.js
+  game/          monsterVoices.js (when monster sounds play), PlaySetup, GameView (React ↔ Phaser), GameScene (incl. playing animations), GameOverlay, BuildPanel, Chronicle, RulesEditor, sound.js, tutorial.js
   locales/       cs.json, en.json
 public/default-data.json   class pack (empty by default)
 public/icons/              app icon (icon.svg → PNGs via npm run icons)
@@ -410,6 +426,7 @@ e2e/                       Playwright browser tests (§15a)
 5f. **Components** ✅ – every game part is one component (pictures + all numbers) edited in the studio, which became the general component editor (§7.1). Buildings are made from **features** (workers, arrows, soldiers, income, hero healing) with a table of 1–5 levels whose fields follow the features; the Town Hall is the `core` building type with the same features; "another look" components add drawings to an existing type. Enemies, weapons/shields/armor and coins carry their numbers next to their drawings; the separate Enemies and Weapons screens are gone and the Rules editor keeps only global rules. Old data and version-1 save files are migrated automatically. Tests cover new building kinds made only from data (market, well, 4-level tower).
 5g. **Lives & backpack** ✅ – every lost life sends the hero away for 10 s and back to the Town Hall; losing all 5 loses the game (the end screen says why). The bot now walks back to heal below 40 % HP and still wins every seed without losing a life; the same bot without healing loses every seed (new test). Small retune: dragon 280 HP / speed 36, rounds 14–15 spawns. **Backpack** rebuilt: three slots (right hand, left hand, armor) with the hero's attack / reach / armor shown live, items dragged onto slots with mouse or finger (or tap item → tap slot), wrong slots refused, worn items dragged back to take them off.
 5h. **Summoners, catapult, themes, terrain** ✅ – enemies can **call minions** (any enemies, several kinds mixed; how many, how often, at most alive, more on death; minions never summon): new built-ins **necromancer** → skeletons, **spider queen** → spiderlings (more when she dies), plus skeleton and spiderling. New building feature **lobs** and built-in **catapult** (rounds 6 / 10 / 15): area damage to walking enemies. **Themes** (§7.2) with an editor; maps have a theme. **Terrain textures** in the map editor with preview (§5.1). Waves: spider queen in rounds 8 and 19, necromancers in 12 and 17; necromancer tuned to 90 HP / every 8 s; the bot builds a catapult – all seeds won, waves 40–60 s. Architecture: building features run from a behaviour table, one spawn path for caves and summoners, ground-target projectiles, built-ins seeded by id.
+5n. **Monster sounds, pasting pictures** ✅ – enemies' own sounds (growl on the road, attack, defeated): recorded or loaded, silence cut automatically, trimmed by hand, played sparingly by the VoiceDirector (§3.2b); pictures pasted from the clipboard into picture slots, the drawing pad and the animation strip, then cropped and cleaned like photos (§3.3). Escape closes only the top dialog. Browser tests record with Chrome's fake microphone and paste through the real clipboard.
 5m. **Code health** ✅ – `world.js` (1 300 lines) split into topic files under `logic/world/` (the World keeps one API; a check stops a method being defined twice; seeded bot games give byte-identical results before and after); Phaser trimmed to its core (game chunk 1.6 MB → 0.9 MB), working in the build and the dev server.
 5l. **Gameplay: difficulty, wave summary, robot map test, map sharing** ✅ – difficulty levels (§11a), a summary card after each wave (§12), "Let the robot try" in the wave editor (§10a), sharing one map with the drawings it uses (§13a). Bot checks per difficulty added to the balance tests.
 5k. **Data safety, installable app, notch, browser tests** ✅ – the browser is asked to keep the data, a backup reminder on the menu after 2 days of unsaved changes, a "Backup & keeping drawings safe" card (§13b); installable app that plays offline, updates wait for a reload outside the game (§2.2); iPhone notch / home bar safe areas (§4a); Playwright browser tests and ESLint run in CI before every deploy (§15a).
@@ -424,6 +441,7 @@ e2e/                       Playwright browser tests (§15a)
 - every menu screen opens without errors; a game starts, runs and pauses;
 - import: a new element is added, one with the same name and a change is reviewed and kept;
 - backup reminder: appears for 3-day-old changes, "Later" hides it across a reload, "Download backup" downloads a valid save file and clears it;
+- studio: a picture from the clipboard goes to cropping; Ctrl+V on the drawing pad; the paste box says when there is no picture; a sound recorded with Chrome's fake microphone is trimmed, kept after saving, and a game with it runs; Escape closes only the top dialog;
 - difficulty: the choice is remembered across a reload;
 - the robot test in the wave editor finishes with a verdict and times for all 20 rounds;
 - sharing a map downloads a file with one map and only the components it uses;

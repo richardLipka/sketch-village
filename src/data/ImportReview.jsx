@@ -4,7 +4,7 @@ import Modal from '../ui/Modal.jsx';
 
 // Reviewing an import (data/mergePlan.js): new things are simply added; for
 // every element that already exists and differs, the kid sees what changed –
-// numbers, names, pictures – and decides: update / keep mine / update all /
+// numbers, names, pictures, sounds – and decides: update / keep mine / update all /
 // keep all mine.
 
 const isPic = (v) => typeof v === 'string' && v.startsWith('data:image');
@@ -15,6 +15,7 @@ function Value({ v }) {
   const empty = v === undefined || v === null || v === '' || (Array.isArray(v) && !v.some((x) => x !== null && x !== ''));
   if (empty) return <span className="muted">{t('import.nothing')}</span>;
   if (isPic(v)) return <img src={v} alt="" className="review-pic checker" />;
+  if (typeof v === 'string' && v.startsWith('data:audio')) return <audio controls src={v} className="review-audio" />;
   if (Array.isArray(v) && v.some(isPic)) {
     return (
       <span className="row" style={{ gap: 4 }}>

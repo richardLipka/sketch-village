@@ -4,10 +4,11 @@ import CameraCapture from './CameraCapture.jsx';
 import AssetCropper from './AssetCropper.jsx';
 import BackgroundRemover from './BackgroundRemover.jsx';
 import SketchPad from './SketchPad.jsx';
+import PasteButton from './PasteButton.jsx';
 import { normalizeAssetImage } from './imageEncoding.js';
 
 // One drawing of an asset, with the full pipeline:
-//   [photo | upload] → crop → remove paper → (optional touch-up)   or   [draw]
+//   [photo | upload | paste] → crop → remove paper → (optional touch-up)   or   [draw]
 export default function ImageSlot({ label, image, fallback, category, onChange }) {
   const { t } = useTranslation();
   const fileRef = useRef(null);
@@ -44,6 +45,7 @@ export default function ImageSlot({ label, image, fallback, category, onChange }
       <div className="row" style={{ justifyContent: 'center', gap: 4 }}>
         <button className="btn icon" title={t('slot.photo')} onClick={() => setStage('camera')}>📷</button>
         <button className="btn icon" title={t('slot.upload')} onClick={() => fileRef.current.click()}>📁</button>
+        <PasteButton onImage={(img) => { setRaw(img); setStage('crop'); }} />
         <button className="btn icon" title={image ? t('slot.edit') : t('slot.draw')} onClick={() => setStage('sketch')}>✏️</button>
         {image && <button className="btn icon danger" title={t('slot.remove')} onClick={() => onChange(null)}>✕</button>}
       </div>

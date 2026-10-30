@@ -748,5 +748,32 @@
     "flag_short": "krátké",
     "flag_long": "dlouhé",
     "flag_tough": "těžké"
+  },
+  "paste": {
+    "button": "Vložit obrázek ze schránky",
+    "short": "Vložit",
+    "title": "Vložit obrázek",
+    "how": "Zkopíruj obrázek (snímek obrazovky, nebo pravým tlačítkem → Kopírovat obrázek) a stiskni Ctrl+V (⌘V na Macu). Na telefonu nebo tabletu: podrž prst na rámečku a vyber Vložit.",
+    "box": "Sem vlož obrázek",
+    "empty": "Ve schránce není obrázek – nejdřív nějaký zkopíruj."
+  },
+  "sounds": {
+    "title": "Zvuky",
+    "hint": "Nahraj hlas příšery (až 3 s) nebo načti zvukový soubor. Hra je pouští jen občas – ne při každém kroku – aby zůstaly výjimečné.",
+    "walk": "Vrčení na cestě",
+    "attack": "Útok",
+    "death": "Poražení",
+    "none": "zatím bez zvuku",
+    "record": "Nahrát mikrofonem",
+    "stop": "Zastavit nahrávání",
+    "recording": "nahrávám…",
+    "play": "Přehrát",
+    "load": "Načíst zvukový soubor",
+    "remove": "Smazat zvuk",
+    "from": "od",
+    "to": "do",
+    "no_mic": "Mikrofon není k dispozici – povol ho v prohlížeči, nebo načti zvukový soubor.",
+    "cant_play": "Tento prohlížeč tenhle zvuk neumí přehrát.",
+    "too_big": "Soubor je moc velký – použij krátký zvuk (do 600 kB)."
   }
 }

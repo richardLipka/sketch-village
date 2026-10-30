@@ -4,6 +4,7 @@ import Modal from '../ui/Modal.jsx';
 import { loadImage, makeCanvas, encodeCanvas } from './imageEncoding.js';
 import { floodErase } from './bgRemoval.js';
 import { floodFill, hexToRgba } from './pixelOps.js';
+import PasteButton, { usePasteAnywhere } from './PasteButton.jsx';
 import AssetCropper from './AssetCropper.jsx';
 
 // Draw a new asset or touch up a photographed one (pencil, eraser, fill,
@@ -154,6 +155,8 @@ export default function SketchPad({ size, initialImage, onSave, onCancel }) {
     reader.onload = () => setCropSrc(reader.result);
     reader.readAsDataURL(file);
   };
+  // a picture from the clipboard: the 📋 button or Ctrl+V while the pad is open
+  usePasteAnywhere(true, setCropSrc);
   const afterCrop = async (cropped) => {
     setCropSrc(null);
     const img = await loadImage(cropped);
@@ -222,6 +225,7 @@ export default function SketchPad({ size, initialImage, onSave, onCancel }) {
             <button className="btn icon" onClick={flip} title={t('sketch.flip')}>⇋</button>
             <button className="btn icon" onClick={startCrop} title={t('sketch.crop')}>✂️</button>
             <button className="btn icon" onClick={() => fileRef.current.click()} title={t('sketch.load')}>📁</button>
+            <PasteButton onImage={setCropSrc} />
             <button className="btn icon danger" onClick={clear} title={t('sketch.clear')}>🗑</button>
           </div>
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={onFile} />

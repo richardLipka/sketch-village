@@ -1,6 +1,10 @@
 // Tiny synthesized sound effects (WebAudio, no sound files): short, soft,
 // cartoonish. Game events are mapped to sounds in `soundFor`; frequent ones
 // (hits) are throttled so a big fight doesn't turn into noise.
+// Plus the kids' recorded monster sounds (clips): decoded once, the trimmed
+// part played at an even loudness; game/monsterVoices.js decides when.
+
+import { clampTrim, normalizeGain } from '../assets/audioClip.js';
 
 let ctx = null;
 let master = null;
@@ -114,4 +118,48 @@ export function play(name) {
   if (c.currentTime - last < gap) return;
   lastPlayed.set(name, c.currentTime);
   try { SOUNDS[name](c); } catch { /* audio is a bonus – never break the game */ }
+}
+
+// ---------------- recorded monster sounds ----------------
+
+const clips = new Map(); // key → { buf, start, end, gain }
+
+/** Decode a recording (data URL) – the editor draws its waveform from this. */
+export async function decodeSound(data) {
+  const c = audio();
+  if (!c) throw new Error('no audio');
+  const bytes = await (await fetch(data)).arrayBuffer();
+  return c.decodeAudioData(bytes);
+}
+
+/** Get a sound { data, start, end } ready under `key`; resolves to how long it plays (s), 0 when it can't. */
+export async function loadClip(key, sound) {
+  if (!sound?.data) return 0;
+  try {
+    const buf = await decodeSound(sound.data);
+    const { start, end } = clampTrim({ start: sound.start ?? 0, end: sound.end ?? buf.duration }, buf.duration);
+    clips.set(key, { buf, start, end, gain: normalizeGain(buf.getChannelData(0), buf.sampleRate, start, end) });
+    return end - start;
+  } catch {
+    return 0; // a recording this browser can't play: the game stays silent for it
+  }
+}
+
+/** Play a loaded clip (`force` = also when the game is muted – the editor's ▶). */
+export function playClip(key, volume = 1, force = false) {
+  const clip = clips.get(key);
+  if ((muted && !force) || !clip) return false;
+  const c = audio();
+  if (!c) return false;
+  try {
+    const src = c.createBufferSource();
+    src.buffer = clip.buf;
+    const g = c.createGain();
+    g.gain.value = clip.gain * volume;
+    src.connect(g).connect(master);
+    src.start(0, clip.start, clip.end - clip.start);
+    return true;
+  } catch {
+    return false;
+  }
 }

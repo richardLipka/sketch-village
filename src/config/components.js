@@ -80,7 +80,7 @@ export function buildingsOf(assets = []) {
 export function enemyTypesOf(assets = []) {
   return assets.filter((a) => a.category === 'enemy').map((a) => ({
     ...DEFAULT_ENEMY_STATS, ...a.stats, id: a.id, name: bothLangs(a.name), image: pictures(a)[0] ?? null, themes: a.themes ?? [],
-    anims: a.anims ?? null, legend: a.legend ?? null,
+    anims: a.anims ?? null, legend: a.legend ?? null, sounds: a.sounds ?? null,
   }));
 }
 

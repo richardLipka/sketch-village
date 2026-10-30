@@ -82,7 +82,7 @@ export class Enemies {
         e.cooldown = type.cooldown;
         if (type.ranged) this.shoot(e, target, type.damage, 'enemy');
         else this.damage(target, type.damage);
-        this.emit('enemyAttack', { id: e.id });
+        this.emit('enemyAttack', { id: e.id, enemy: e.type });
       }
       return;
     }

@@ -414,3 +414,21 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 .round-test { font-size: 14px; padding: 0 6px; border-radius: 6px; background: var(--hl-blue); }
 .round-test.flagged { background: var(--hl-yellow); }
 .device-phone .game-stage:has(.round-summary) .coach { display: none; }
+
+/* paste a picture (PasteButton) */
+.paste-box { min-height: 90px; display: grid; place-items: center; text-align: center; padding: 12px; border: 2.5px dashed var(--ink); border-radius: 10px; background: #fffdf7; color: var(--ink-soft); outline: none; }
+.paste-box:focus { background: var(--hl-yellow); color: var(--ink); }
+
+/* a monster's own sounds (SoundEditor) */
+.sound-row { display: grid; grid-template-columns: 8.5em 1fr auto; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px dashed #d6cdb6; }
+.sound-row:first-of-type { border-top: none; }
+.sound-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.waveform { width: 100%; max-width: 260px; height: 44px; border: 1.5px solid var(--ink-soft); border-radius: 6px; background: #fffdf7; }
+.sound-trim input[type=range] { width: 7em; vertical-align: middle; }
+.rec-dot { color: var(--danger); }
+.sound-actions { gap: 4px; flex-wrap: nowrap; }
+.review-audio { height: 32px; max-width: 220px; }
+@media (max-width: 600px) {
+  .sound-row { grid-template-columns: 1fr auto; }
+  .sound-body { grid-column: 1 / -1; grid-row: 2; }
+}

@@ -740,5 +740,32 @@
     "flag_short": "short",
     "flag_long": "long",
     "flag_tough": "tough"
+  },
+  "paste": {
+    "button": "Paste a picture from the clipboard",
+    "short": "Paste",
+    "title": "Paste a picture",
+    "how": "Copy a picture (a screenshot, or right-click → Copy image), then press Ctrl+V (⌘V on a Mac). On a phone or tablet: long-press the box and choose Paste.",
+    "box": "Paste the picture here",
+    "empty": "There is no picture in the clipboard – copy one first."
+  },
+  "sounds": {
+    "title": "Sounds",
+    "hint": "Record the monster’s voice (up to 3 s) or load a sound file. The game plays them now and then – not on every step – so they stay special.",
+    "walk": "Growl on the road",
+    "attack": "Attack",
+    "death": "Defeated",
+    "none": "no sound yet",
+    "record": "Record with the microphone",
+    "stop": "Stop recording",
+    "recording": "recording…",
+    "play": "Play",
+    "load": "Load a sound file",
+    "remove": "Remove the sound",
+    "from": "from",
+    "to": "to",
+    "no_mic": "The microphone isn’t available – allow it in the browser, or load a sound file.",
+    "cant_play": "This browser can’t play this sound.",
+    "too_big": "The file is too big – use a short sound (under 600 kB)."
   }
 }

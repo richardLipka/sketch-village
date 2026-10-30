@@ -7,6 +7,7 @@ import ItemStatsEditor from './ItemStatsEditor.jsx';
 import EnemyStatsEditor from './EnemyStatsEditor.jsx';
 import BuildingStatsEditor from './BuildingStatsEditor.jsx';
 import AnimationEditor from './AnimationEditor.jsx';
+import SoundEditor from './SoundEditor.jsx';
 import NumField from './NumField.jsx';
 import { getCategory } from './categories.js';
 import { DEFAULT_HERO_POINTS } from '../config/heroStats.js';
@@ -22,7 +23,7 @@ import { newId } from '../data/saveFile.js';
 // building type's features and levels, a weapon's damage, a coin's value…) and,
 // for enemies and buildings, the themes (worlds) it belongs to, optional
 // animations (walking, attacking, reloading) and, for enemies, a legend for the
-// chronicle.
+// chronicle and their own recorded sounds.
 
 const AUTHOR_KEY = 'sv:lastAuthor';
 
@@ -174,6 +175,12 @@ export default function AssetEditor({ asset, isNew, heroRules, buildingTypes = [
       {cat.anims && (
         <div style={{ marginTop: 12 }}>
           <AnimationEditor kinds={cat.anims} anims={draft.anims ?? {}} size={cat.size} removeBg={cat.removeBg} onChange={(anims) => set({ anims })} />
+        </div>
+      )}
+
+      {cat.sounds && (
+        <div style={{ marginTop: 12 }}>
+          <SoundEditor sounds={draft.sounds ?? {}} onChange={(sounds) => set({ sounds })} />
         </div>
       )}
 

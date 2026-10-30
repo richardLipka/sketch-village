@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import AnimPreview from './AnimPreview.jsx';
+import PasteButton from './PasteButton.jsx';
 import { ANIM_KINDS, MIN_FRAMES, MAX_FRAMES, MIN_FPS, MAX_FPS, DEFAULT_FPS, sliceStrip, guessStripFrames, loadFrames, hasAnim } from './animation.js';
 
 // Animations of one component (walking / attacking / reloading), next to its
@@ -46,17 +47,19 @@ export default function AnimationEditor({ kinds, anims = {}, size = 128, removeB
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [raw, count, dir, paper]);
 
+  // a strip from a file or the clipboard: guess the frame count, then cut it
+  const openStrip = async (src) => {
+    const guess = await guessStripFrames(src).catch(() => null);
+    setDir(null);
+    if (guess) setCount(guess);
+    setRaw(src);
+  };
   const onFile = (e) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = async () => {
-      const guess = await guessStripFrames(reader.result).catch(() => null);
-      setDir(null);
-      if (guess) setCount(guess);
-      setRaw(reader.result);
-    };
+    reader.onload = () => openStrip(reader.result);
     reader.readAsDataURL(file);
   };
 
@@ -83,6 +86,7 @@ export default function AnimationEditor({ kinds, anims = {}, size = 128, removeB
 
       <div className="row" style={{ gap: 8 }}>
         <button type="button" className="btn" onClick={() => fileRef.current.click()}>📁 {t('anim.open_strip')}</button>
+        <PasteButton className="btn" label={t('paste.short')} onImage={openStrip} />
         {hasAnim(anim) && <button type="button" className="btn danger" onClick={() => { setRaw(null); setAnim(null); }}>🗑 {t('anim.remove')}</button>}
         {busy && <span className="small muted">⏳</span>}
       </div>
