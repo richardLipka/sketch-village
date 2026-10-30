@@ -388,8 +388,8 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
           onExit={exit} onPause={togglePause} onSpeed={changeSpeed} onZoom={zoom} onWobble={toggleWobble} onMute={toggleMute} onTips={toggleTips} onChronicle={openChronicle} />
         {playing && newMonster && <MonsterNote enemy={enemyTypes.find((e) => e.id === newMonster.id)} key={newMonster.at} onMore={openChronicle} onClose={() => setNewMonster(null)} />}
         {chronicle && (
-          <Modal onClose={closeChronicle} wide>
-            <div className="row"><h2 style={{ margin: 0 }}>📖 {t('chronicle.map_title')}</h2><span className="spacer" /><button className="btn" onClick={closeChronicle}>✕</button></div>
+          <Modal onClose={closeChronicle} wide fill
+            header={<div className="row"><h2>📖 {t('chronicle.map_title')}</h2><span className="spacer" /><button className="btn" onClick={closeChronicle}>✕</button></div>}>
             <Chronicle enemies={monsters} themes={themes} seen={seen.current} />
           </Modal>
         )}

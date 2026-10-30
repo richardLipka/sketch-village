@@ -63,6 +63,7 @@ export default function BuildPanel({ info, types = [], weapons = [], assets = []
           <span className="spacer" />
           <button className="btn icon" onClick={() => setShop(false)} aria-label={t('common.done')}>✕</button>
         </div>
+        <div className="shop-body">
         {!info.near && <p className="small muted" style={{ margin: '2px 0' }}>🚶 {t('shop.go_to_hall')}</p>}
         <h4>🦸 {t('build.hero_upgrades')}</h4>
         <div className="eq-bag shop-grid">
@@ -99,6 +100,7 @@ export default function BuildPanel({ info, types = [], weapons = [], assets = []
                 </div>
               </>
             )}
+        </div>
           </div>
         );
     body = (

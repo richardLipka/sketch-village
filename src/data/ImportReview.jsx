@@ -59,9 +59,24 @@ export default function ImportReview({ plan, onDone, onCancel }) {
   const rows = ch.diff.slice(0, MAX_ROWS);
 
   return (
-    <Modal onClose={onCancel} wide>
-      <h2>📥 {t('import.review_title')}</h2>
-      <p className="small">{t('import.review_counts', { added: plan.additions.length, changes: changes.length })}</p>
+    <Modal onClose={onCancel} wide
+      header={<>
+        <h2>📥 {t('import.review_title')}</h2>
+        <p className="small" style={{ margin: '4px 0 0' }}>{t('import.review_counts', { added: plan.additions.length, changes: changes.length })}</p>
+      </>}
+      footer={<>
+        <div className="row review-actions" style={{ marginTop: 0 }}>
+          <button className="btn primary" onClick={() => decide(true)}>✓ {t('import.accept')}</button>
+          <button className="btn" onClick={() => decide(false)}>✕ {t('import.reject')}</button>
+          <span className="spacer" />
+          <button className="btn" onClick={() => all(true)}>✓✓ {t('import.accept_all')}</button>
+          <button className="btn" onClick={() => all(false)}>✕✕ {t('import.reject_all')}</button>
+        </div>
+        <p className="small muted" style={{ margin: '8px 0 0' }}>
+          <button className="btn" onClick={onCancel}>{t('import.cancel')}</button> {t('import.cancel_hint')}
+        </p>
+      </>}
+    >
       <div className="sketch-card" style={{ padding: 10 }}>
         <div className="row" style={{ justifyContent: 'space-between' }}>
           <b>{kind}{name && `: ${name}`}</b>
@@ -83,16 +98,6 @@ export default function ImportReview({ plan, onDone, onCancel }) {
         </div>
         {ch.diff.length > MAX_ROWS && <p className="small muted">{t('import.more', { n: ch.diff.length - MAX_ROWS })}</p>}
       </div>
-      <div className="row review-actions">
-        <button className="btn primary" onClick={() => decide(true)}>✓ {t('import.accept')}</button>
-        <button className="btn" onClick={() => decide(false)}>✕ {t('import.reject')}</button>
-        <span className="spacer" />
-        <button className="btn" onClick={() => all(true)}>✓✓ {t('import.accept_all')}</button>
-        <button className="btn" onClick={() => all(false)}>✕✕ {t('import.reject_all')}</button>
-      </div>
-      <p className="small muted" style={{ marginTop: 8 }}>
-        <button className="btn" onClick={onCancel}>{t('import.cancel')}</button> {t('import.cancel_hint')}
-      </p>
     </Modal>
   );
 }

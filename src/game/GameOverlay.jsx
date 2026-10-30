@@ -1,4 +1,4 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { roundSummary } from '../logic/waves.js';
 import { unlockLabel } from '../config/unlocks.js';
@@ -89,6 +89,9 @@ export const AttackBar = memo(function AttackBar({ mode, hasMelee, hasRanged, ha
 });
 
 // which equipment slot an item goes into
+/** Clicks into the game while the backpack is open; one more closes it. */
+export const OUTSIDE_CLICKS = 2;
+
 const slotFor = (w) => (isWeapon(w) ? 'right' : w?.slot === 'shield' ? 'left' : 'armor');
 const SLOTS = [['right', '✋', 'weapons.right_hand'], ['left', SLOT_ICON.shield, 'weapons.left_hand'], ['armor', SLOT_ICON.armor, 'weapons.slot_armor']];
 
@@ -100,6 +103,21 @@ const SLOTS = [['right', '✋', 'weapons.right_hand'], ['left', SLOT_ICON.shield
 export const Equipment = memo(function Equipment({ inventoryKey, right, left, armor, attack, reach, armorPct, items, assets, onEquipTo, onUnequip }) {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
+  const wrap = useRef(null);
+  // a player who keeps clicking into the game instead of the backpack wants to
+  // play: the click that makes it more than OUTSIDE_CLICKS closes the backpack
+  // (the clicks still act on the game; a click inside the backpack starts over)
+  useEffect(() => {
+    if (!open) return undefined;
+    let outside = 0;
+    const onDown = (e) => {
+      if (e.isPrimary === false) return; // the second finger of a pinch
+      if (wrap.current?.contains(e.target)) { outside = 0; return; }
+      if (++outside > OUTSIDE_CLICKS) { setOpen(false); setPicked(null); }
+    };
+    window.addEventListener('pointerdown', onDown, true);
+    return () => window.removeEventListener('pointerdown', onDown, true);
+  }, [open]);
   const [drag, setDrag] = useState(null); // { id, from, x, y } while dragging
   const [picked, setPicked] = useState(null); // { id, from } after a tap
   const lang = i18n.language;
@@ -173,7 +191,7 @@ export const Equipment = memo(function Equipment({ inventoryKey, right, left, ar
   );
 
   return (
-    <div className="ov ov-br-eq">
+    <div className="ov ov-br-eq" ref={wrap}>
       {open && (
         <div className="backpack sketch-card" onPointerDown={(e) => e.stopPropagation()}>
           <div className="row" style={{ justifyContent: 'space-between' }}>

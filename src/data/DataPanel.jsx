@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import Screen from '../ui/Screen.jsx';
 import { parseSaveFile, COLLECTIONS } from './saveFile.js';
 import { planImport, applyImport } from './mergePlan.js';
 import ImportReview from './ImportReview.jsx';
@@ -75,9 +76,7 @@ export default function DataPanel({ db, onReplaceDb, onBackup }) {
   const sizeKb = Math.round(JSON.stringify(db).length / 1024);
 
   return (
-    <section>
-      <h1>{t('data.title')}</h1>
-      <p className="muted">{t('data.summary', { assets: db.assets.length, maps: db.maps.length, kb: sizeKb })}</p>
+    <Screen title={t('data.title')} head={<p className="muted" style={{ margin: 0 }}>{t('data.summary', { assets: db.assets.length, maps: db.maps.length, kb: sizeKb })}</p>}>
 
       <SafetyCard settings={db.settings} onBackup={onBackup} />
 
@@ -120,6 +119,6 @@ export default function DataPanel({ db, onReplaceDb, onBackup }) {
           {message.text}
         </div>
       )}
-    </section>
+    </Screen>
   );
 }

@@ -124,8 +124,19 @@ export default function AssetEditor({ asset, isNew, heroRules, buildingTypes = [
   };
 
   return (
-    <Modal onClose={onCancel} wide>
-      <h2>{isNew ? t('editor.new_title', { cat: t(`cat.${asset.category}`) }) : t('editor.edit_title', { name: compName(asset, lang) || t(`cat.${asset.category}`) })}</h2>
+    <Modal onClose={onCancel} wide
+      header={<h2>{isNew ? t('editor.new_title', { cat: t(`cat.${asset.category}`) }) : t('editor.edit_title', { name: compName(asset, lang) || t(`cat.${asset.category}`) })}</h2>}
+      footer={
+        <div className="row">
+          {!isNew && !isCore && <button className="btn danger" onClick={() => { if (confirm(t('editor.confirm_delete'))) onDelete(draft.id); }}>🗑 {t('common.delete')}</button>}
+          {builtIn && <button className="btn" onClick={restore}>↺ {t('component.restore')}</button>}
+          <span className="spacer" />
+          {!canSave && <span className="small muted">{t('component.need_name')}</span>}
+          <button className="btn" onClick={onCancel}>{t('common.cancel')}</button>
+          <button className="btn primary" onClick={save} disabled={!canSave}>✓ {t('common.save')}</button>
+        </div>
+      }
+    >
       <div className="row" style={{ marginBottom: 16 }}>
         <label>{t('editor.name')} <input type="text" value={name} onChange={(e) => setName(e.target.value)} autoFocus /></label>
         <label>{t('editor.author')} <input type="text" value={draft.author ?? ''} onChange={(e) => set({ author: e.target.value })} /></label>
@@ -183,15 +194,6 @@ export default function AssetEditor({ asset, isNew, heroRules, buildingTypes = [
           <SoundEditor sounds={draft.sounds ?? {}} onChange={(sounds) => set({ sounds })} />
         </div>
       )}
-
-      <div className="row" style={{ marginTop: 20 }}>
-        {!isNew && !isCore && <button className="btn danger" onClick={() => { if (confirm(t('editor.confirm_delete'))) onDelete(draft.id); }}>🗑 {t('common.delete')}</button>}
-        {builtIn && <button className="btn" onClick={restore}>↺ {t('component.restore')}</button>}
-        <span className="spacer" />
-        {!canSave && <span className="small muted">{t('component.need_name')}</span>}
-        <button className="btn" onClick={onCancel}>{t('common.cancel')}</button>
-        <button className="btn primary" onClick={save} disabled={!canSave}>✓ {t('common.save')}</button>
-      </div>
     </Modal>
   );
 }

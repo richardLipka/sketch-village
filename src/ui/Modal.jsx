@@ -4,8 +4,13 @@ import React, { useEffect, useRef } from 'react';
 // cropper over the component editor must not close the editor too)
 const stack = [];
 
-/** Paper-styled modal. Escape closes it when onClose is given. */
-export default function Modal({ children, onClose, wide = false }) {
+/**
+ * Paper-styled modal. Escape closes it when onClose is given.
+ * With `header` / `footer` they stay in place and only the content between
+ * them scrolls (the editor's title and its Save button are always in view);
+ * `fill` lets the content arrange its own scrolling (the chronicle's list).
+ */
+export default function Modal({ children, onClose, wide = false, header = null, footer = null, fill = false }) {
   const me = useRef({});
   const close = useRef(onClose);
   close.current = onClose;
@@ -25,10 +30,17 @@ export default function Modal({ children, onClose, wide = false }) {
     };
   }, []);
 
+  const split = header || footer || fill;
   return (
     <div className="modal-back">
-      <div className="modal sketch-card" style={wide ? { width: 'min(960px, 100%)' } : undefined}>
-        {children}
+      <div className={`modal sketch-card ${split ? 'modal-split' : ''}`} style={wide ? { width: 'min(960px, 100%)' } : undefined}>
+        {split ? (
+          <>
+            {header && <div className="modal-head">{header}</div>}
+            <div className={`modal-body ${fill ? 'fill' : ''}`}>{children}</div>
+            {footer && <div className="modal-foot">{footer}</div>}
+          </>
+        ) : children}
       </div>
     </div>
   );

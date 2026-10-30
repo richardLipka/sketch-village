@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import Screen from './ui/Screen.jsx';
 import { loadDb, saveCollection, saveSettings, saveDb } from './data/store.js';
 import { mergeSaveFile } from './data/saveFile.js';
 import { fetchDefaultData } from './data/defaultData.js';
@@ -104,6 +105,7 @@ export default function App() {
         <LanguageSwitcher />
       </header>
 
+      <div className="page-main">
       {screen === 'menu' && (
         <main style={{ textAlign: 'center' }}>
           <h1>{t('app.title')}</h1>
@@ -132,10 +134,9 @@ export default function App() {
       )}
 
       {screen === 'chronicle' && (
-        <section>
-          <h1>📖 {t('chronicle.title')}</h1>
+        <Screen title={`📖 ${t('chronicle.title')}`} fill>
           <Chronicle enemies={enemyTypes} themes={db.themes} intro={t('chronicle.intro')} />
-        </section>
+        </Screen>
       )}
 
       {screen === 'rules' && <RulesEditor rules={rules} onSave={(r) => updateCollection('rules', [r])} />}
@@ -148,6 +149,7 @@ export default function App() {
       )}
 
       {screen === 'data' && <DataPanel db={db} onReplaceDb={replaceDb} onBackup={backupNow} />}
+      </div>
 
       {screen !== 'play' && <UpdateToast />}
     </div>

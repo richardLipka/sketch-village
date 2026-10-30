@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import Screen from '../ui/Screen.jsx';
 import { wavesOf, defaultWaves } from '../config/waves.js';
 import { roundSummary, roundDuration, roundReward } from '../logic/waves.js';
 import { BALANCE } from '../config/balance.js';
@@ -54,9 +55,8 @@ export default function WaveEditor({ map, enemyTypes, themes = [], balance = BAL
   const total = waves.rounds.reduce((s, r) => s + r.groups.reduce((a, g) => a + (g.count ?? 0), 0), 0);
 
   return (
-    <section>
-      <h1>{t('waves.title', { map: map.name })}</h1>
-      <div className="row" style={{ marginBottom: 12 }}>
+    <Screen title={t('waves.title', { map: map.name })} head={
+      <div className="row">
         <label>{t('waves.start_coins')} <input type="number" min={0} max={999} value={waves.startCoins} onChange={(e) => setTop('startCoins', num(e.target.value, 0, 999))} style={{ width: 70 }} /></label>
         <label>{t('waves.first_prep')} <input type="number" min={5} max={300} value={waves.firstPrep} onChange={(e) => setTop('firstPrep', num(e.target.value, 5, 300))} style={{ width: 60 }} /></label>
         <label>{t('waves.prep')} <input type="number" min={3} max={300} value={waves.prep} onChange={(e) => setTop('prep', num(e.target.value, 3, 300))} style={{ width: 60 }} /></label>
@@ -66,6 +66,7 @@ export default function WaveEditor({ map, enemyTypes, themes = [], balance = BAL
         <button className="btn" onClick={onCancel}>{t('common.cancel')}</button>
         <button className="btn primary" onClick={() => onSave(waves)}>✓ {t('common.save')}</button>
       </div>
+    }>
 
       {buildingTypes && rules && (
         <MapTestPanel map={map} waves={waves} enemyTypes={enemyTypes} buildingTypes={buildingTypes} rules={rules} items={items} onReport={setReport} />
@@ -127,6 +128,6 @@ export default function WaveEditor({ map, enemyTypes, themes = [], balance = BAL
         );
       })}
       <button className="btn" onClick={addRound}>+ {t('waves.add_round')}</button>
-    </section>
+    </Screen>
   );
 }

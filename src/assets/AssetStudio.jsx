@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import Screen from '../ui/Screen.jsx';
 import { CATEGORY_IDS } from './categories.js';
 import AssetEditor, { emptyAsset } from './AssetEditor.jsx';
 import { newId } from '../data/saveFile.js';
@@ -68,8 +69,7 @@ export default function AssetStudio({ assets, heroRules, buildingTypes = [], ene
   };
 
   return (
-    <section>
-      <h1>{t('studio.title')}</h1>
+    <Screen title={t('studio.title')} head={<>
       <div className="tabs">
         {CATEGORY_IDS.map((c) => (
           <button key={c} className={`tab ${c === category ? 'on' : ''}`} onClick={() => pickCategory(c)}>
@@ -87,6 +87,7 @@ export default function AssetStudio({ assets, heroRules, buildingTypes = [], ene
           <button className="btn chip" onClick={() => setThemesOpen(true)}>🏷️ {t('themes.button')}…</button>
         </div>
       )}
+    </>}>
 
       <div className="grid">
         <button className="asset-tile new btn" onClick={() => setEditing({ asset: emptyAsset(category), isNew: true })} title={t('studio.add')}>
@@ -124,6 +125,6 @@ export default function AssetStudio({ assets, heroRules, buildingTypes = [], ene
       {themesOpen && (
         <ThemesEditor themes={themes} assets={assets} maps={maps} onSave={(next) => { onThemes(next); setThemesOpen(false); }} onCancel={() => setThemesOpen(false)} />
       )}
-    </section>
+    </Screen>
   );
 }

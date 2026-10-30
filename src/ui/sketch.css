@@ -44,7 +44,32 @@ h1 { font-size: 2.6rem; transform: rotate(-1.5deg); }
 h2 { font-size: 1.8rem; }
 
 /* ---- layout ---- */
-.page { max-width: 1100px; margin: 0 auto; padding: calc(24px + var(--sa-t)) calc(16px + var(--sa-r)) calc(48px + var(--sa-b)) calc(80px + var(--sa-l)); }
+.page {
+  max-width: 1100px; margin: 0 auto; box-sizing: border-box; height: 100vh; height: 100dvh;
+  display: flex; flex-direction: column;
+  padding: calc(24px + var(--sa-t)) calc(16px + var(--sa-r)) calc(8px + var(--sa-b)) calc(80px + var(--sa-l));
+}
+/* the app's top bar (← back, language) stays; the screen below scrolls – or,
+   for a Screen, only its body does, under a fixed head */
+.page > header { flex: none; }
+.page-main { flex: 1; min-height: 0; overflow: auto; padding-bottom: 24px; }
+.page-main:has(> .screen) { overflow: hidden; display: flex; flex-direction: column; padding-bottom: 0; }
+.screen { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.screen-head { flex: none; padding-bottom: 6px; border-bottom: 1.5px dashed #d6cdb6; }
+.screen-head h1 { margin-top: 0; }
+.screen-body { flex: 1; min-height: 0; overflow: auto; padding: 10px 6px 24px 0; }
+.screen-body.fill { overflow: hidden; display: flex; flex-direction: column; padding-bottom: 0; }
+/* low screens (a phone held sideways): a smaller head */
+@media (max-height: 520px) {
+  .page { padding-top: calc(8px + var(--sa-t)); }
+  .page > header { margin-bottom: 6px !important; }
+  .screen-head h1 { font-size: 1.2em; margin-bottom: 2px; }
+  /* one line each: tabs and chips slide sideways, the long hints wait for a bigger screen */
+  .screen-head .tabs, .screen-head > .row, .screen-head .chronicle-filter { flex-wrap: nowrap; overflow-x: auto; margin-bottom: 4px !important; }
+  .screen-head .tabs .tab, .screen-head > .row > * { flex: none; }
+  .screen-head > p.small { display: none; }
+  .modal-head h2 { font-size: 1.25em; }
+}
 .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .spacer { flex: 1; }
 .muted { color: var(--ink-soft); }
@@ -143,6 +168,13 @@ label { display: inline-flex; gap: 8px; align-items: center; }
   padding: calc(16px + var(--sa-t)) calc(16px + var(--sa-r)) calc(16px + var(--sa-b)) calc(16px + var(--sa-l));
 }
 .modal { width: min(720px, 100%); max-height: 95vh; overflow: auto; background: var(--paper); }
+/* a modal with a fixed header / footer: only the middle scrolls */
+.modal.modal-split { display: flex; flex-direction: column; overflow: hidden; max-height: min(95vh, 95dvh); padding-bottom: 10px; }
+.modal-head { flex: none; padding-bottom: 6px; border-bottom: 1.5px dashed #d6cdb6; }
+.modal-head h2 { margin: 0; }
+.modal-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 8px 4px 8px 0; }
+.modal-body.fill { overflow: hidden; display: flex; flex-direction: column; }
+.modal-foot { flex: none; padding-top: 8px; border-top: 1.5px dashed #d6cdb6; }
 
 /* ---- level slots (one drawing per upgrade level) ---- */
 .slots { display: flex; gap: 16px; flex-wrap: wrap; }
@@ -231,7 +263,10 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 .btn.attack .switching { position: absolute; left: 0; bottom: 0; height: 6px; background: var(--danger); }
 .eq-row { gap: 0.3em; }
 .game-screen .btn.eq-slot { width: max(48px, calc(2.4 * var(--u))); height: max(48px, calc(2.4 * var(--u))); padding: 0; display: grid; place-items: center; font-size: 1.1em; background: #fffdf7; }
-.backpack { width: min(24em, calc(100vw - 32px)); max-height: 62vh; overflow: auto; padding: 0.4em 0.6em; user-select: none; }
+.backpack { width: min(24em, calc(100vw - 32px)); max-height: 62vh; overflow: hidden; display: flex; flex-direction: column; padding: 0.4em 0.6em; user-select: none; }
+/* the title row stays; slots and items scroll below it */
+.backpack > .row, .backpack > .drag-hint { flex: none; }
+.backpack-body { flex: 1 1 auto; min-height: 0; overflow: auto; }
 .eq-slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4em; margin: 0.3em 0; }
 .eq-big, .eq-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15em; text-align: center;
   border: 2px dashed #b8ad94; border-radius: 10px; background: #fffdf7; padding: 0.3em 0.2em; min-height: 48px; touch-action: none; cursor: grab; }
@@ -325,7 +360,10 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 
 /* the Town Hall's shop: an overlay over the map, tiles as big as the backpack's */
 .big-action { width: 100%; margin-top: 6px; justify-content: center; }
-.shop-overlay { left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 25; width: min(40em, calc(100% - 16px)); max-height: calc(100% - 16px); overflow: auto; padding: 0.4em 0.7em; }
+.shop-overlay { left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 25; width: min(40em, calc(100% - 16px)); max-height: calc(100% - 16px); overflow: hidden; display: flex; flex-direction: column; padding: 0.4em 0.7em; }
+/* the shop's title, coins and ✕ stay; the tiles scroll */
+.shop-head { flex: none; padding-bottom: 0.2em; border-bottom: 1.5px dashed #d6cdb6; }
+.shop-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding-bottom: 0.3em; }
 .shop-overlay h4 { margin: 0.5em 0 0.3em; font-size: 1em; }
 .shop-head { gap: 0.6em; }
 .shop-grid { border-style: solid; border-color: transparent; padding: 0; }
@@ -370,7 +408,8 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 .device-phone .monster-note { top: calc(8px + 2.6em); max-width: 52%; font-size: 0.85em; }
 /* full-screen backpack: slots on the left, items on the right */
 .device-phone .backpack { position: fixed; inset: calc(6px + var(--sa-t)) calc(6px + var(--sa-r)) calc(6px + var(--sa-b)) calc(6px + var(--sa-l)); width: auto; max-height: none; z-index: 30; display: flex; flex-direction: column; }
-.device-phone .backpack-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(15em, 42%) 1fr; gap: 8px; }
+.device-phone .backpack-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(15em, 42%) 1fr; gap: 8px; overflow: hidden; }
+.device-phone .backpack-body .eq-left { overflow: auto; min-height: 0; }
 .device-phone .backpack-body .eq-bag { overflow: auto; align-content: start; }
 .device-phone .eq-big { min-height: 5em; }
 .device-phone .drag-hint { display: none; }
@@ -458,3 +497,7 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 .slot.compact .row, .frame-ops { gap: 4px !important; flex-wrap: wrap; justify-content: center; }
 .slot.selected .pic { outline: 3px solid var(--hl-yellow); outline-offset: 2px; }
 .frame-ops { display: flex; margin-top: 4px; }
+/* the chronicle in a fixed-head screen or dialog: intro and filter stay, the monsters scroll */
+.fill > .chronicle { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.fill > .chronicle > :not(.chronicle-grid) { flex: none; }
+.fill > .chronicle > .chronicle-grid { flex: 1; min-height: 0; overflow: auto; align-content: start; padding: 4px 6px 16px 0; }

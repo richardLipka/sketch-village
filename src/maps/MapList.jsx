@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import Screen from '../ui/Screen.jsx';
 import MapPainter from './MapPainter.jsx';
 import WaveEditor from './WaveEditor.jsx';
 import { drawSampleMap } from './mapRuntime.js';
@@ -56,12 +57,12 @@ export default function MapList({ maps, assets, enemyTypes, themes = [], balance
   }
 
   return (
-    <section>
-      <h1>{t('maps.title')}</h1>
-      <div className="row" style={{ marginBottom: 16 }}>
+    <Screen title={t('maps.title')} head={
+      <div className="row">
         <button className="btn primary" onClick={() => setEditing(emptyMap(''))}>+ {t('maps.new_blank')}</button>
         <button className="btn" onClick={createSample}>✨ {t('maps.new_sample')}</button>
       </div>
+    }>
       {maps.length === 0 && <p className="muted">{t('maps.empty')}</p>}
       <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
         {maps.map((m) => (
@@ -79,6 +80,6 @@ export default function MapList({ maps, assets, enemyTypes, themes = [], balance
           </div>
         ))}
       </div>
-    </section>
+    </Screen>
   );
 }

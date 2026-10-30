@@ -1,5 +1,6 @@
 import React, { useState, Suspense, lazy } from 'react';
 import { useTranslation } from 'react-i18next';
+import Screen from '../ui/Screen.jsx';
 import { enterFullscreen } from '../ui/FullscreenButton.jsx';
 import { DIFFICULTIES, DIFFICULTY_IDS, DEFAULT_DIFFICULTY } from '../config/difficulty.js';
 
@@ -31,8 +32,12 @@ export default function PlaySetup({ maps, assets, enemyTypes, buildings, rules, 
   }
 
   return (
-    <section>
-      <h1>{t('play.title')}</h1>
+    <Screen title={t('play.title')} head={
+      <div className="row">
+        <button className="btn big primary" disabled={!map} onClick={() => { enterFullscreen(); setPlaying(true); }}>▶ {t('play.start')}</button>
+        {map && <span className="muted">{map.name}{hero ? ` · ${hero.name}` : ''}</span>}
+      </div>
+    }>
 
       <h2>{t('play.pick_map')}</h2>
       {playable.length === 0 && <p className="muted">{t('play.no_maps')}</p>}
@@ -66,8 +71,6 @@ export default function PlaySetup({ maps, assets, enemyTypes, buildings, rules, 
           </button>
         ))}
       </div>
-
-      <button className="btn big primary" disabled={!map} onClick={() => { enterFullscreen(); setPlaying(true); }}>▶ {t('play.start')}</button>
-    </section>
+    </Screen>
   );
 }

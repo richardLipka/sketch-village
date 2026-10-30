@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import Screen from '../ui/Screen.jsx';
 import { DEFAULT_RULES } from '../config/rules.js';
 import { unlockLabel } from '../config/unlocks.js';
 import NumField from '../assets/NumField.jsx';
@@ -85,14 +86,14 @@ export default function RulesEditor({ rules, onSave }) {
   );
 
   return (
-    <section>
-      <h1>⚙️ {t('rules.title')}</h1>
-      <p className="muted small">{t('rules.hint')}</p>
-      <div className="row" style={{ marginBottom: 12, position: 'sticky', top: 0, zIndex: 5, background: 'var(--paper)', padding: '6px 0' }}>
+    <Screen title={`⚙️ ${t('rules.title')}`} head={<>
+      <p className="muted small" style={{ marginTop: 0 }}>{t('rules.hint')}</p>
+      <div className="row">
         <button className="btn primary" onClick={save} disabled={!dirty}>✓ {t('common.save')}</button>
         <button className="btn" onClick={reset}>↺ {t('rules.reset')}</button>
         {saved && <span className="small" style={{ color: 'var(--ok, #15803d)' }}>✓ {t('rules.saved')}</span>}
       </div>
+    </>}>
 
       <h2>🎲 {t('rules.general')}</h2>
       <div className="sketch-card" style={{ padding: 12 }}>
@@ -122,6 +123,6 @@ export default function RulesEditor({ rules, onSave }) {
         </div>
         <p className="small muted">{t('rules.hero_costs_hint')} {t('rules.components_note')}</p>
       </div>
-    </section>
+    </Screen>
   );
 }
