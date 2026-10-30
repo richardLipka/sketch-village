@@ -8,10 +8,17 @@ import { validateMap, placeCave, MAX_SPOTS, CENTRE_RADIUS } from '../logic/mapMo
 import { floodFill, hexToRgba } from '../assets/pixelOps.js';
 import { loadImage } from '../assets/imageEncoding.js';
 import { newId } from '../data/saveFile.js';
+import DecorPanel from './DecorPanel.jsx';
+import { matchesQuery, searchTexts } from '../ui/search.js';
+import { DECOR_BASE, decorSize, onDecor, handleAt, handlePoints, resizeDecor, fillPolygon, seededRng } from './decorEdit.js';
 
 // Map Painter & Map Editor (SPEC §5.1).
 //   Paint – yellow road brush, grass brush (erases road), decoration pencil, bucket fill.
 //   Place – town hall (village centre), any number of building spots, caves anywhere beside a road, decorations.
+//           Decorations: their pictures in a searchable list on the left; a placed one
+//           is selected (a frame with 8 handles: corners resize, sides stretch), Delete
+//           removes the selected thing; or draw a polygon and fill it with decorations
+//           (density, size variety) – maps/decorEdit.js has the geometry.
 //   Terrain – which texture covers each painted colour in the game (with a preview);
 //             painting itself stays in plain colours so the bucket fills exactly.
 // The map also has a theme (world): it decides which buildings can be built on it.
@@ -22,7 +29,9 @@ const ROAD_SIZES = [24, 40, 64];
 const PENCIL_SIZES = [3, 6, 12];
 const UNDO_LIMIT = 15;
 const HIT = 28; // px radius for grabbing a marker
-const DECOR_BASE = 64; // decoration size at scale 1
+const HANDLE = 9; // px half-size of a frame handle as drawn
+const HANDLE_HIT = 22; // px – grabbing a handle (fingers too)
+const CLOSE_POLY = 24; // px – a click this near the first corner closes the polygon
 
 export default function MapPainter({ map: initial, assets, themes = [], onSave, onCancel }) {
   const { t, i18n } = useTranslation();
@@ -42,6 +51,13 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
   const [placeTool, setPlaceTool] = useState('centre');
   const [decorAsset, setDecorAsset] = useState(null);
   const [decorScale, setDecorScale] = useState(1);
+  const [decorQuery, setDecorQuery] = useState('');
+  const [decorMode, setDecorMode] = useState('place'); // place one | fill a polygon
+  const [poly, setPoly] = useState([]); // the polygon being drawn (fill)
+  const [density, setDensity] = useState(5);
+  const [variety, setVariety] = useState(0.3);
+  const [sel, setSel] = useState(null); // the selected marker { kind, i } – framed, Delete removes it
+  const [imgTick, setImgTick] = useState(0); // bumped when pictures finish loading → the overlay redraws
   const [showGrid, setShowGrid] = useState(true);
   const [grid, setGrid] = useState(null);
   const [colours, setColours] = useState([]); // the painted colours (terrain mode)
@@ -51,8 +67,9 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
 
   // anything already drawn can stand on the grass: decorations (trees, rocks,
   // mountains…) first, then all other drawings
-  const decorations = assets.filter((a) => a.category === 'decoration' && a.images?.[0]);
-  const otherDrawings = assets.filter((a) => a.category !== 'decoration' && a.images?.[0]);
+  const findable = (a) => matchesQuery(decorQuery, ...searchTexts(a));
+  const decorations = assets.filter((a) => a.category === 'decoration' && a.images?.[0] && findable(a));
+  const otherDrawings = assets.filter((a) => a.category !== 'decoration' && a.category !== 'icon' && a.images?.[0] && findable(a));
   const [placeMsg, setPlaceMsg] = useState(null);
   // only on grass: a decoration must not stand on a road cell
   const onRoad = (p) => {
@@ -121,7 +138,7 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
       if (images.current[k] || !src) return;
       images.current[k] = await loadImage(src);
       changed = true;
-    })).then(() => changed && force((n) => n + 1));
+    })).then(() => changed && setImgTick((n) => n + 1));
   }, [map.decorations, assets, townhallImg, caveImg]);
 
   // ---------- overlay drawing ----------
@@ -140,8 +157,9 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
 
     for (const d of map.decorations) {
       const img = images.current[d.asset];
-      const s = DECOR_BASE * (d.scale ?? 1);
-      if (img) ctx.drawImage(img, d.x - s / 2, d.y - s / 2, s, s);
+      const { w, h } = decorSize(d);
+      if (img) ctx.drawImage(img, d.x - w / 2, d.y - h / 2, w, h);
+      else { ctx.save(); ctx.strokeStyle = '#16653480'; ctx.strokeRect(d.x - w / 2, d.y - h / 2, w, h); ctx.restore(); } // still loading
     }
 
     ctx.lineWidth = 3;
@@ -187,7 +205,54 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
         ctx.restore();
       }
     }
-  }, [map, grid, showGrid, W, H, t]);
+
+    // the selected thing: a frame; a decoration also gets its 8 handles
+    const picked = sel && (sel.kind === 'centre' ? map.centre : map[sel.kind]?.[sel.i]);
+    if (picked) {
+      ctx.save();
+      ctx.strokeStyle = '#ca8a04';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([8, 5]);
+      if (sel.kind === 'decorations') {
+        const { w, h } = decorSize(picked);
+        ctx.strokeRect(picked.x - w / 2, picked.y - h / 2, w, h);
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#fde68a';
+        ctx.lineWidth = 2;
+        for (const hp of handlePoints(picked)) {
+          ctx.fillRect(hp.x - HANDLE, hp.y - HANDLE, HANDLE * 2, HANDLE * 2);
+          ctx.strokeRect(hp.x - HANDLE, hp.y - HANDLE, HANDLE * 2, HANDLE * 2);
+        }
+      } else {
+        ctx.beginPath();
+        ctx.arc(picked.x, picked.y, sel.kind === 'centre' ? (picked.radius ?? CENTRE_RADIUS) + 10 : 36, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // the polygon being drawn for a fill
+    if (poly.length) {
+      ctx.save();
+      ctx.strokeStyle = '#7c3aed';
+      ctx.fillStyle = 'rgba(124,58,237,0.12)';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([10, 6]);
+      ctx.beginPath();
+      poly.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+      if (poly.length > 2) { ctx.closePath(); ctx.fill(); }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      poly.forEach((p, i) => {
+        ctx.fillStyle = i === 0 ? '#7c3aed' : '#fff';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, i === 0 ? 10 : 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      });
+      ctx.restore();
+    }
+  }, [map, grid, showGrid, W, H, t, sel, poly, imgTick]);
 
   // ---------- helpers ----------
   const bctx = () => baseRef.current.getContext('2d', { willReadFrequently: true });
@@ -205,6 +270,7 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
     if (!last) return;
     bctx().putImageData(last.img, 0, 0);
     setMap(last.map);
+    setSel(null);
     recomputeGrid();
   };
   const update = (patch) => setMap((m) => ({ ...m, ...patch }));
@@ -216,7 +282,7 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
   const hitTest = (p) => {
     const near = (q, r = HIT) => q && Math.hypot(q.x - p.x, q.y - p.y) <= r;
     for (let i = map.decorations.length - 1; i >= 0; i--) {
-      if (near(map.decorations[i], (DECOR_BASE * (map.decorations[i].scale ?? 1)) / 2)) return { kind: 'decorations', i };
+      if (onDecor(map.decorations[i], p)) return { kind: 'decorations', i };
     }
     for (let i = 0; i < map.spots.length; i++) if (near(map.spots[i])) return { kind: 'spots', i };
     for (let i = 0; i < map.caves.length; i++) if (near(map.caves[i])) return { kind: 'caves', i };
@@ -238,6 +304,38 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
   const removeMarker = (hit) => {
     if (hit.kind === 'centre') update({ centre: null });
     else update({ [hit.kind]: map[hit.kind].filter((_, i) => i !== hit.i) });
+    setSel(null);
+  };
+
+  // Delete (or Backspace) removes the selected thing, Escape lets it go / drops the polygon
+  const live = useRef({});
+  live.current = { sel, removeMarker, pushUndo };
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.target?.closest?.('input, textarea, select, [contenteditable]') || document.querySelector('.modal-back')) return;
+      const { sel: s, removeMarker: rm, pushUndo: pu } = live.current;
+      if ((e.key === 'Delete' || e.key === 'Backspace') && s) { e.preventDefault(); pu(); rm(s); }
+      else if (e.key === 'Escape') { setSel(null); setPoly([]); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // nothing stands on a road or on the Town Hall / spots / caves
+  const freeForDecor = (p) => !onRoad(p)
+    && !(map.centre && Math.hypot(p.x - map.centre.x, p.y - map.centre.y) < (map.centre.radius ?? CENTRE_RADIUS) + 20)
+    && ![...map.spots, ...map.caves].some((s) => Math.hypot(p.x - s.x, p.y - s.y) < 40);
+
+  // fill the polygon with the chosen decoration
+  const fillPoly = (points = poly) => {
+    if (!decorAsset) { setPlaceMsg(t('maps.pick_decor_first')); return; }
+    const made = fillPolygon(points, { size: DECOR_BASE * decorScale, density, variety, allowed: freeForDecor, rng: seededRng(Date.now() & 0xffff) });
+    setPoly([]);
+    if (!made.length) { setPlaceMsg(t('maps.fill_nothing')); return; }
+    pushUndo();
+    update({ decorations: [...map.decorations, ...made.map((d) => ({ id: newId(), asset: decorAsset, ...d }))] });
+    setSel(null);
+    setPlaceMsg(t('maps.fill_done', { count: made.length }));
   };
 
   // ---------- painting ----------
@@ -274,12 +372,30 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
       return;
     }
     // place mode
+    // a polygon for a fill: corners by clicking; clicking the first corner again fills it
+    if (placeTool === 'decoration' && decorMode === 'fill') {
+      if (poly.length >= 3 && Math.hypot(p.x - poly[0].x, p.y - poly[0].y) <= CLOSE_POLY) fillPoly();
+      else setPoly([...poly, p]);
+      return;
+    }
+    // the selected decoration's handles: resize / stretch
+    const picked = sel?.kind === 'decorations' && map.decorations[sel.i];
+    const handle = picked && handleAt(picked, p, HANDLE_HIT * (W / overRef.current.getBoundingClientRect().width));
+    if (handle) { pushUndo(); drag.current = { resize: handle, i: sel.i, start: { ...picked } }; return; }
     const hit = hitTest(p);
     if (placeTool === 'erase') {
       if (hit) { pushUndo(); removeMarker(hit); }
       return;
     }
-    if (hit) { pushUndo(); drag.current = hit; return; }
+    if (hit) {
+      // select it and move it (keeping where it was grabbed)
+      pushUndo();
+      setSel(hit);
+      const q = hit.kind === 'centre' ? map.centre : map[hit.kind][hit.i];
+      drag.current = { ...hit, dx: q.x - p.x, dy: q.y - p.y };
+      return;
+    }
+    setSel(null);
     pushUndo();
     if (placeTool === 'centre') update({ centre: { x: p.x, y: p.y, radius: CENTRE_RADIUS } });
     else if (placeTool === 'spot' && map.spots.length < MAX_SPOTS) update({ spots: [...map.spots, { id: newId(), ...p }] });
@@ -289,17 +405,28 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
       setPlaceMsg(null);
       update({ caves: [...map.caves, { id: newId(), ...pos }] });
     }
-    else if (placeTool === 'decoration' && decorAsset) {
-      if (onRoad(p)) { setPlaceMsg(t('maps.decor_on_road')); return; }
+    else if (placeTool === 'decoration') {
+      if (!decorAsset) { undo.current.pop(); setPlaceMsg(t('maps.pick_decor_first')); return; }
+      if (onRoad(p)) { undo.current.pop(); setPlaceMsg(t('maps.decor_on_road')); return; }
       setPlaceMsg(null);
-      update({ decorations: [...map.decorations, { id: newId(), asset: decorAsset, x: p.x, y: p.y, scale: decorScale }] });
+      const s = DECOR_BASE * decorScale;
+      update({ decorations: [...map.decorations, { id: newId(), asset: decorAsset, x: p.x, y: p.y, w: s, h: s }] });
+      setSel({ kind: 'decorations', i: map.decorations.length }); // the new one is selected: resize it right away
     }
   };
 
   const onMove = (e) => {
     const p = toWorld(e);
+    const d = drag.current;
     if (stroke.current) { paintSeg(stroke.current, p); stroke.current = p; }
-    else if (drag.current && !(drag.current.kind === 'decorations' && onRoad(p))) moveMarker(drag.current, p);
+    else if (d?.resize) {
+      const list = [...map.decorations];
+      list[d.i] = resizeDecor(d.start, d.resize, p);
+      update({ decorations: list });
+    } else if (d) {
+      const to = { x: p.x + (d.dx ?? 0), y: p.y + (d.dy ?? 0) };
+      if (!(d.kind === 'decorations' && onRoad(to))) moveMarker(d, to);
+    }
   };
 
   const onUp = () => {
@@ -328,6 +455,7 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
 
   const PAINT_TOOLS = [['road', '🟨'], ['grass', '🟩'], ['pencil', '✏️'], ['fill', '🪣']];
   const PLACE_TOOLS = [['centre', '🏛️'], ['spot', '⬚'], ['cave', '🕳️'], ['decoration', '🌳'], ['erase', '✕']];
+  const pickPlaceTool = (id) => { setPlaceTool(id); setPlaceMsg(null); setPoly([]); };
 
   return (
     <section>
@@ -413,7 +541,7 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
         ) : (
           <>
             {PLACE_TOOLS.map(([id, icon]) => (
-              <button key={id} className={`btn icon ${placeTool === id ? 'active' : ''}`} onClick={() => { setPlaceTool(id); setPlaceMsg(null); }}>
+              <button key={id} className={`btn icon ${placeTool === id ? 'active' : ''}`} onClick={() => pickPlaceTool(id)}>
                 {icon} {t(`maps.place_${id}`)}{id === 'spot' ? ` (${map.spots.length})` : ''}
               </button>
             ))}
@@ -421,32 +549,24 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
         )}
       </div>
 
-      {mode === 'place' && placeTool === 'decoration' && (
-        <div className="sketch-card decor-picker" style={{ marginBottom: 8 }}>
-          {decorations.length + otherDrawings.length === 0 && <span className="muted small">{t('maps.no_decorations')}</span>}
-          {[[decorations, 'maps.decor_nature'], [otherDrawings, 'maps.decor_other']].map(([list, label]) => list.length > 0 && (
-            <div key={label}>
-              <div className="small muted">{t(label)}</div>
-              <div className="row" style={{ gap: 6 }}>
-                {list.map((d) => (
-                  <button key={d.id} className={`decor-tile ${decorAsset === d.id ? 'on' : ''}`} onClick={() => setDecorAsset(d.id)} title={compName(d, i18n.language)}>
-                    <img src={d.images[0]} alt="" />
-                    <span>{compName(d, i18n.language)}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-          <label className="small">{t('maps.decor_size')} <input type="range" min={0.5} max={3} step={0.1} value={decorScale} onChange={(e) => setDecorScale(+e.target.value)} /></label>
-        </div>
-      )}
-
       <p className="small muted" style={{ margin: '0 0 6px' }}>
-        {mode !== 'terrain' && t(mode === 'paint' ? `maps.hint_${tool}` : `maps.hint_place_${placeTool}`)}
+        {mode !== 'terrain' && t(mode === 'paint' ? `maps.hint_${tool}` : placeTool === 'decoration' ? `maps.hint_decor_${decorMode}` : `maps.hint_place_${placeTool}`)}
         {mode === 'place' && placeMsg && <b className="error-text"> {placeMsg}</b>}
       </p>
 
-      <div style={{ position: 'relative', width: '100%', aspectRatio: `${W} / ${H}`, border: '2.5px solid var(--ink)', borderRadius: 6, overflow: 'hidden' }}>
+      <div className="painter-body">
+      {mode === 'place' && placeTool === 'decoration' && (
+        <DecorPanel
+          mode={decorMode} onMode={(m) => { setDecorMode(m); setPoly([]); setSel(null); }}
+          query={decorQuery} onQuery={setDecorQuery} decorations={decorations} otherDrawings={otherDrawings}
+          asset={decorAsset} onAsset={setDecorAsset} scale={decorScale} onScale={setDecorScale}
+          density={density} onDensity={setDensity} variety={variety} onVariety={setVariety}
+          corners={poly.length} onFill={() => fillPoly()} onClearPolygon={() => setPoly([])}
+          selected={sel?.kind === 'decorations'} onDelete={() => { pushUndo(); removeMarker(sel); }}
+        />
+      )}
+
+      <div className="map-stage" style={{ position: 'relative', aspectRatio: `${W} / ${H}`, border: '2.5px solid var(--ink)', borderRadius: 6, overflow: 'hidden' }}>
         <canvas ref={baseRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
         <canvas ref={previewRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: preview ? 'block' : 'none' }} />
         <canvas
@@ -457,6 +577,7 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
           onPointerUp={onUp}
           onPointerCancel={onUp}
         />
+      </div>
       </div>
 
       {validation && (

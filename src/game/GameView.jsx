@@ -24,6 +24,7 @@ import { coinTypesOf } from '../config/components.js';
 import { World } from '../logic/world.js';
 import { play, setMuted, soundFor, loadClip, playClip } from './sound.js';
 import { VoiceDirector } from './monsterVoices.js';
+import { gameSize } from './viewport.js';
 import { SOUND_KINDS } from '../assets/audioClip.js';
 import { TUTORIAL_STEPS, TUTORIAL_DONE, advanceTutorial } from './tutorial.js';
 
@@ -74,7 +75,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
   // a themed map offers only the buildings of its theme (and those without one); the Town Hall always
   const types = useMemo(() => buildings.types.filter((ty) => ty.core || fitsTheme(ty, map.theme)), [buildings, map.theme]);
   const typeName = useCallback((id) => buildings.types.find((ty) => ty.id === id)?.name?.[lang] ?? id, [buildings, lang]);
-  live.current = { t, lang, typeName, tip, onSettings, weapons, onExit, wobble: !!settings.wobble, muted: !!settings.muted };
+  live.current = { t, lang, typeName, tip, onSettings, weapons, onExit, wobble: !!settings.wobble, muted: !!settings.muted, device };
 
   // messages arriving together (round end + new unlocks) are joined, not replaced
   const say = useCallback((text) => {
@@ -233,11 +234,14 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
       });
       worldRef.current = world;
 
+      // the map covers the whole screen (phones always); the rest is reached by dragging (viewport.js)
+      const host = hostRef.current.getBoundingClientRect();
+      const size = gameSize(host.width, host.height, map.world.width, map.world.height, live.current.device);
       gameRef.current = new Phaser.Game({
         type: Phaser.AUTO,
         parent: hostRef.current,
         backgroundColor: '#fbf8ef',
-        scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: map.world.width, height: map.world.height },
+        scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: size.width, height: size.height },
         disableContextMenu: true,
         audio: { noAudio: true }, // sounds come from sound.js; Phaser's own AudioContext would just idle
         scene: [],
@@ -260,6 +264,24 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
   }, [map, hero, assets, enemyTypes, buildings, types, rules, weapons, difficulty, restart, onEvent, anyEvent]);
 
   const scene = () => gameRef.current?.scene.getScene('game');
+
+  // a turned phone or a resized window: the game takes the new shape (still covering the screen)
+  useEffect(() => {
+    const el = hostRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(() => {
+      const g = gameRef.current;
+      if (!g?.scale) return;
+      const r = el.getBoundingClientRect();
+      const size = gameSize(r.width, r.height, map.world.width, map.world.height, device);
+      if (size.width !== g.scale.gameSize.width || size.height !== g.scale.gameSize.height) {
+        g.scale.setGameSize(size.width, size.height);
+        scene()?.cameras.main.setSize(size.width, size.height);
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [map, device]);
   const started = hud !== null; // the scene exists once the first HUD arrived
   useEffect(() => { const s = scene(); if (s) s.wobble = wobble; }, [wobble, started]);
 

@@ -246,6 +246,8 @@ label { display: inline-flex; gap: 8px; align-items: center; }
    never get smaller than 48 px (finger size). */
 .game-screen { padding: var(--sa-t) var(--sa-r) var(--sa-b) var(--sa-l); --u: clamp(18px, calc(0.75vw + 0.75vh + 8px), 34px); font-size: var(--u); }
 .game-screen .game-host { border: none; border-radius: 0; }
+/* the map reaches under the notch and the home bar; the controls stay in the safe area over it */
+.game-screen .game-host { inset: calc(-1 * var(--sa-t)) calc(-1 * var(--sa-r)) calc(-1 * var(--sa-b)) calc(-1 * var(--sa-l)); }
 .game-screen .btn { font-size: 1em; min-height: max(48px, calc(2.3 * var(--u))); }
 .game-screen .btn.icon { min-width: max(48px, calc(2.3 * var(--u))); padding: 0.15em 0.4em; }
 .game-screen .small { font-size: 0.8em; }
@@ -532,3 +534,18 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 .device-phone .chronicle-card { grid-template-columns: 96px 1fr; }
 .device-phone .chronicle-pic { width: 96px; height: 96px; }
 .device-phone .chronicle-pic canvas, .device-phone .chronicle-pic svg, .device-phone .chronicle-pic img { width: 96px !important; height: 96px !important; }
+
+/* map painter: decorations in a searchable list on the left of the map; the map fits the screen */
+.painter-body { display: flex; gap: 10px; align-items: flex-start; }
+.painter-body .map-stage { flex: 1; min-width: 0; max-width: calc((100dvh - 120px) * 16 / 9); }
+.decor-side { flex: none; width: 220px; display: flex; flex-direction: column; gap: 6px; padding: 8px; position: sticky; top: 0; max-height: calc(100dvh - 120px); }
+.decor-side .search-box input { width: 100%; }
+.decor-side .search-box { display: flex; }
+.decor-list { flex: 1; min-height: 80px; overflow: auto; display: flex; flex-direction: column; gap: 4px; }
+.decor-list .decor-tile { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; }
+.decor-list .decor-tile img { width: 40px; height: 40px; object-fit: contain; flex: none; }
+.decor-modes { gap: 4px; flex-wrap: wrap; }
+.decor-side input[type=range] { width: 100%; }
+.device-phone .decor-side { width: 150px; font-size: 0.9em; }
+.device-phone .decor-list .decor-tile img { width: 32px; height: 32px; }
+.decor-list .decor-tile span { max-width: none; flex: 1; }

@@ -125,10 +125,12 @@ export const Equipment = memo(function Equipment({ inventoryKey, right, left, ar
     window.addEventListener('pointerdown', onDown, true);
     return () => window.removeEventListener('pointerdown', onDown, true);
   }, [open]);
-  // I opens / closes the backpack (as its button says)
+  // I opens / closes the backpack (as its button says), Escape closes it
   useEffect(() => {
     const onKey = (e) => {
-      if ((e.key === 'i' || e.key === 'I') && gameKey(e)) { setOpen((o) => !o); setPicked(null); }
+      if (!gameKey(e)) return;
+      if (e.key === 'i' || e.key === 'I') { setOpen((o) => !o); setPicked(null); }
+      else if (e.key === 'Escape') { setOpen(false); setPicked(null); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);

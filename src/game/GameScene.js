@@ -1,6 +1,7 @@
 import Phaser from './phaser.js';
 import { hasFeature, shapeOf, buildingScale } from '../config/features.js';
 import { frameAt } from '../assets/animation.js';
+import { decorSize } from '../maps/decorEdit.js';
 
 // Draws the World simulation (src/logic/world.js) and forwards clicks to it.
 // Camera: zoom (wheel, pinch, buttons) and drag-pan, clamped to the map.
@@ -112,8 +113,8 @@ export default class GameScene extends Phaser.Scene {
 
     for (const d of map.decorations) {
       if (!this.textures.exists(d.asset)) continue;
-      const s = 64 * (d.scale ?? 1);
-      this.add.image(d.x, d.y, d.asset).setDisplaySize(s, s).setDepth(d.y);
+      const { w, h } = decorSize(d); // resized / stretched in the map editor
+      this.add.image(d.x, d.y, d.asset).setDisplaySize(w, h).setDepth(d.y);
     }
 
     for (const [i, s] of map.spots.entries()) {
@@ -141,7 +142,8 @@ export default class GameScene extends Phaser.Scene {
     const cam = this.cameras.main;
     cam.setBounds(0, 0, W, H);
     cam.setZoom(MIN_ZOOM);
-    cam.centerOn(W / 2, H / 2);
+    // when the map covers a wider / taller screen, part of it is out of view: start at the village
+    cam.centerOn(this.world.townHall.x, this.world.townHall.y);
     this.setupInput();
   }
 

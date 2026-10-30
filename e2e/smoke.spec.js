@@ -99,6 +99,9 @@ test('everything opens and works without errors or warnings', async ({ page }) =
     await page.keyboard.press('1'); await page.keyboard.press('2'); await page.keyboard.press('3');
     await page.keyboard.press('i'); await page.keyboard.press('i');
     await page.keyboard.press('p'); await page.keyboard.press('p');
+    // a click above may have hit 🎒 – on a phone the backpack then covers everything: close it
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.backpack')).toHaveCount(0);
     await page.getByTitle(/Rychlost|2×|1×/).first().click().catch(() => {});
     await page.waitForTimeout(4000);
     await page.getByTitle(/Kronika/).first().click();
