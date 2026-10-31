@@ -28,7 +28,9 @@
     "cancel": "Cancel",
     "done": "Done",
     "save": "Save",
-    "delete": "Delete"
+    "delete": "Delete",
+    "scroll_left": "Slide left",
+    "scroll_right": "Slide right"
   },
   "camera": {
     "title": "Take a photo",
@@ -258,7 +260,8 @@
     "place_cave": "Cave",
     "place_respawn": "Hero start",
     "place_decoration": "Decoration",
-    "place_erase": "Remove",
+    "place_erase": "Eraser",
+    "rubber_size": "Eraser size",
     "no_decorations": "Draw some decorations in the Drawing studio first.",
     "decor_on_road": "Decorations go on the grass, not on the road.",
     "decor_nature": "Decorations",
@@ -274,7 +277,7 @@
     "cave_need_road": "A cave must be next to a road – click closer to one.",
     "hint_place_respawn": "Click where the hero appears.",
     "hint_place_decoration": "Pick a picture (trees, mountains…) and click on the green grass. Drag to move.",
-    "hint_place_erase": "Click the thing you want to remove.",
+    "hint_place_erase": "Click the thing you want to remove, or drag the eraser over several things at once (decorations, building spots, caves). The Town Hall goes only when you click right on it. ↶ undoes the whole stroke.",
     "marker_centre": "Town hall",
     "valid": "The map is ready to play!",
     "problems": "Still missing:",
@@ -331,6 +334,10 @@
   },
   "game": {
     "exit": "Quit",
+    "quit_title": "End the game?",
+    "quit_text": "You are in round {{n}} of {{total}}. If you end the game, everything built and collected in it is lost.",
+    "quit_no": "Keep playing",
+    "quit_yes": "End the game",
     "hint": "Click a road = walk · click an enemy = attack · drag = move view · wheel = zoom · 1/2/3 = sword/bow/magic · space = Ready",
     "zoom_in": "Zoom in",
     "zoom_out": "Zoom out",

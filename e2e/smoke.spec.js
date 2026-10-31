@@ -109,6 +109,7 @@ test('everything opens and works without errors or warnings', async ({ page }) =
     await page.keyboard.press('Escape');
     // exit and come back: a second game
     await page.getByTitle(/Konec|Odejít|✕/).first().click().catch(() => {});
+    await page.getByTestId('quit-yes').click({ timeout: 3000 }).catch(() => {}); // "End the game?"
   });
   expect([...new Set(problems)]).toEqual([]);
 });

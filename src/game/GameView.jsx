@@ -286,7 +286,9 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
       const size = gameSize(r.width, r.height, map.world.width, map.world.height, device);
       if (size.width !== g.scale.gameSize.width || size.height !== g.scale.gameSize.height) {
         g.scale.setGameSize(size.width, size.height);
-        scene()?.cameras.main.setSize(size.width, size.height);
+        const sc = scene();
+        sc?.cameras.main.setSize(size.width, size.height);
+        sc?.fitBounds();
       }
     });
     ro.observe(el);
@@ -349,6 +351,22 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
   }, []);
   const skipTips = useCallback(() => live.current.onSettings?.({ tutorialStep: TUTORIAL_DONE }), []);
   const exit = useCallback(() => live.current.onExit?.(), []);
+  // leaving a running game asks first – the game waits meanwhile; after the end (or while loading) it just leaves
+  const [quitting, setQuitting] = useState(false);
+  const pausedByQuit = useRef(false);
+  const askExit = useCallback(() => {
+    const w = worldRef.current, sc = scene();
+    if (!w || !sc || w.phase === 'won' || w.phase === 'lost') { live.current.onExit?.(); return; }
+    pausedByQuit.current = !sc.paused;
+    sc.paused = true;
+    setQuitting(true);
+  }, []);
+  const keepPlaying = useCallback(() => {
+    const sc = scene();
+    if (sc && pausedByQuit.current) sc.paused = false;
+    pausedByQuit.current = false;
+    setQuitting(false);
+  }, []);
 
   // build / upgrade / sell / shop actions; failures are explained in a message
   const act = useCallback((fn) => {
@@ -424,7 +442,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
           </>
         )}
         <Toolbar compact={device === 'phone'} paused={paused} speed={speed} wobble={wobble} muted={muted} tipsOn={tip < TUTORIAL_DONE}
-          onExit={exit} onPause={togglePause} onSpeed={changeSpeed} onZoom={zoom} onWobble={toggleWobble} onMute={toggleMute} onTips={toggleTips} onChronicle={openChronicle} />
+          onExit={askExit} onPause={togglePause} onSpeed={changeSpeed} onZoom={zoom} onWobble={toggleWobble} onMute={toggleMute} onTips={toggleTips} onChronicle={openChronicle} />
         {playing && newMonster && <MonsterNote enemy={enemyTypes.find((e) => e.id === newMonster.id)} key={newMonster.at} onMore={openChronicle} onClose={() => setNewMonster(null)} />}
         {chronicle && (
           <Modal onClose={closeChronicle} wide fill
@@ -446,7 +464,19 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
             onUpgradeTownHall={onUpgradeTownHall} onUpgradeHero={onUpgradeHero} onBuyWeapon={onBuyWeapon}
           />
         )}
-        {paused && playing && <div className="game-over"><div className="sketch-card"><h2>{t('game.paused')}</h2><button className="btn primary" onClick={togglePause}>▶ {t('game.resume')}</button></div></div>}
+        {quitting && playing && (
+          <Modal onClose={keepPlaying}>
+            <div className="quit-ask" role="alertdialog" aria-label={t('game.quit_title')}>
+              <h2>{t('game.quit_title')}</h2>
+              <p>{t('game.quit_text', { n: hud.round, total: hud.totalRounds })}</p>
+              <div className="row" style={{ justifyContent: 'center' }}>
+                <button className="btn primary" onClick={keepPlaying} autoFocus>▶ {t('game.quit_no')}</button>
+                <button className="btn danger" onClick={exit} data-testid="quit-yes">✕ {t('game.quit_yes')}</button>
+              </div>
+            </div>
+          </Modal>
+        )}
+        {paused && playing && !quitting && <div className="game-over"><div className="sketch-card"><h2>{t('game.paused')}</h2><button className="btn primary" onClick={togglePause}>▶ {t('game.resume')}</button></div></div>}
         {hud && !playing && (
           <div className="game-over">
             <div className="sketch-card" style={{ textAlign: 'center' }}>

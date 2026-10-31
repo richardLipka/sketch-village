@@ -6,10 +6,12 @@ import { INK, TOWN_HALL_SIZE, dashedRect } from './scene/draw.js';
 import { Textures } from './scene/Textures.js';
 import { Input, MIN_ZOOM } from './scene/Input.js';
 import { Effects } from './scene/Effects.js';
+import { mapBorder, startScroll } from './viewport.js';
 import { Entities } from './scene/Entities.js';
 
 // Draws the World simulation (src/logic/world.js) and forwards clicks to it.
-// Camera: zoom (wheel, pinch, buttons) and drag-pan, clamped to the map.
+// Camera: zoom (wheel, pinch, buttons) and drag-pan, clamped to the map and
+// a paper border around it (the controls must not hide the map's edges).
 // The scene's methods live in parts by topic (./scene/*.js), mixed in at the
 // bottom: Textures (placeholders), Input (clicks, pan, zoom), Effects (floating
 // numbers, rings, bars), Entities (the sprites following the world each frame).
@@ -109,7 +111,12 @@ export default class GameScene extends Phaser.Scene {
     }
     this.makePlaceholders();
 
+    // the paper border around the map: a little darker, the map framed in ink
+    const paper = this.add.graphics().setDepth(-1001);
+    paper.fillStyle(0xefe7d3, 1).fillRect(-2 * W, -2 * H, 5 * W, 5 * H);
+    paper.fillStyle(0x1e293b, 0.12).fillRect(6, 8, W, H); // shadow
     this.add.image(0, 0, 'background').setOrigin(0).setDepth(-1000);
+    this.add.graphics().setDepth(-999).lineStyle(3, INK, 0.8).strokeRect(-1.5, -1.5, W + 3, H + 3);
 
     for (const d of map.decorations) {
       if (!this.textures.exists(d.asset)) continue;
@@ -140,11 +147,20 @@ export default class GameScene extends Phaser.Scene {
     this.marker = this.add.text(0, 0, '✕', { fontFamily: 'Patrick Hand', fontSize: '28px', color: '#b91c1c' }).setOrigin(0.5).setVisible(false).setDepth(10000);
 
     const cam = this.cameras.main;
-    cam.setBounds(0, 0, W, H);
+    this.fitBounds();
     cam.setZoom(MIN_ZOOM);
-    // when the map covers a wider / taller screen, part of it is out of view: start at the village
-    cam.centerOn(this.world.townHall.x, this.world.townHall.y);
+    // when the map covers a wider / taller screen, part of it is out of view: start at the village (no border in view)
+    const start = startScroll(this.world.townHall, cam.width, cam.height, W, H);
+    cam.setScroll(start.x, start.y);
     this.setupInput();
+  }
+
+  /** The camera may go a border past the map's edges (after a resize too). */
+  fitBounds() {
+    const cam = this.cameras.main;
+    const { width: W, height: H } = this.cfg.map.world;
+    const b = mapBorder(cam.width, cam.height);
+    cam.setBounds(-b.x, -b.y, W + 2 * b.x, H + 2 * b.y);
   }
 
   // ---------------- per-frame ----------------

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { decorSize, onDecor, handleAt, handlePoints, resizeDecor, pointInPolygon, fillPolygon, seededRng, DECOR_BASE, MIN_DECOR } from './decorEdit.js';
+import { decorSize, onDecor, handleAt, handlePoints, resizeDecor, pointInPolygon, fillPolygon, seededRng, touchedBy, removeTouched, DECOR_BASE, MIN_DECOR } from './decorEdit.js';
 
 const tree = { id: 't', asset: 'a', x: 100, y: 100, scale: 1 }; // 64 × 64
 
@@ -85,5 +85,34 @@ describe('filling a polygon with decorations', () => {
   it('the same polygon with the same seed fills the same way; too few corners = nothing', () => {
     expect(fillPolygon(square, { rng: seededRng(9) })).toEqual(fillPolygon(square, { rng: seededRng(9) }));
     expect(fillPolygon(square.slice(0, 2))).toEqual([]);
+  });
+});
+
+describe('the rubber', () => {
+  const map = {
+    centre: { x: 640, y: 360, radius: 70 },
+    decorations: [tree, { id: 'u', asset: 'a', x: 300, y: 100, w: 40, h: 200 }, { id: 'v', asset: 'a', x: 1000, y: 600, scale: 1 }],
+    spots: [{ id: 's1', x: 170, y: 100 }, { id: 's2', x: 680, y: 360 }],
+    caves: [{ id: 'c1', x: 160, y: 160 }],
+  };
+  it('touches whatever its circle reaches: a decoration’s frame, markers', () => {
+    expect(touchedBy(map, { x: 140, y: 100 }, 10)).toEqual({ decorations: [0], spots: [0], caves: [], centre: false });
+    // the tall stone is reached at its side, far from its centre
+    expect(touchedBy(map, { x: 330, y: 180 }, 12).decorations).toEqual([1]);
+    expect(touchedBy(map, { x: 160, y: 190 }, 5).caves).toEqual([0]);
+  });
+  it('a sweep never takes the Town Hall – only a click on it does', () => {
+    expect(touchedBy(map, { x: 640, y: 360 }, 30).centre).toBe(false);
+    expect(touchedBy(map, { x: 640, y: 360 }, 30, { centre: true }).centre).toBe(true);
+    expect(touchedBy(map, { x: 640, y: 360 }, 30).spots).toEqual([1]);
+  });
+  it('removes what it touched; nothing touched = the same map', () => {
+    const after = removeTouched(map, touchedBy(map, { x: 140, y: 100 }, 10));
+    expect(after.decorations.map((d) => d.id)).toEqual(['u', 'v']);
+    expect(after.spots.map((s) => s.id)).toEqual(['s2']);
+    expect(after.caves).toEqual(map.caves);
+    expect(after.centre).toEqual(map.centre);
+    expect(removeTouched(map, touchedBy(map, { x: 900, y: 100 }, 10))).toBe(map);
+    expect(removeTouched(map, touchedBy(map, { x: 640, y: 360 }, 5, { centre: true })).centre).toBe(null);
   });
 });

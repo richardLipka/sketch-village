@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { gameSize, hiddenShare } from './viewport.js';
+import { gameSize, hiddenShare, mapBorder, startScroll, BORDER_SHARE } from './viewport.js';
 
 describe('the game covers the screen', () => {
   it('a phone held sideways (wider than the map): the whole width, part of the height to drag to', () => {
@@ -21,5 +21,19 @@ describe('the game covers the screen', () => {
   });
   it('no size yet: the map', () => {
     expect(gameSize(0, 0, 1280, 720, 'phone')).toEqual({ width: 1280, height: 720, cover: false });
+  });
+});
+
+describe('the paper border around the map', () => {
+  it('is a share of the view on every side, so the edges can be scrolled out from under the controls', () => {
+    const b = mapBorder(1280, 591);
+    expect(b).toEqual({ x: Math.round(1280 * BORDER_SHARE), y: Math.round(591 * BORDER_SHARE) });
+    // the bottom bar of a PC (≈ 12 % of the screen) and a phone's side columns (≈ 15 %) fit in it
+    expect(BORDER_SHARE).toBeGreaterThan(0.15);
+  });
+  it('the game starts at the village with no border in view', () => {
+    expect(startScroll({ x: 640, y: 360 }, 1280, 591, 1280, 720)).toEqual({ x: 0, y: 360 - 591 / 2 });
+    expect(startScroll({ x: 40, y: 700 }, 1000, 500, 1280, 720)).toEqual({ x: 0, y: 220 }); // a corner: clamped to the map
+    expect(startScroll({ x: 640, y: 360 }, 1280, 720, 1280, 720)).toEqual({ x: 0, y: 0 });
   });
 });

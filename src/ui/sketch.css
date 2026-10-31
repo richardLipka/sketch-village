@@ -446,6 +446,16 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 .summary-facts { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.3em 0.9em; margin: 0.2em 0; }
 .device-phone .round-summary { top: calc(14px + 5em); max-width: 50%; font-size: 0.85em; }
 /* difficulty choice before a game */
+/* a row of tiles that slides sideways (ui/PickStrip.jsx: maps and heroes before a game) */
+.pick-strip-wrap { position: relative; margin-bottom: 20px; }
+.pick-strip { display: flex; gap: 16px; overflow-x: auto; overflow-y: hidden; padding: 6px 4px 12px; scroll-snap-type: x proximity; scroll-padding-inline: 4px; overscroll-behavior-x: contain; }
+.pick-strip > .asset-tile { flex: none; scroll-snap-align: start; }
+.pick-strip > .map-pick { width: 230px; }
+.pick-strip > .map-pick img { max-width: 100%; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 4px; }
+.pick-strip > .hero-pick { width: 160px; }
+.strip-arrow { position: absolute; top: 50%; transform: translateY(-60%); z-index: 2; min-width: 44px; min-height: 64px; font-size: 1.8em; background: #fffdf7; box-shadow: 0 2px 6px #0003; }
+.strip-arrow.left { left: -6px; }
+.strip-arrow.right { right: -6px; }
 .difficulty-pick { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 24px; }
 .difficulty-pick .btn { flex-direction: column; align-items: flex-start; min-width: 11em; text-align: left; }
 .difficulty-pick .btn.active { background: var(--hl-yellow); }
@@ -539,25 +549,64 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 .device-phone .asset-tile > .row, .device-phone .asset-tile > button { grid-column: 3; grid-row: 1 / span 4; justify-self: end; align-self: center; justify-content: flex-end !important; flex-wrap: nowrap; }
 .device-phone .asset-tile .no-pic { font-size: 40px; padding: 0; }
 .device-phone .asset-tile.new { min-height: 56px; font-size: 32px; display: flex; justify-content: center; }
+.device-phone .pick-strip { gap: 8px; }
+.device-phone .pick-strip > .map-pick { width: 170px; }
+.device-phone .pick-strip > .hero-pick { width: 110px; }
+/* the strip keeps its tiles upright on a phone (a phone's list tiles lie sideways) */
+.device-phone .pick-strip > .asset-tile { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px; min-height: 0; }
+.device-phone .pick-strip > .map-pick img { width: 100%; max-width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; }
+.device-phone .pick-strip > .hero-pick img { width: 72px; height: 72px; max-width: 72px; }
+.device-phone .pick-strip .name { font-size: 0.9em; text-align: center; }
 .device-phone .chronicle-grid { grid-template-columns: 1fr; }
 .device-phone .chronicle-card { grid-template-columns: 96px 1fr; }
 .device-phone .chronicle-pic { width: 96px; height: 96px; }
 .device-phone .chronicle-pic canvas, .device-phone .chronicle-pic svg, .device-phone .chronicle-pic img { width: 96px !important; height: 96px !important; }
 
-/* map painter: decorations in a searchable list on the left of the map; the map fits the screen */
-.painter-body { display: flex; gap: 10px; align-items: flex-start; }
-.painter-body .map-stage { flex: 1; min-width: 0; max-width: calc((100dvh - 120px) * 16 / 9); }
-.decor-side { flex: none; width: 220px; display: flex; flex-direction: column; gap: 6px; padding: 8px; position: sticky; top: 0; max-height: calc(100dvh - 120px); }
+/* map painter: the whole window – a head (name, save), one bar of modes and
+   tools, then the side panel (decorations / textures) and the map as big as
+   the rest allows; nothing scrolls unless the window is very low */
+.page:has(.map-painter) { max-width: none; }
+.page-main:has(> .map-painter) { overflow: hidden; display: flex; flex-direction: column; padding-bottom: 0; }
+.map-painter { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; overflow: auto; }
+.map-painter > * { flex: none; }
+.painter-head, .painter-bar { gap: 8px; row-gap: 6px; }
+.painter-head input[type=text] { width: 9em; }
+.painter-head .description-field { flex: 1 1 10em; display: flex; align-items: baseline; gap: 4px; min-width: 0; }
+.painter-head .description-field input[type=text] { flex: 1; width: auto; min-width: 4em; }
+.painter-modes { gap: 4px; flex-wrap: nowrap; }
+.painter-tools { gap: 6px; flex-wrap: wrap; }
+.painter-hint { margin: 0; min-height: 1.3em; }
+.painter-body { flex: 1 1 auto; min-height: 260px; display: flex; gap: 10px; align-items: stretch; }
+.map-fit { flex: 1; min-width: 0; min-height: 0; container-type: size; display: flex; align-items: flex-start; justify-content: center; }
+.map-stage { position: relative; max-width: 100%; max-height: 100%; border: 2.5px solid var(--ink); border-radius: 6px; overflow: hidden; box-sizing: border-box; }
+.map-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.painter-status { padding: 4px 10px; border: 1.5px dashed #d6cdb6; border-radius: 8px; background: #fffdf7; }
+.painter-status.ok { background: var(--hl-green); border-style: solid; }
+.painter-side, .decor-side { flex: none; width: clamp(220px, 24vw, 420px); display: flex; flex-direction: column; gap: 6px; padding: 8px; min-height: 0; overflow: auto; box-sizing: border-box; }
+.decor-side { overflow: hidden; }
 .decor-side .search-box input { width: 100%; }
 .decor-side .search-box { display: flex; }
 .decor-list { flex: 1; min-height: 80px; overflow: auto; display: flex; flex-direction: column; gap: 4px; }
-.decor-list .decor-tile { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; }
-.decor-list .decor-tile img { width: 40px; height: 40px; object-fit: contain; flex: none; }
+/* the pictures as a grid of tiles: the wider the panel, the more in view */
+.decor-group { display: grid; grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: 4px; }
+.decor-group > .small { grid-column: 1 / -1; }
+.decor-list .decor-tile { width: 100%; min-height: 0; padding: 3px; }
+.decor-list .decor-tile img { width: 100%; max-width: 52px; height: auto; aspect-ratio: 1; object-fit: contain; }
+.decor-list .decor-tile span { max-width: 100%; font-size: 12px; }
 .decor-modes { gap: 4px; flex-wrap: wrap; }
 .decor-side input[type=range] { width: 100%; }
-.device-phone .decor-side { width: 150px; font-size: 0.9em; }
-.device-phone .decor-list .decor-tile img { width: 32px; height: 32px; }
-.decor-list .decor-tile span { max-width: none; flex: 1; }
+.painter-side .terrain-row { flex-wrap: wrap; }
+.painter-side .terrain-row select { flex: 1; min-width: 0; }
+@media (max-width: 900px), (max-height: 560px) {
+  .painter-head label { font-size: 0.9em; }
+  .painter-head .description-field { display: none; }
+}
+.device-phone .painter-side, .device-phone .decor-side { width: 180px; font-size: 0.9em; }
+.device-phone .decor-group { grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); }
+.device-phone .decor-list .decor-tile span { display: none; }
+.device-phone .painter-head, .device-phone .painter-bar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }
+.device-phone .painter-head > *, .device-phone .painter-bar > * { flex: none; }
+.device-phone .painter-hint { display: none; }
 
 /* the public library (data/Library.jsx): one entry per line – picture, texts, buttons */
 .library-list { display: flex; flex-direction: column; gap: 12px; }

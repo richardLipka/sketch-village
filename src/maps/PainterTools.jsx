@@ -7,13 +7,14 @@ import { useTranslation } from 'react-i18next';
 export const DECOR_COLORS = ['#1f2937', '#78350f', '#166534', '#2563eb', '#dc2626', '#ffffff'];
 export const ROAD_SIZES = [24, 40, 64];
 export const PENCIL_SIZES = [3, 6, 12];
+export const RUBBER_SIZES = [16, 40, 90]; // map px – the rubber's radius
 const PAINT_TOOLS = [['road', '🟨'], ['grass', '🟩'], ['pencil', '✏️'], ['fill', '🪣']];
-const PLACE_TOOLS = [['centre', '🏛️'], ['spot', '⬚'], ['cave', '🕳️'], ['decoration', '🌳'], ['erase', '✕']];
+const PLACE_TOOLS = [['centre', '🏛️'], ['spot', '⬚'], ['cave', '🕳️'], ['decoration', '🌳'], ['erase', '🧽']];
 
-export function PainterTools({ mode, map, tool, onTool, roadSize, onRoadSize, pencilSize, onPencilSize, color, onColor, placeTool, onPlaceTool }) {
+export function PainterTools({ mode, map, tool, onTool, roadSize, onRoadSize, pencilSize, onPencilSize, color, onColor, placeTool, onPlaceTool, rubberSize, onRubberSize }) {
   const { t } = useTranslation();
   return (
-    <div className="row" style={{ marginBottom: 8, minHeight: mode === 'terrain' ? 0 : 44 }}>
+    <div className="row painter-tools">
       {mode === 'terrain' ? null : mode === 'paint' ? (
         <>
           {PAINT_TOOLS.map(([id, icon]) => (
@@ -45,6 +46,16 @@ export function PainterTools({ mode, map, tool, onTool, roadSize, onRoadSize, pe
               {icon} {t(`maps.place_${id}`)}{id === 'spot' ? ` (${map.spots.length})` : ''}
             </button>
           ))}
+          {placeTool === 'erase' && (
+            <>
+              <span className="muted">|</span>
+              {RUBBER_SIZES.map((s) => (
+                <button key={s} className={`btn icon ${rubberSize === s ? 'active' : ''}`} onClick={() => onRubberSize(s)} title={t('maps.rubber_size')} aria-label={`${t('maps.rubber_size')} ${s}`}>
+                  <span style={{ display: 'inline-block', width: s / 3 + 4, height: s / 3 + 4, borderRadius: '50%', border: '2px dashed var(--ink)' }} />
+                </button>
+              ))}
+            </>
+          )}
         </>
       )}
     </div>
@@ -56,7 +67,7 @@ export function TerrainPanel({ map, colours, choices, onTexture }) {
   const { t } = useTranslation();
   const colourLabel = (c) => (c === map.palette.path ? t('maps.tool_road') : c === map.palette.grass ? t('maps.tool_grass') : c);
   return (
-    <div className="sketch-card terrain-panel" style={{ marginBottom: 8 }}>
+    <aside className="sketch-card terrain-panel painter-side">
       <p className="small muted" style={{ margin: '0 0 6px' }}>{t('maps.terrain_hint')}</p>
       {!colours.length && <span className="small muted">{t('maps.terrain_none')}</span>}
       {colours.map((c) => {
@@ -79,6 +90,6 @@ export function TerrainPanel({ map, colours, choices, onTexture }) {
           </div>
         );
       })}
-    </div>
+    </aside>
   );
 }

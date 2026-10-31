@@ -1,6 +1,6 @@
 // The map editor's overlay (maps/MapPainter.jsx): the walkable grid, the
 // decorations, the Town Hall circle, building spots, caves, the selection frame
-// with its handles and the polygon being drawn for a fill. Pure drawing.
+// with its handles, the polygon being drawn for a fill and the rubber. Pure drawing.
 
 import { CENTRE_RADIUS } from '../logic/mapModel.js';
 import { decorSize, handlePoints } from './decorEdit.js';
@@ -11,7 +11,7 @@ const HANDLE = 9; // px half-size of a frame handle as drawn
  * Draw everything on top of the bitmap.
  * images: { [assetId], townhall?, cave? } loaded pictures (missing ones get an outline)
  */
-export function drawOverlay(ctx, { map, grid, showGrid, images, sel, poly, centreLabel }) {
+export function drawOverlay(ctx, { map, grid, showGrid, images, sel, poly, rubber, centreLabel }) {
   const { width: W, height: H } = map.world;
   ctx.clearRect(0, 0, W, H);
 
@@ -117,6 +117,20 @@ export function drawOverlay(ctx, { map, grid, showGrid, images, sel, poly, centr
       ctx.fill();
       ctx.stroke();
     });
+    ctx.restore();
+  }
+
+  // the rubber: a dashed circle where it is (whatever it touches goes)
+  if (rubber) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(244,114,182,0.18)';
+    ctx.strokeStyle = '#be185d';
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([8, 5]);
+    ctx.beginPath();
+    ctx.arc(rubber.x, rubber.y, rubber.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
     ctx.restore();
   }
 }

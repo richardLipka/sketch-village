@@ -28,7 +28,9 @@
     "cancel": "Zrušit",
     "done": "Hotovo",
     "save": "Uložit",
-    "delete": "Smazat"
+    "delete": "Smazat",
+    "scroll_left": "Posunout doleva",
+    "scroll_right": "Posunout doprava"
   },
   "camera": {
     "title": "Vyfoť obrázek",
@@ -258,7 +260,8 @@
     "place_cave": "Jeskyně",
     "place_respawn": "Start hrdiny",
     "place_decoration": "Ozdoba",
-    "place_erase": "Odebrat",
+    "place_erase": "Guma",
+    "rubber_size": "Velikost gumy",
     "no_decorations": "Nejdřív nakresli ozdoby v Ateliéru obrázků.",
     "decor_on_road": "Ozdoby patří na trávu, ne na cestu.",
     "decor_nature": "Ozdoby",
@@ -274,7 +277,7 @@
     "cave_need_road": "Jeskyně musí být u cesty – klikni blíž k nějaké.",
     "hint_place_respawn": "Klikni, kde se hrdina objeví.",
     "hint_place_decoration": "Vyber obrázek (stromy, hory…) a klikej na zelenou trávu. Táhnutím ho posuneš.",
-    "hint_place_erase": "Klikni na věc, kterou chceš odebrat.",
+    "hint_place_erase": "Klikni na věc, kterou chceš odebrat, nebo táhni gumou přes víc věcí najednou (ozdoby, místa na stavbu, jeskyně). Radnici smaže jen klik přímo na ni. ↶ vrátí celý tah.",
     "marker_centre": "Radnice",
     "valid": "Mapa je připravená ke hře!",
     "problems": "Ještě chybí:",
@@ -335,6 +338,10 @@
   },
   "game": {
     "exit": "Konec",
+    "quit_title": "Ukončit hru?",
+    "quit_text": "Hraješ kolo {{n}} z {{total}}. Když hru ukončíš, všechno postavené a nasbírané v této hře se ztratí.",
+    "quit_no": "Hrát dál",
+    "quit_yes": "Ukončit hru",
     "hint": "Klik na cestu = jdi · klik na nepřítele = útok · táhni = posuň · kolečko = přiblížit · 1/2/3 = meč/luk/kouzla · mezerník = Připraven",
     "zoom_in": "Přiblížit",
     "zoom_out": "Oddálit",

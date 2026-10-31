@@ -3,7 +3,8 @@
 //   px (older ones have only `scale` × DECOR_BASE, square);
 //   its frame has 8 handles: corners resize keeping the shape, edge midpoints
 //   stretch one side (change the shape);
-//   a polygon can be filled with decorations: density + size variety.
+//   a polygon can be filled with decorations: density + size variety;
+//   the rubber removes everything it is pulled over (touchedBy, removeTouched).
 
 export const DECOR_BASE = 64; // px of a decoration at scale 1
 export const MIN_DECOR = 12; // px – smaller can't be grabbed any more
@@ -19,6 +20,36 @@ export function decorSize(d) {
 export function onDecor(d, p, pad = 0) {
   const { w, h } = decorSize(d);
   return Math.abs(p.x - d.x) <= w / 2 + pad && Math.abs(p.y - d.y) <= h / 2 + pad;
+}
+
+/**
+ * What a rubber of radius `r` at `p` touches: decorations whose frame it
+ * reaches, building spots and caves (markers of radius `marker`), the Town
+ * Hall only with `centre` (a sweep must not take it by accident – a click on it
+ * does). Returns { decorations: [i…], spots: [i…], caves: [i…], centre }.
+ */
+export function touchedBy(map, p, r, { marker = 28, centre = false } = {}) {
+  const near = (q, reach) => Math.hypot(q.x - p.x, q.y - p.y) <= reach;
+  const decorations = [];
+  map.decorations.forEach((d, i) => {
+    const { w, h } = decorSize(d);
+    const dx = Math.max(Math.abs(p.x - d.x) - w / 2, 0), dy = Math.max(Math.abs(p.y - d.y) - h / 2, 0);
+    if (Math.hypot(dx, dy) <= r) decorations.push(i);
+  });
+  const idx = (list) => list.flatMap((q, i) => (near(q, r + marker) ? [i] : []));
+  return { decorations, spots: idx(map.spots), caves: idx(map.caves), centre: !!(centre && map.centre && near(map.centre, r + 40)) };
+}
+
+/** The map without what the rubber touched (the same map when it touched nothing). */
+export function removeTouched(map, hit) {
+  const n = hit.decorations.length + hit.spots.length + hit.caves.length + (hit.centre ? 1 : 0);
+  if (!n) return map;
+  const keep = (list, gone) => list.filter((_, i) => !gone.includes(i));
+  return {
+    ...map,
+    decorations: keep(map.decorations, hit.decorations), spots: keep(map.spots, hit.spots), caves: keep(map.caves, hit.caves),
+    ...(hit.centre ? { centre: null } : {}),
+  };
 }
 
 // handle → which way it pulls: [-1 | 0 | 1 on x, -1 | 0 | 1 on y]

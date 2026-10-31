@@ -22,7 +22,7 @@ export default function DecorPanel({
       <div className="decor-list">
         {decorations.length + otherDrawings.length === 0 && <span className="muted small">{t(query ? 'maps.decor_none_found' : 'maps.no_decorations')}</span>}
         {[[decorations, 'maps.decor_nature'], [otherDrawings, 'maps.decor_other']].map(([list, label]) => list.length > 0 && (
-          <div key={label}>
+          <div key={label} className="decor-group">
             <div className="small muted">{t(label)}</div>
             {list.map((d) => (
               <button key={d.id} type="button" className={`decor-tile ${asset === d.id ? 'on' : ''}`} aria-pressed={asset === d.id} onClick={() => onAsset(d.id)} title={compName(d, lang)}>

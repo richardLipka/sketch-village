@@ -9,10 +9,10 @@ import { floodFill, hexToRgba } from '../assets/pixelOps.js';
 import { loadImage } from '../assets/imageEncoding.js';
 import { newId } from '../data/saveFile.js';
 import DecorPanel from './DecorPanel.jsx';
-import { PainterTools, TerrainPanel, DECOR_COLORS, ROAD_SIZES, PENCIL_SIZES } from './PainterTools.jsx';
+import { PainterTools, TerrainPanel, DECOR_COLORS, ROAD_SIZES, PENCIL_SIZES, RUBBER_SIZES } from './PainterTools.jsx';
 import { drawOverlay } from './painterOverlay.js';
 import { matchesQuery, searchTexts } from '../ui/search.js';
-import { DECOR_BASE, onDecor, handleAt, resizeDecor, fillPolygon, seededRng } from './decorEdit.js';
+import { DECOR_BASE, onDecor, handleAt, resizeDecor, fillPolygon, seededRng, touchedBy, removeTouched } from './decorEdit.js';
 
 // Map Painter & Map Editor (SPEC §5.1).
 //   Paint – yellow road brush, grass brush (erases road), decoration pencil, bucket fill.
@@ -21,6 +21,9 @@ import { DECOR_BASE, onDecor, handleAt, resizeDecor, fillPolygon, seededRng } fr
 //           is selected (a frame with 8 handles: corners resize, sides stretch), Delete
 //           removes the selected thing; or draw a polygon and fill it with decorations
 //           (density, size variety) – maps/decorEdit.js has the geometry.
+//           The rubber removes what is clicked, and everything it is pulled over.
+// The editor uses the whole window: the map as big as the space left beside
+// the side panel (decorations / textures) allows, the tools above it.
 //   Terrain – which texture covers each painted colour in the game (with a preview);
 //             painting itself stays in plain colours so the bucket fills exactly.
 // The map also has a theme (world): it decides which buildings can be built on it.
@@ -49,6 +52,9 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
   const [pencilSize, setPencilSize] = useState(PENCIL_SIZES[1]);
   const [color, setColor] = useState(DECOR_COLORS[1]);
   const [placeTool, setPlaceTool] = useState('centre');
+  const [rubberSize, setRubberSize] = useState(RUBBER_SIZES[1]);
+  const [rubberAt, setRubberAt] = useState(null); // where the rubber is (its circle on the overlay)
+  const rub = useRef(null); // a rubber stroke: { before } – the map when it started (one undo step)
   const [decorAsset, setDecorAsset] = useState(null);
   const [decorScale, setDecorScale] = useState(1);
   const [decorQuery, setDecorQuery] = useState('');
@@ -145,8 +151,9 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
   useEffect(() => {
     const c = overRef.current;
     if (!c || c.width !== W) return; // not sized yet (bitmap still loading)
-    drawOverlay(c.getContext('2d'), { map, grid, showGrid, images: images.current, sel, poly, centreLabel: t('maps.marker_centre') });
-  }, [map, grid, showGrid, W, H, t, sel, poly, imgTick]);
+    const rubber = rubberAt && mode === 'place' && placeTool === 'erase' ? { ...rubberAt, r: rubberSize } : null;
+    drawOverlay(c.getContext('2d'), { map, grid, showGrid, images: images.current, sel, poly, rubber, centreLabel: t('maps.marker_centre') });
+  }, [map, grid, showGrid, W, H, t, sel, poly, imgTick, rubberAt, rubberSize, mode, placeTool]);
 
   // ---------- helpers ----------
   const bctx = () => baseRef.current.getContext('2d', { willReadFrequently: true });
@@ -282,7 +289,14 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
     if (handle) { drag.current = { resize: handle, i: sel.i, start: { ...picked }, undoPending: true }; return; }
     const hit = hitTest(p);
     if (placeTool === 'erase') {
-      if (hit) { pushUndo(); removeMarker(hit); }
+      // the rubber: what was clicked (the Town Hall too), then all it is pulled over – one undo step
+      pushUndo();
+      rub.current = { before: map };
+      setSel(null);
+      setMap((m) => {
+        const start = hit ? removeTouched(m, { decorations: [], spots: [], caves: [], centre: false, [hit.kind]: hit.kind === 'centre' ? true : [hit.i] }) : m;
+        return removeTouched(start, touchedBy(start, p, rubberSize, { marker: HIT }));
+      });
       return;
     }
     if (hit) {
@@ -314,6 +328,11 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
 
   const onMove = (e) => {
     const p = toWorld(e);
+    if (mode === 'place' && placeTool === 'erase') {
+      setRubberAt(p);
+      if (rub.current) setMap((m) => removeTouched(m, touchedBy(m, p, rubberSize, { marker: HIT })));
+      return;
+    }
     const d = drag.current;
     if (d?.undoPending) { pushUndo(); d.undoPending = false; } // the selected thing really moves now
     if (stroke.current) { paintSeg(stroke.current, p); stroke.current = p; }
@@ -329,6 +348,10 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
   };
 
   const onUp = () => {
+    if (rub.current) {
+      if (rub.current.before === map) undo.current.pop(); // rubbed nothing: no undo step
+      rub.current = null;
+    }
     if (stroke.current) { stroke.current = null; recomputeGrid(); }
     drag.current = null;
   };
@@ -354,8 +377,8 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
   const pickPlaceTool = (id) => { setPlaceTool(id); setPlaceMsg(null); setPoly([]); };
 
   return (
-    <section>
-      <div className="row" style={{ marginBottom: 10 }}>
+    <section className="map-painter">
+      <div className="row painter-head">
         <label>{t('maps.name')} <input type="text" value={map.name} onChange={(e) => update({ name: e.target.value })} /></label>
         <label>{t('editor.author')} <input type="text" value={map.author ?? ''} onChange={(e) => update({ author: e.target.value })} /></label>
         <label className="description-field">{t('editor.description')}{' '}
@@ -372,66 +395,63 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
         <button className="btn primary" onClick={save} disabled={!map.name.trim()}>✓ {t('common.save')}</button>
       </div>
 
-      <div className="row" style={{ marginBottom: 8 }}>
-        <button className={`tab ${mode === 'paint' ? 'on' : ''}`} onClick={() => pickMode('paint')}>🖌️ {t('maps.mode_paint')}</button>
-        <button className={`tab ${mode === 'place' ? 'on' : ''}`} onClick={() => pickMode('place')}>📍 {t('maps.mode_place')}</button>
-        <button className={`tab ${mode === 'terrain' ? 'on' : ''}`} onClick={() => pickMode('terrain')}>🧱 {t('maps.mode_terrain')}</button>
+      <div className="row painter-bar">
+        <div className="row painter-modes">
+          <button className={`tab ${mode === 'paint' ? 'on' : ''}`} onClick={() => pickMode('paint')}>🖌️ {t('maps.mode_paint')}</button>
+          <button className={`tab ${mode === 'place' ? 'on' : ''}`} onClick={() => pickMode('place')}>📍 {t('maps.mode_place')}</button>
+          <button className={`tab ${mode === 'terrain' ? 'on' : ''}`} onClick={() => pickMode('terrain')}>🧱 {t('maps.mode_terrain')}</button>
+        </div>
+        <PainterTools
+          mode={mode} map={map} tool={tool} onTool={setTool} roadSize={roadSize} onRoadSize={setRoadSize}
+          pencilSize={pencilSize} onPencilSize={setPencilSize} color={color} onColor={setColor}
+          placeTool={placeTool} onPlaceTool={pickPlaceTool} rubberSize={rubberSize} onRubberSize={setRubberSize}
+        />
         <span className="spacer" />
         <label className="small"><input type="checkbox" checked={preview} onChange={(e) => setPreview(e.target.checked)} /> {t('maps.preview')}</label>
         <label className="small"><input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} /> {t('maps.show_grid')}</label>
         <button className="btn icon" onClick={doUndo} disabled={!undo.current.length} title={t('sketch.undo')}>↶</button>
       </div>
 
-      {mode === 'terrain' && <TerrainPanel map={map} colours={colours} choices={textureChoices} onTexture={setTexture} />}
-
-      <PainterTools
-        mode={mode} map={map} tool={tool} onTool={setTool} roadSize={roadSize} onRoadSize={setRoadSize}
-        pencilSize={pencilSize} onPencilSize={setPencilSize} color={color} onColor={setColor}
-        placeTool={placeTool} onPlaceTool={pickPlaceTool}
-      />
-
-      <p className="small muted" style={{ margin: '0 0 6px' }}>
+      <p className="small muted painter-hint">
         {mode !== 'terrain' && t(mode === 'paint' ? `maps.hint_${tool}` : placeTool === 'decoration' ? `maps.hint_decor_${decorMode}` : `maps.hint_place_${placeTool}`)}
         {mode === 'place' && placeMsg && <b className="error-text"> {placeMsg}</b>}
       </p>
 
       <div className="painter-body">
-      {mode === 'place' && placeTool === 'decoration' && (
-        <DecorPanel
-          mode={decorMode} onMode={(m) => { setDecorMode(m); setPoly([]); setSel(null); }}
-          query={decorQuery} onQuery={setDecorQuery} decorations={decorations} otherDrawings={otherDrawings}
-          asset={decorAsset} onAsset={setDecorAsset} scale={decorScale} onScale={setDecorScale}
-          density={density} onDensity={setDensity} variety={variety} onVariety={setVariety}
-          corners={poly.length} onFill={() => fillPoly()} onClearPolygon={() => setPoly([])}
-          selected={sel?.kind === 'decorations'} onDelete={() => { pushUndo(); removeMarker(sel); }}
-        />
-      )}
+        {mode === 'terrain' && <TerrainPanel map={map} colours={colours} choices={textureChoices} onTexture={setTexture} />}
+        {mode === 'place' && placeTool === 'decoration' && (
+          <DecorPanel
+            mode={decorMode} onMode={(m) => { setDecorMode(m); setPoly([]); setSel(null); }}
+            query={decorQuery} onQuery={setDecorQuery} decorations={decorations} otherDrawings={otherDrawings}
+            asset={decorAsset} onAsset={setDecorAsset} scale={decorScale} onScale={setDecorScale}
+            density={density} onDensity={setDensity} variety={variety} onVariety={setVariety}
+            corners={poly.length} onFill={() => fillPoly()} onClearPolygon={() => setPoly([])}
+            selected={sel?.kind === 'decorations'} onDelete={() => { pushUndo(); removeMarker(sel); }}
+          />
+        )}
 
-      <div className="map-stage" style={{ position: 'relative', aspectRatio: `${W} / ${H}`, border: '2.5px solid var(--ink)', borderRadius: 6, overflow: 'hidden' }}>
-        <canvas ref={baseRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
-        <canvas ref={previewRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: preview ? 'block' : 'none' }} />
-        <canvas
-          ref={overRef}
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', touchAction: 'none', cursor: mode === 'paint' ? 'crosshair' : mode === 'place' ? 'pointer' : 'default' }}
-          onPointerDown={onDown}
-          onPointerMove={onMove}
-          onPointerUp={onUp}
-          onPointerCancel={onUp}
-        />
-      </div>
+        {/* the map as big as the space beside the panel allows (wide or tall), its shape kept */}
+        <div className="map-fit">
+          <div className="map-stage" style={{ aspectRatio: `${W} / ${H}`, width: `min(100cqw, 100cqh * ${W / H})` }}>
+            <canvas ref={baseRef} />
+            <canvas ref={previewRef} style={{ display: preview ? 'block' : 'none' }} />
+            <canvas
+              ref={overRef}
+              style={{ touchAction: 'none', cursor: mode === 'paint' ? 'crosshair' : mode === 'place' ? (placeTool === 'erase' ? 'none' : 'pointer') : 'default' }}
+              onPointerDown={onDown}
+              onPointerMove={onMove}
+              onPointerUp={onUp}
+              onPointerCancel={onUp}
+              onPointerLeave={() => setRubberAt(null)}
+            />
+          </div>
+        </div>
       </div>
 
       {validation && (
-        <div className="sketch-card" style={{ marginTop: 12, background: validation.ok ? 'var(--hl-green)' : '#fffdf7' }}>
-          {validation.ok ? (
-            <b>✓ {t('maps.valid')}</b>
-          ) : (
-            <>
-              <b>{t('maps.problems')}</b>
-              <ul style={{ margin: '4px 0 0' }}>
-                {validation.problems.map((p, i) => <li key={i}>{t(`maps.problem_${p.key}`, p.params)}</li>)}
-              </ul>
-            </>
+        <div className={`painter-status small ${validation.ok ? 'ok' : ''}`} role="status">
+          {validation.ok ? <b>✓ {t('maps.valid')}</b> : (
+            <><b>⚠ {t('maps.problems')}</b> {validation.problems.map((p) => t(`maps.problem_${p.key}`, p.params)).join(' · ')}</>
           )}
         </div>
       )}

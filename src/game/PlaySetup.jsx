@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import SearchBox from '../ui/SearchBox.jsx';
 import { matchesQuery, searchTexts } from '../ui/search.js';
 import Screen from '../ui/Screen.jsx';
+import PickStrip from '../ui/PickStrip.jsx';
 import { enterFullscreen } from '../ui/FullscreenButton.jsx';
 import { compName } from '../config/components.js';
 import { DIFFICULTIES, DIFFICULTY_IDS, DEFAULT_DIFFICULTY } from '../config/difficulty.js';
@@ -11,6 +12,8 @@ import { DIFFICULTIES, DIFFICULTY_IDS, DEFAULT_DIFFICULTY } from '../config/diff
 const GameView = lazy(() => import('./GameView.jsx'));
 
 // Pick a level (map), a hero and how hard it should be, then play (fullscreen).
+// Maps and heroes are each one row that slides sideways (ui/PickStrip.jsx), so
+// however many there are, all of them can be reached.
 export default function PlaySetup({ maps, assets, enemyTypes, buildings, rules, weapons, themes = [], settings, onSettings, initialMapId = null }) {
   const { t, i18n } = useTranslation();
   const playable = maps.filter((m) => m.valid);
@@ -47,26 +50,30 @@ export default function PlaySetup({ maps, assets, enemyTypes, buildings, rules, 
 
       <h2>{t('play.pick_map')}</h2>
       {playable.length === 0 && <p className="muted">{t('play.no_maps')}</p>}
-      <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', marginBottom: 24 }}>
-        {playable.filter((m) => m.id === mapId || matchesQuery(query, ...searchTexts(m))).map((m) => (
-          <div key={m.id} className="asset-tile" style={m.id === mapId ? { background: 'var(--hl-yellow)' } : undefined} onClick={() => setMapId(m.id)}>
-            <img src={m.background} alt="" style={{ maxWidth: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: 4 }} />
-            <div className="name">{themes.find((th) => th.id === m.theme)?.icon} {m.name}</div>
-          </div>
-        ))}
-      </div>
+      {playable.length > 0 && (
+        <PickStrip label={t('play.pick_map')} selectedKey={mapId}>
+          {playable.filter((m) => m.id === mapId || matchesQuery(query, ...searchTexts(m))).map((m) => (
+            <div key={m.id} data-key={m.id} role="option" aria-selected={m.id === mapId} className="asset-tile map-pick" style={m.id === mapId ? { background: 'var(--hl-yellow)' } : undefined} onClick={() => setMapId(m.id)}>
+              <img src={m.background} alt="" />
+              <div className="name">{themes.find((th) => th.id === m.theme)?.icon} {m.name}</div>
+            </div>
+          ))}
+        </PickStrip>
+      )}
 
       <h2>{t('play.pick_hero')}</h2>
       {heroes.length === 0 && <p className="muted">{t('play.no_heroes')}</p>}
-      <div className="grid" style={{ marginBottom: 24 }}>
-        {heroes.filter((h) => h.id === heroId || matchesQuery(query, ...searchTexts(h))).map((h) => (
-          <div key={h.id} className="asset-tile" style={h.id === heroId ? { background: 'var(--hl-yellow)' } : undefined} onClick={() => setHeroId(h.id)}>
-            <img src={h.images[0]} alt={compName(h, i18n.language)} />
-            <div className="name">{compName(h, i18n.language)}</div>
-            <div className="author">{h.author && `✎ ${h.author}`}</div>
-          </div>
-        ))}
-      </div>
+      {heroes.length > 0 && (
+        <PickStrip label={t('play.pick_hero')} selectedKey={heroId}>
+          {heroes.filter((h) => h.id === heroId || matchesQuery(query, ...searchTexts(h))).map((h) => (
+            <div key={h.id} data-key={h.id} role="option" aria-selected={h.id === heroId} className="asset-tile hero-pick" style={h.id === heroId ? { background: 'var(--hl-yellow)' } : undefined} onClick={() => setHeroId(h.id)}>
+              <img src={h.images[0]} alt={compName(h, i18n.language)} />
+              <div className="name">{compName(h, i18n.language)}</div>
+              <div className="author">{h.author && `✎ ${h.author}`}</div>
+            </div>
+          ))}
+        </PickStrip>
+      )}
 
       <h2>{t('difficulty.pick')}</h2>
       <div className="difficulty-pick" role="radiogroup">
