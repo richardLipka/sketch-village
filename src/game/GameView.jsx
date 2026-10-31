@@ -159,11 +159,20 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
       const shown = await texturedCanvas(ruggedRoads(bg, map.palette, map.id), map.textures, assets);
       const firstImage = (cat) => assets.find((a) => a.category === cat)?.images.find(Boolean);
       const images = { background: shown };
-      const load = async (key, src) => { if (src) images[key] = await loadImage(src); };
+      // every picture is decoded once and all of them in parallel (a fill can place
+      // a hundred decorations of one picture); `jobs` is awaited before the game starts
+      const jobs = [];
+      const pending = new Set();
+      const load = (key, src) => {
+        if (!src || pending.has(key)) return;
+        pending.add(key);
+        // a picture that can't be read is skipped: the game shows its shape instead of not starting
+        jobs.push(loadImage(src).then((img) => { images[key] = img; }, () => {}));
+      };
       // (something drawn only as an animation uses its first frame as the still picture)
-      await load('hero', hero?.images[0] || firstFrame(hero?.anims));
+      load('hero', hero?.images[0] || firstFrame(hero?.anims));
       // optional hero drawings per weapon class (images[1..3]); missing ones use the default
-      for (const [i, k] of ['melee', 'ranged', 'magic'].entries()) await load(`hero:${k}`, hero?.images[i + 1]);
+      for (const [i, k] of ['melee', 'ranged', 'magic'].entries()) load(`hero:${k}`, hero?.images[i + 1]);
       // buildings: every look of a type (its own drawings + "another look" components)
       // is one variant, picked at random per building; one texture per level,
       // a missing level uses the previous drawing
@@ -175,35 +184,35 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
           let last = images.find(Boolean);
           for (let lvl = 1; lvl <= type.levels.length; lvl++) {
             last = images[lvl - 1] || last;
-            await load(`${type.id}#${v}:${lvl}`, last);
+            load(`${type.id}#${v}:${lvl}`, last);
           }
         }
       }
       const coinTypes = coinTypesOf(assets);
-      for (const c of coinTypes) if (c.src) await load(c.key, c.src);
+      for (const c of coinTypes) if (c.src) load(c.key, c.src);
       const soldier = assets.find((a) => a.category === 'soldier' && (a.images?.some(Boolean) || firstFrame(a.anims)));
-      await load('soldier', soldier?.images.find(Boolean) || firstFrame(soldier?.anims));
-      await load('cave', firstImage('cave'));
-      await load('projectile', firstImage('projectile'));
+      load('soldier', soldier?.images.find(Boolean) || firstFrame(soldier?.anims));
+      load('cave', firstImage('cave'));
+      load('projectile', firstImage('projectile'));
       // every drawn projectile and soldier on its own (buildings / enemies / castles pick them)
       for (const a of assets) {
-        if (a.category === 'projectile') await load(`proj:${a.id}`, a.images?.find(Boolean));
-        if (a.category === 'soldier') await load(`soldier:${a.id}`, a.images?.find(Boolean) || firstFrame(a.anims));
+        if (a.category === 'projectile') load(`proj:${a.id}`, a.images?.find(Boolean));
+        if (a.category === 'soldier') load(`soldier:${a.id}`, a.images?.find(Boolean) || firstFrame(a.anims));
       }
-      await load('chest', firstImage('chest'));
-      for (const et of enemyTypes) await load(`enemy:${et.id}`, et.image || firstFrame(et.anims));
+      load('chest', firstImage('chest'));
+      for (const et of enemyTypes) load(`enemy:${et.id}`, et.image || firstFrame(et.anims));
       for (const d of map.decorations) {
         const a = assets.find((x) => x.id === d.asset);
-        if (a && !images[a.id]) await load(a.id, a.images[0]);
+        if (a) load(a.id, a.images[0]);
       }
       // animations: every frame (moved by its alignment offset) is a texture
       // `${base}|${kind}|${i}`; the scene plays them (still picture without them)
       const anims = {};
-      const loadAnims = async (base, set) => {
+      const loadAnims = (base, set) => {
         const info = {};
         for (const [kind, a] of Object.entries(set ?? {})) {
           if (!a?.frames?.length) continue;
-          for (const [i, src] of a.frames.entries()) images[`${base}|${kind}|${i}`] = composeFrame(await loadImage(src), a.offsets?.[i]);
+          a.frames.forEach((src, i) => jobs.push(loadImage(src).then((img) => { images[`${base}|${kind}|${i}`] = composeFrame(img, a.offsets?.[i]); }, () => {})));
           info[kind] = { n: a.frames.length, fps: a.fps ?? DEFAULT_FPS };
         }
         if (Object.keys(info).length) anims[base] = info;
@@ -212,18 +221,19 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
       const lengths = {};
       for (const et of enemyTypes) {
         for (const kind of SOUND_KINDS) {
-          const secs = await loadClip(`voice:${et.id}:${kind}`, et.sounds?.[kind]);
-          if (secs) (lengths[et.id] ??= {})[kind] = secs;
+          if (!et.sounds?.[kind]) continue;
+          jobs.push(loadClip(`voice:${et.id}:${kind}`, et.sounds[kind]).then((secs) => { if (secs) (lengths[et.id] ??= {})[kind] = secs; }));
         }
       }
-      const director = new VoiceDirector({ voices: lengths });
-      await loadAnims('hero', hero?.anims);
-      await loadAnims('soldier', soldier?.anims);
-      for (const a of assets) if (a.category === 'soldier') await loadAnims(`soldier:${a.id}`, a.anims);
-      for (const et of enemyTypes) await loadAnims(`enemy:${et.id}`, et.anims);
+      loadAnims('hero', hero?.anims);
+      loadAnims('soldier', soldier?.anims);
+      for (const a of assets) if (a.category === 'soldier') loadAnims(`soldier:${a.id}`, a.anims);
+      for (const et of enemyTypes) loadAnims(`enemy:${et.id}`, et.anims);
       for (const type of types) {
-        for (const [v, set] of (buildings.lookAnims?.[type.id] ?? []).entries()) await loadAnims(`${type.id}#${v}`, set);
+        for (const [v, set] of (buildings.lookAnims?.[type.id] ?? []).entries()) loadAnims(`${type.id}#${v}`, set);
       }
+      await Promise.all(jobs);
+      const director = new VoiceDirector({ voices: lengths });
       if (!alive) return;
       voices.current = director;
 

@@ -66,7 +66,7 @@ export class Enemies {
     if (this.townHall.hp > 0) consider(this.townHall, this.townHall.radius);
     if (!this.hero.dead) consider(this.hero, this.b.heroRadius);
     for (const b of this.buildings) if (b.state !== 'ruin') consider(b, b.radius);
-    for (const s of this.soldiers) consider(s, s.radius);
+    for (const s of this.soldiers) if (!s.dead) consider(s, s.radius); // not one killed earlier this frame
     return best;
   }
 

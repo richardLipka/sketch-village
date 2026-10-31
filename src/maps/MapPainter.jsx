@@ -260,18 +260,22 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
     const r = overRef.current.getBoundingClientRect();
     return { x: ((e.clientX - r.left) / r.width) * W, y: ((e.clientY - r.top) / r.height) * H };
   };
-  const pushUndo = () => {
-    undo.current.push({ img: bctx().getImageData(0, 0, W, H), map });
+  // painting keeps a copy of the bitmap (3.7 MB); placing changes only the map
+  // record, so its undo steps don't copy the picture
+  const pushUndo = (bitmap = mode === 'paint') => {
+    undo.current.push({ img: bitmap ? bctx().getImageData(0, 0, W, H) : null, map });
     if (undo.current.length > UNDO_LIMIT) undo.current.shift();
     force((n) => n + 1);
   };
   const doUndo = () => {
     const last = undo.current.pop();
     if (!last) return;
-    bctx().putImageData(last.img, 0, 0);
     setMap(last.map);
     setSel(null);
-    recomputeGrid();
+    if (last.img) {
+      bctx().putImageData(last.img, 0, 0);
+      recomputeGrid();
+    }
   };
   const update = (patch) => setMap((m) => ({ ...m, ...patch }));
 
@@ -381,7 +385,7 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
     // the selected decoration's handles: resize / stretch
     const picked = sel?.kind === 'decorations' && map.decorations[sel.i];
     const handle = picked && handleAt(picked, p, HANDLE_HIT * (W / overRef.current.getBoundingClientRect().width));
-    if (handle) { pushUndo(); drag.current = { resize: handle, i: sel.i, start: { ...picked } }; return; }
+    if (handle) { drag.current = { resize: handle, i: sel.i, start: { ...picked }, undoPending: true }; return; }
     const hit = hitTest(p);
     if (placeTool === 'erase') {
       if (hit) { pushUndo(); removeMarker(hit); }
@@ -389,10 +393,9 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
     }
     if (hit) {
       // select it and move it (keeping where it was grabbed)
-      pushUndo();
       setSel(hit);
       const q = hit.kind === 'centre' ? map.centre : map[hit.kind][hit.i];
-      drag.current = { ...hit, dx: q.x - p.x, dy: q.y - p.y };
+      drag.current = { ...hit, dx: q.x - p.x, dy: q.y - p.y, undoPending: true };
       return;
     }
     setSel(null);
@@ -418,13 +421,15 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
   const onMove = (e) => {
     const p = toWorld(e);
     const d = drag.current;
+    if (d?.undoPending) { pushUndo(); d.undoPending = false; } // the selected thing really moves now
     if (stroke.current) { paintSeg(stroke.current, p); stroke.current = p; }
     else if (d?.resize) {
       const list = [...map.decorations];
       list[d.i] = resizeDecor(d.start, d.resize, p);
       update({ decorations: list });
     } else if (d) {
-      const to = { x: p.x + (d.dx ?? 0), y: p.y + (d.dy ?? 0) };
+      // kept on the map even when the pointer leaves it
+      const to = { x: Math.max(0, Math.min(W, p.x + (d.dx ?? 0))), y: Math.max(0, Math.min(H, p.y + (d.dy ?? 0))) };
       if (!(d.kind === 'decorations' && onRoad(to))) moveMarker(d, to);
     }
   };

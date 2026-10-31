@@ -391,7 +391,8 @@ export default class GameScene extends Phaser.Scene {
     if (e.type === 'cantHit') this.cfg.onEvent?.(e);
     if (e.type === 'buildingDestroyed') { const s = this.world.spots.find((p) => p.id === e.spotId); if (s) this.puff(s.x, s.y); }
     if (e.type === 'enemyAttack') { const sp = this.sprites.get(e.id); if (sp) this.playOnce(sp, sp.base, ['attack']); }
-    if (e.type === 'soldierAttack') { const sp = this.sprites.get(`s${e.id}`); if (sp) this.playOnce(sp, 'soldier', ['attack']); }
+    // a soldier attacks with its own kind's animation (a goblin on our side, a drawn knight…)
+    if (e.type === 'soldierAttack') { const sp = this.sprites.get(`s${e.id}`); if (sp) this.playOnce(sp, sp.base, ['attack']); }
     if (e.type === 'heroAttack') this.playOnce(this.heroAnim, 'hero', ['attack']);
     if (e.type === 'buildingAttack') {
       if (e.id === this.world.townHall.id) { const th = this.world.townHall; this.playOnce(this.townHallAnim, this.lookOf(this.buildingKey(th.type, this.townHallVariant, th.level)), ['attack', 'reload']); }
@@ -538,6 +539,7 @@ export default class GameScene extends Phaser.Scene {
         img: this.add.image(so.x, so.y, base).setDisplaySize(36, 36).setOrigin(0.5, 0.85),
         bar: this.add.graphics().setDepth(9000),
       }));
+      s.base = base; // the kind can change when the castle is upgraded
       const soKey = this.animKey(s, base, so.path.length > 0) ?? base;
       if (s.img.texture.key !== soKey) s.img.setTexture(soKey).setDisplaySize(36, 36);
       s.img.setPosition(so.x, so.y).setDepth(so.y).setFlipX(so.facing < 0).setAngle(this.jitter(so.id) * 3);

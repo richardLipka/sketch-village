@@ -20,12 +20,13 @@ import { FEATURES } from '../config/features.js';
 import { DEFAULT_BUILDING_TYPES } from '../config/buildings.js';
 import { RULES_ID } from '../config/rules.js';
 import { isWeapon, normalizeItem } from '../config/weapons.js';
+import { HP_SCALE_V4, scaleBuildingHp } from './saveFile.js';
+
+export { HP_SCALE_V4 };
 
 export const DATA_VERSION = 4; // 4: buildings have 20 % less HP
 
 // the built-ins of version 2, which seeded them all at once (`componentsSeeded`)
-export const HP_SCALE_V4 = 0.8;
-
 const V2_BUILT_INS = [
   'townhall', 'house', 'tower', 'castle', 'goblin', 'wolf', 'archer', 'orc', 'bat', 'troll', 'dragon',
   'stick', 'shortbow', 'sword', 'axe', 'longbow', 'crossbow', 'wand', 'firestaff', 'woodshield', 'ironshield', 'leather', 'chainmail',
@@ -103,8 +104,7 @@ export function migrateDb(db) {
   if (settings.dataVersion !== undefined && settings.dataVersion < 4) {
     for (const [i, a] of assets.entries()) {
       if (a.category !== 'building' || !a.stats?.levels || a.stats.variantOf) continue;
-      const levels = a.stats.levels.map((l) => (typeof l.hp === 'number' ? { ...l, hp: Math.max(1, Math.round(l.hp * HP_SCALE_V4)) } : l));
-      assets[i] = { ...a, stats: { ...a.stats, levels } };
+      assets[i] = { ...a, stats: { ...a.stats, levels: scaleBuildingHp(a.stats.levels) } };
       changed = true;
     }
   }

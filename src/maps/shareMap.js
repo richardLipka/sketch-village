@@ -4,6 +4,7 @@
 // imports it like any save file (new things added, changes reviewed).
 
 import { buildSaveFile } from '../data/saveFile.js';
+import { DATA_VERSION } from '../data/migrate.js';
 import { wavesOf } from '../config/waves.js';
 
 export function mapPackage(map, db, balance, now = new Date()) {
@@ -21,7 +22,7 @@ export function mapPackage(map, db, balance, now = new Date()) {
 
   const theme = (db.themes ?? []).find((th) => th.id === map.theme);
   return buildSaveFile({
-    settings: {},
+    settings: { dataVersion: DATA_VERSION }, // current numbers: nothing to upgrade when it is read
     maps: [map],
     themes: theme ? [theme] : [],
     assets: (db.assets ?? []).filter((a) => ids.has(a.id)),

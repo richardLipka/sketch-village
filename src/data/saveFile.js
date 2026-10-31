@@ -26,6 +26,21 @@ export function buildSaveFile(db, now = new Date()) {
   return file;
 }
 
+// Data version 4 lowered every building's HP by 20 % (data/migrate.js scales the
+// browser's own data once). A backup or class pack exported before that carries
+// the old HP – it is scaled when the file is read, so importing it doesn't bring
+// the old numbers back (or offer them as "changes" in the import review).
+export const HP_SCALE_V4 = 0.8;
+export const scaleBuildingHp = (levels) => levels.map((l) => (typeof l?.hp === 'number' ? { ...l, hp: Math.max(1, Math.round(l.hp * HP_SCALE_V4)) } : l));
+
+function upgradeBuildingHp(file) {
+  if ((file.settings?.dataVersion ?? 0) >= 4) return;
+  file.assets = file.assets.map((a) => (a?.category === 'building' && a.stats?.levels && !a.stats.variantOf
+    ? { ...a, stats: { ...a.stats, levels: scaleBuildingHp(a.stats.levels) } } : a));
+  file.buildingTypes = file.buildingTypes.map((t) => (t?.levels ? { ...t, levels: scaleBuildingHp(t.levels) } : t)); // version-1 files
+  file.settings = { ...file.settings, dataVersion: 4 };
+}
+
 /** Validate and upgrade an imported file. Throws with a translation key on failure. */
 export function parseSaveFile(json) {
   let file;
@@ -38,6 +53,7 @@ export function parseSaveFile(json) {
   if (typeof file.version !== 'number' || file.version > SAVE_VERSION) throw new Error('import.error_newer_version');
   // Future format changes: migrate older versions here, step by step.
   for (const c of COLLECTIONS) if (!Array.isArray(file[c])) file[c] = [];
+  upgradeBuildingHp(file);
   return file;
 }
 

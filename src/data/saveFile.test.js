@@ -45,3 +45,23 @@ describe('merge', () => {
     expect(summary.added).toBe(1);
   });
 });
+
+
+describe('files from before data version 4 (building HP −20 %)', () => {
+  const tower = { id: 'tower', category: 'building', name: 'Věž', images: [], stats: { features: ['shoots'], levels: [{ hp: 500 }, { hp: 750 }] } };
+  const look = { id: 'look', category: 'building', name: 'Jiná věž', images: [], stats: { variantOf: 'tower' } };
+  const file = (settings) => JSON.stringify({ format: 'sketch-village', version: 3, settings, assets: [tower, look] });
+
+  it('an older backup or class pack gets the lower HP when it is read', () => {
+    for (const settings of [{ dataVersion: 3 }, {}]) {
+      const f = parseSaveFile(file(settings));
+      expect(f.assets[0].stats.levels.map((l) => l.hp)).toEqual([400, 600]);
+      expect(f.assets[1].stats).toEqual({ variantOf: 'tower' });
+      expect(f.settings.dataVersion).toBe(4);
+    }
+  });
+
+  it('a file exported after the change stays as it is', () => {
+    expect(parseSaveFile(file({ dataVersion: 4 })).assets[0].stats.levels.map((l) => l.hp)).toEqual([500, 750]);
+  });
+});

@@ -24,7 +24,7 @@ describe('sharing one map', () => {
     expect(f.maps).toEqual([map]);
     expect(f.themes.map((t) => t.id)).toEqual(['graveyard']);
     expect(f.assets.map((a) => a.id).sort()).toEqual(['mud', 'necro', 'skel', 'tree']);
-    expect(f.settings).toEqual({});
+    expect(f.settings).toEqual({ dataVersion: 4 }); // nothing else travels with a shared map
   });
 
   it('is a normal save file a friend can import', () => {

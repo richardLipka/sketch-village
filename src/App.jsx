@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import Screen from './ui/Screen.jsx';
 import { loadDb, saveCollection, saveSettings, saveDb } from './data/store.js';
@@ -62,27 +62,29 @@ export default function App() {
   const items = useMemo(() => itemsOf(assets), [assets]);
   const uiIcons = useMemo(() => uiIconsOf(assets), [assets]);
 
+  // The latest settings, kept outside React's state updates: those must stay pure
+  // (React may run an updater twice), so saving happens here, not inside them.
+  const settingsRef = useRef({});
+  useEffect(() => { if (db) settingsRef.current = db.settings; }, [db]);
+
+  const updateSettings = useCallback((patch) => {
+    const settings = { ...settingsRef.current, ...patch };
+    settingsRef.current = settings;
+    setDb((cur) => ({ ...cur, settings }));
+    saveSettings(settings);
+  }, []);
+
   // Replace one collection in memory and persist it. The kid made something:
   // note it for the backup reminder and ask the browser to keep the data.
   const updateCollection = useCallback(async (name, records) => {
-    setDb((cur) => {
-      const patch = noteChange(cur.settings);
-      if (!patch) return { ...cur, [name]: records };
-      const settings = { ...cur.settings, ...patch };
-      saveSettings(settings);
+    setDb((cur) => ({ ...cur, [name]: records }));
+    const patch = noteChange(settingsRef.current);
+    if (patch) {
+      updateSettings(patch);
       storageStatus({ ask: true });
-      return { ...cur, [name]: records, settings };
-    });
+    }
     await saveCollection(name, records);
-  }, []);
-
-  const updateSettings = useCallback((patch) => {
-    setDb((cur) => {
-      const settings = { ...cur.settings, ...patch };
-      saveSettings(settings);
-      return { ...cur, settings };
-    });
-  }, []);
+  }, [updateSettings]);
 
   const backupNow = useCallback(() => {
     downloadSaveFile(db, i18n.language);
