@@ -618,3 +618,10 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 .device-phone .library-entry { grid-template-columns: 96px 1fr; gap: 8px; }
 .device-phone .library-thumb { width: 96px; }
 .device-phone .library-actions { grid-column: 1 / -1; flex-direction: row; }
+
+/* ⬆ Load… (data/LoadFile.jsx): from the computer or an address */
+.load-file { display: grid; gap: 10px; }
+.load-file h2 { margin: 0; }
+.load-file > .btn.primary { justify-self: start; }
+.load-address { gap: 6px; flex-wrap: wrap; align-items: center; }
+.load-address input { flex: 1 1 16em; min-width: 0; }

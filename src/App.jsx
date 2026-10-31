@@ -181,12 +181,12 @@ export default function App() {
       {screen === 'studio' && (
         <AssetStudio
           assets={db.assets} heroRules={rules.hero} buildingTypes={buildings.types} enemyTypes={enemyTypes} themes={db.themes} maps={db.maps}
-          onChange={(a) => updateCollection('assets', a)} onThemes={(th) => updateCollection('themes', th)}
+          onChange={(a) => updateCollection('assets', a)} onThemes={(th) => updateCollection('themes', th)} onImport={importFile}
         />
       )}
 
       {screen === 'maps' && (
-        <MapList maps={db.maps} assets={db.assets} enemyTypes={enemyTypes} themes={db.themes} balance={rules.balance} buildingTypes={buildings.types} rules={rules} items={items} onChange={(m) => updateCollection('maps', m)} />
+        <MapList maps={db.maps} assets={db.assets} enemyTypes={enemyTypes} themes={db.themes} balance={rules.balance} buildingTypes={buildings.types} rules={rules} items={items} onChange={(m) => updateCollection('maps', m)} onImport={importFile} />
       )}
 
       {screen === 'chronicle' && (

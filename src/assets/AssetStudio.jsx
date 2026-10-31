@@ -12,15 +12,20 @@ import { FEATURES } from '../config/features.js';
 import { getCategory } from './categories.js';
 import { fitsTheme, themeName } from '../config/themes.js';
 import ThemesEditor from './ThemesEditor.jsx';
+import LoadFile from '../data/LoadFile.jsx';
+import { downloadJson } from '../data/safety.js';
+import { componentPackage, componentFileName, canShare } from './shareComponent.js';
 
 // The component library: one tab per kind. A component can exist without a
 // picture (built-in ones start that way and are drawn as simple shapes).
 // Themed kinds (enemies, buildings) can be shown one theme at a time; the
-// themes themselves are edited here too (🏷️).
+// themes themselves are edited here too (🏷️). ⬇ downloads a component with
+// everything it needs (assets/shareComponent.js), ⬆ loads one (or any save
+// file) from the computer or an address.
 
 const KIND_ICON = { hero: '🦸', enemy: '👾', building: '🏗️', soldier: '💂', weapon: '⚔️', shield: '🛡️', armor: '🦺', coin: '🪙', chest: '🎁', projectile: '➶', cave: '🕳️', decoration: '🌳', texture: '🧱', icon: '♥' };
 
-export default function AssetStudio({ assets, heroRules, buildingTypes = [], enemyTypes = [], themes = [], maps = [], onChange, onThemes }) {
+export default function AssetStudio({ assets, heroRules, buildingTypes = [], enemyTypes = [], themes = [], maps = [], onChange, onThemes, onImport }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const [category, setCategory] = useState(() => {
@@ -63,6 +68,9 @@ export default function AssetStudio({ assets, heroRules, buildingTypes = [], ene
     onChange([...assets, { ...rest, images, id: newId(), name: `${compName(asset, lang)} 2`, stats, createdAt: now, updatedAt: now }]);
   };
 
+  // ⬇ the component with everything it needs (minions, projectiles, soldiers, looks…)
+  const download = (asset) => downloadJson(componentPackage(asset, { assets, themes }, lang), componentFileName(asset, lang));
+
   // a line under the name saying what the component is
   const describe = (a) => {
     if (a.category === 'enemy' && a.stats?.minions?.length && a.stats.summons !== false) {
@@ -95,7 +103,10 @@ export default function AssetStudio({ assets, heroRules, buildingTypes = [], ene
           <button className="btn chip" onClick={() => setThemesOpen(true)}>🏷️ {t('themes.button')}…</button>
         </div>
       )}
-      <SearchBox value={query} onChange={setQuery} count={list.length} />
+      <div className="row">
+        <SearchBox value={query} onChange={setQuery} count={list.length} />
+        {onImport && <LoadFile label={t('studio.load')} title={t('studio.load_title')} hint={t('studio.load_hint')} onImport={onImport} testId="studio-load" />}
+      </div>
     </>}>
 
       <div className="grid">
@@ -113,7 +124,12 @@ export default function AssetStudio({ assets, heroRules, buildingTypes = [], ene
               <div className="name">{a.builtIn && '⭐ '}{compName(a, lang)} {themed && <span title={t('themes.label')}>{themeIcons(a)}</span>}</div>
               <div className="author">{a.author && `✎ ${a.author}`}</div>
               {describe(a) && <div className="small muted">{describe(a)}</div>}
-              {!getCategory(a.category).fixed && <button className="btn icon small" onClick={(e) => { e.stopPropagation(); duplicate(a); }} title={t('studio.duplicate')}>⧉</button>}
+              {canShare(a) && (
+                <div className="row" style={{ justifyContent: 'center', gap: 4 }}>
+                  <button className="btn icon small" onClick={(e) => { e.stopPropagation(); duplicate(a); }} title={t('studio.duplicate')}>⧉</button>
+                  <button className="btn icon small" onClick={(e) => { e.stopPropagation(); download(a); }} title={t('studio.download_title')} data-testid="component-download">⬇</button>
+                </div>
+              )}
             </div>
           );
         })}

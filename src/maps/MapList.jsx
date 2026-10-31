@@ -10,9 +10,11 @@ import { emptyMap } from '../logic/mapModel.js';
 import { newId } from '../data/saveFile.js';
 import { downloadJson } from '../data/safety.js';
 import { mapPackage, mapFileName } from './shareMap.js';
+import LoadFile from '../data/LoadFile.jsx';
 
-// All maps (= levels): create blank or sample, edit, duplicate, delete.
-export default function MapList({ maps, assets, enemyTypes, themes = [], balance, buildingTypes, rules, items, onChange }) {
+// All maps (= levels): create blank or sample, edit, duplicate, delete,
+// download one (⬇, with everything it needs) and load one (⬆ – a file or an address).
+export default function MapList({ maps, assets, enemyTypes, themes = [], balance, buildingTypes, rules, items, onChange, onImport }) {
   const { t } = useTranslation();
   const themeIcon = (id) => themes.find((th) => th.id === id)?.icon ?? '';
   const [editing, setEditing] = useState(null);
@@ -72,6 +74,7 @@ export default function MapList({ maps, assets, enemyTypes, themes = [], balance
       <div className="row">
         <button className="btn primary" onClick={() => setEditing(emptyMap(''))}>+ {t('maps.new_blank')}</button>
         <button className="btn" onClick={createSample}>✨ {t('maps.new_sample')}</button>
+        {onImport && <LoadFile label={t('maps.load')} title={t('maps.load_title')} hint={t('maps.load_hint')} onImport={onImport} testId="map-load" />}
         <SearchBox value={query} onChange={setQuery} count={shown.length} />
       </div>
     }>

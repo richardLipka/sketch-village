@@ -1,8 +1,9 @@
-// Importing a map file (SPEC §13a): one map with everything it needs to be
-// played as its maker saw it – pure, unit-tested.
+// Importing a package file (SPEC §13a, data/packageFile.js): one map, or one
+// component, with everything it needs to work as its maker made it – pure,
+// unit-tested.
 //
-//   planMapImport(db, file)              → { additions, partials, exact, maps }
-//   applyMapImport(db, plan)             → { db, summary }
+//   planPackageImport(db, file)          → { source, additions, partials, exact, maps }
+//   applyPackageImport(db, plan)         → { db, summary }
 //   resolveDuplicates(db, plan, choose)  → { db, rename, summary }
 //
 // Every component of the file is compared with the ones here (by id, else by
@@ -10,7 +11,9 @@
 //   – exactly the same → the map uses the one here, nothing is added;
 //   – partly the same (same name, but another picture, other numbers…) → it is
 //     added as a copy with a new name made from its name and the map's name
-//     ("Goblin (Zelené údolí)"), so the map plays with the maker's version;
+//     ("Goblin (Zelené údolí)") – for a component file the maker's name
+//     ("Goblin (Ema)"), else a number ("Goblin (2)") – so the map plays with
+//     (the component works with) the maker's version;
 //   – not here at all → added as it is.
 // Something that calls or uses a changed thing (a necromancer whose skeleton
 // is different) is a copy too – the map must get the maker's skeletons. After
@@ -18,16 +21,14 @@
 // one: keep both (default), keep mine or take the map's version.
 
 import { newId, SAVE_VERSION } from './saveFile.js';
+import { isComponentFile } from './packageFile.js';
 import { namesOf, diffRecords, remapIds, upgradeIncoming, comparable, sameThing } from './mergePlan.js';
 import { wavesOf } from '../config/waves.js';
 import { rulesOf } from '../config/rules.js';
 
-/** A save file that holds one downloaded map (Maps → ⬇ Download, the public library). */
-export const isMapFile = (file) => file?.kind === 'map' || (!!file?.info && file?.maps?.length === 1);
-
 const textOf = (name) => (typeof name === 'string' ? name : name?.cs ?? Object.values(name ?? {})[0] ?? '');
 
-/** "Goblin" + "Zelené údolí" → "Goblin (Zelené údolí)"; a map copy "Louka (2)". Unique among `taken` (lower-case names). */
+/** "Goblin" + "Zelené údolí" → "Goblin (Zelené údolí)"; no tag (a map copy…) → "Louka (2)". Unique among `taken` (lower-case names). */
 function deriveName(name, tag, taken) {
   const one = (n) => {
     let s = tag ? `${n} (${tag})` : `${n} (2)`;
@@ -62,7 +63,7 @@ function pairUp(local, incoming) {
   return pairs;
 }
 
-export function planMapImport(db, file, now = new Date()) {
+export function planPackageImport(db, file, now = new Date()) {
   const incoming = (file.version ?? 1) < SAVE_VERSION ? upgradeIncoming(file) : file;
   const stamp = now.toISOString();
   const localIds = new Set(['assets', 'maps', 'themes'].flatMap((c) => (db[c] ?? []).map((x) => x.id)));
@@ -111,7 +112,8 @@ export function planMapImport(db, file, now = new Date()) {
   }
   const partial = new Set([...same].filter(([, hit]) => !hit).map(([id]) => id));
 
-  const tag = textOf(maps[0]?.name) || textOf(incoming.info?.title) || 'mapa';
+  const source = isComponentFile(file) ? 'component' : 'map';
+  const tag = source === 'component' ? textOf(incoming.info?.author) || null : textOf(maps[0]?.name) || textOf(incoming.info?.title) || 'mapa';
   const taken = new Set((db.assets ?? []).flatMap(namesOf));
   const takenMaps = new Set((db.maps ?? []).flatMap(namesOf));
   const additions = [], partials = [];
@@ -133,10 +135,10 @@ export function planMapImport(db, file, now = new Date()) {
   }
 
   // the file's maps as they are called here after the import (to open one to play)
-  return { additions, partials, exact, maps: maps.map((m) => remap[m.id] ?? m.id) };
+  return { source, additions, partials, exact, maps: maps.map((m) => remap[m.id] ?? m.id) };
 }
 
-export function applyMapImport(db, plan) {
+export function applyPackageImport(db, plan) {
   const next = { ...db };
   for (const c of ['assets', 'maps', 'themes']) next[c] = [...(db[c] ?? [])];
   for (const { collection, record } of [...plan.additions, ...plan.partials]) next[collection].push(record);

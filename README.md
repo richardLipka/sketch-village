@@ -37,15 +37,17 @@ All data lives in each browser. To give every computer the same drawings, maps a
 
 The shipped file holds the class's drawings: the built-in buildings, monsters and coins as the kids drew them, the goblin pack, skeleton warrior and roc, four heroes, the castle's soldiers, a chest and a few decorations. It has no maps, so a fresh browser also gets the built-in sample map.
 
-## Sharing one map
+## Sharing one map or one component
 
-**Maps → ⬇ Download** on a map gives one `map-<name>.json` with the map and everything needed to play it as you see it: the buildings of its world, heroes, weapons, coins, soldiers, the monsters of its waves and what they call, decorations, textures (not the game's own icons). Loading it on another computer (**Save & load**, the Library or a `?data=` link):
+**Maps → ⬇ Download** on a map gives one `map-<name>.json` with the map and everything needed to play it as you see it: the buildings of its world, heroes, weapons, coins, soldiers, the monsters of its waves and what they call, decorations, textures (not the game's own icons). **Studio → ⬇** on a hero, monster, building, weapon… gives `<kind>-<name>.json` with it and what it needs: the minions a monster calls, a shooter's projectile, a castle's soldiers, a building's other looks.
+
+Loading one on another computer – **⬆ Load a map** in Maps, **⬆ Load** in the studio or in Save & load (a file from the computer or an address: `https://…/map-x.json` or a library name like `green-valley`), the Library or a `?data=` link:
 
 - things that are exactly the same there are used as they are;
-- things with the same name but another picture or other numbers come as copies named after the map – *Goblin (Zelené údolí)* – so the map plays as you made it;
-- at the end a table lists the copies: **Keep both** (default), **Only mine** or **Only the map's**.
+- things with the same name but another picture or other numbers come as copies named after the map (or the file's author) – *Goblin (Zelené údolí)* – so it works as you made it;
+- at the end a table lists the copies: **Keep both** (default), **Only mine** or **Only the map's / the file's**.
 
-Loading the same map again adds nothing.
+Loading the same file again adds nothing.
 
 ## Public library and data links
 
@@ -59,8 +61,8 @@ All data is always one file: the browser itself keeps exactly one save-file reco
 
 ## Code map
 
-- `src/assets/` – studio, the general component editor: `categories.js` (registry), `CameraCapture`, `AssetCropper`, `BackgroundRemover` + `bgRemoval.js`, `SketchPad`, `ImageSlot` (pipeline), `AssetStudio` (library), `AssetEditor` (pictures + all numbers of one component), `BuildingStatsEditor` (features + levels), `EnemyStatsEditor` (numbers + minions), `ProjectilePick` (which projectile a shooter flies), `SoundEditor` + `audioClip.js` (monster sounds: record, auto-trim, trim), `SoundPreview` (hear them as in the game), `PasteButton` + `clipboard.js` (pictures from the clipboard), `AnimationEditor` + `AnimPreview` + `animation.js` (animation strips: cutting, lining up, speed, preview), `ThemesEditor`, `ItemStatsEditor`, `HeroStatsEditor`, `NumField`
-- `src/data/` – `safety.js` + `SafetyCard` (backup reminder, asking the browser to keep the data), `saveFile.js` (JSON format), `mergePlan.js` + `ImportReview` + `useImporter` (import: add new, review changed – matched by name), `mapImport.js` + `ImportDuplicates` (a map file: the same things used, partly different ones copied as "Name (Map)", then a table to merge them), `migrate.js` (old data → components), `store.js` (IndexedDB: one save-file record, coalesced writes), `defaultData.js` (class pack), `library.js` + `Library` (public library, `?data=` links), `DataPanel`
+- `src/assets/` – studio, the general component editor: `categories.js` (registry), `CameraCapture`, `AssetCropper`, `BackgroundRemover` + `bgRemoval.js`, `SketchPad`, `ImageSlot` (pipeline), `AssetStudio` (library), `AssetEditor` (pictures + all numbers of one component), `BuildingStatsEditor` (features + levels), `EnemyStatsEditor` (numbers + minions), `ProjectilePick` (which projectile a shooter flies), `SoundEditor` + `audioClip.js` (monster sounds: record, auto-trim, trim), `SoundPreview` (hear them as in the game), `PasteButton` + `clipboard.js` (pictures from the clipboard), `AnimationEditor` + `AnimPreview` + `animation.js` (animation strips: cutting, lining up, speed, preview), `ThemesEditor`, `shareComponent.js` (one component as a file with what it needs), `ItemStatsEditor`, `HeroStatsEditor`, `NumField`
+- `src/data/` – `safety.js` + `SafetyCard` (backup reminder, asking the browser to keep the data), `saveFile.js` (JSON format), `mergePlan.js` + `ImportReview` + `useImporter` (import: add new, review changed – matched by name), `packageFile.js` (one map or component with everything it needs) + `packageImport.js` + `ImportDuplicates` (such a file: the same things used, partly different ones copied as "Name (Map)", then a table to merge them), `LoadFile` (⬆ a file from the computer or an address), `migrate.js` (old data → components), `store.js` (IndexedDB: one save-file record, coalesced writes), `defaultData.js` (class pack), `library.js` + `Library` (public library, `?data=` links), `DataPanel`
 - `src/config/` – `uiIcons.js` (editable GUI icons), `components.js` (built-in components, the permanent ones = the game's own pictures, + `buildingsOf` / `enemyTypesOf` / `itemsOf` / `coinTypesOf`), `features.js` (what a building can do), `themes.js` (worlds), `difficulty.js` (easy / normal / hard), `legends.js` (monster stories and hints), default numbers `balance.js`, `buildings.js`, `heroStats.js`, `enemies.js`, `weapons.js`, `waves.js`; `rules.js` merges the kids' global rules over them
 
 Every game part – building type, enemy, weapon, shield, armor, coin, hero – is one **component** (a record in `assets`) holding its pictures and all its numbers. A new kind of building is just a component with a different set of features; no code change is needed.

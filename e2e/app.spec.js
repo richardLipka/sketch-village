@@ -42,7 +42,8 @@ test('import: new things are added, a changed one is reviewed', async ({ page })
       { id: 'dragon-hills', icon: '🐉', name: 'Dračí hory' }, // new
     ],
   };
-  await page.locator('input[type=file]').setInputFiles({ name: 'class.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
+  await page.getByTestId('data-load').click();
+  await page.getByTestId('load-file-input').setInputFiles({ name: 'class.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
   const review = page.locator('.modal');
   await expect(review.getByText('Co se změnilo?')).toBeVisible();
   await expect(review.getByText('icon', { exact: true })).toBeVisible();

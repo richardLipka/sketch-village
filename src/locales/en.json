@@ -114,6 +114,10 @@
     "description_placeholder": "what it is, what it does…"
   },
   "studio": {
+    "load": "Load",
+    "load_title": "Load from a file",
+    "load_hint": "A hero, monster, building, weapon… someone downloaded (⬇), with everything it needs. What you already have the same is used; what is a little different comes as a copy, and at the end you choose what to merge.",
+    "download_title": "Download with everything it needs (minions, projectiles, soldiers, other looks)",
     "title": "Studio – game parts",
     "add": "Add",
     "levels_done": "{{n}} of {{total}} levels",
@@ -159,6 +163,12 @@
     "texture": "Photos or drawings of surfaces – grass, stones, sand, a carpet… In the map editor (Terrain) a colour of the map can be covered with them.",
     "icon": "The icons on the game’s controls – hearts, coins, workers, attack buttons… Draw your own; until then the game shows the emoji."
   },
+  "load": {
+    "from_computer": "From your computer",
+    "from_address": "From an address on the internet",
+    "load": "Load",
+    "error_address": "That isn’t a file address (it starts with https://)."
+  },
   "import": {
     "done": "Imported: {{added}} new, {{updated}} updated, {{skipped}} unchanged.",
     "error_not_json": "This is not a game data file.",
@@ -187,6 +197,16 @@
     "kind_rules": "Rules",
     "kind_settings": "Settings",
     "done_map": "Map loaded – new things: {{added}}, copies with a new name: {{copies}}, already the same: {{unchanged}}, merged: {{merged}}.",
+    "done_component": "Loaded – new things: {{added}}, copies with a new name: {{copies}}, already the same: {{unchanged}}, merged: {{merged}}.",
+    "dup_title_component": "Similar things from the file",
+    "dup_intro_component": "You already have these things ({{n}}), but in the file they look or work a little differently. They were added as copies with a new name so they don’t get mixed up with yours. Merge them?",
+    "dup_col_map_component": "From the file",
+    "dup_both_component": "Keep both",
+    "dup_mine_component": "Only mine",
+    "dup_theirs_component": "Only the file’s",
+    "dup_both_hint_component": "“{{copy}}” stays next to your “{{mine}}”.",
+    "dup_mine_hint_component": "The copy goes and everything that used it uses your “{{mine}}”.",
+    "dup_theirs_hint_component": "Your “{{mine}}” gets the file’s version and the copy goes.",
     "dup_title": "Similar things from the map",
     "dup_intro": "You already have these things ({{n}}), but in the map they look or work a bit differently. The map now plays with its own versions – they got a new name so they don’t mix with yours. Do you want to merge them?",
     "dup_col_mine": "Yours",
@@ -240,6 +260,9 @@
     "pack_howto": "Download everything (button above), rename the file to default-data.json and replace public/default-data.json in the game's GitHub repository. After the website updates, every new computer starts with it, and others can press “Load class pack”."
   },
   "maps": {
+    "load": "Load a map",
+    "load_title": "Load a map",
+    "load_hint": "A map someone downloaded (⬇ Download), from a file or an address. What you already have the same is used; what is a little different comes as a copy named after the map, and at the end you choose what to merge.",
     "title": "Maps",
     "new_blank": "New blank map",
     "new_sample": "Sample map",

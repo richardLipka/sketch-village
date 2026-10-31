@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { isMapFile, planMapImport, applyMapImport, resolveDuplicates } from './mapImport.js';
+import { planPackageImport, applyPackageImport, resolveDuplicates } from './packageImport.js';
+import { isMapFile } from './packageFile.js';
 import { comparable } from './mergePlan.js';
 import { mapPackage } from '../maps/shareMap.js';
 import { parseSaveFile } from './saveFile.js';
@@ -64,7 +65,7 @@ describe('importing a map', () => {
     const f = fileOf(maker());
     const db = home();
     db.assets = db.assets.map((a) => (a.id === 'goblin' ? { ...a, images: [pic('their-goblin')] } : a)); // drawn the same
-    const plan = planMapImport(db, f, NOW);
+    const plan = planPackageImport(db, f, NOW);
     expect(plan.partials).toHaveLength(0);
     expect(plan.additions.map((x) => x.record.id).sort()).toEqual(['hero-1', 'map-1', 'tree-1']);
     expect(plan.exact).toBe(f.assets.length - 2);
@@ -76,7 +77,7 @@ describe('importing a map', () => {
     const db = home();
     db.assets.push({ id: 'my-tree', category: 'decoration', name: 'Strom', images: [pic('tree')], stats: {}, createdAt: T, updatedAt: T });
     db.assets = db.assets.map((a) => (a.id === 'goblin' ? { ...a, images: [pic('their-goblin')] } : a));
-    const plan = planMapImport(db, f, NOW);
+    const plan = planPackageImport(db, f, NOW);
     expect(plan.additions.some((x) => x.record.id === 'tree-1')).toBe(false);
     const map = plan.additions.find((x) => x.collection === 'maps').record;
     expect(map.decorations[0].asset).toBe('my-tree');
@@ -87,14 +88,14 @@ describe('importing a map', () => {
     // here the skeleton has other numbers: the maker's necromancer must call the maker's skeletons
     const db = home();
     db.assets = db.assets.map((a) => (a.id === 'skeleton' ? { ...a, stats: { ...a.stats, hp: 99 } } : a));
-    const plan = planMapImport(db, f, NOW);
+    const plan = planPackageImport(db, f, NOW);
     const byLocal = Object.fromEntries(plan.partials.map((p) => [p.local.id, p]));
     expect(Object.keys(byLocal).sort()).toEqual(['goblin', 'necromancer', 'skeleton']);
     expect(byLocal.goblin.record.name).toEqual({ cs: 'Goblin (Zelené údolí)', en: 'Goblin (Zelené údolí)' });
     expect(byLocal.goblin.record.builtIn).toBeUndefined();
     expect(byLocal.goblin.diff.map((d) => d.path)).toEqual(['images']);
     expect(byLocal.necromancer.record.stats.minions).toEqual([byLocal.skeleton.record.id, 'skeletonWarrior']);
-    const { db: after, summary } = applyMapImport(db, plan);
+    const { db: after, summary } = applyPackageImport(db, plan);
     expect(summary).toEqual({ added: 3, copies: 3, unchanged: plan.exact });
     const map = after.maps.find((m) => m.id === 'map-1');
     expect(map.waves.rounds[0].groups.map((g) => g.enemy)).toEqual([byLocal.goblin.record.id, byLocal.necromancer.record.id]);
@@ -103,8 +104,8 @@ describe('importing a map', () => {
 
   it('importing the same map again adds nothing', () => {
     const f = fileOf(maker());
-    const once = applyMapImport(home(), planMapImport(home(), f, NOW)).db;
-    const again = planMapImport(once, f, NOW);
+    const once = applyPackageImport(home(), planPackageImport(home(), f, NOW)).db;
+    const again = planPackageImport(once, f, NOW);
     expect(again.additions).toHaveLength(0);
     expect(again.partials).toHaveLength(0);
     expect(again.maps).toEqual(['map-1']);
@@ -115,10 +116,10 @@ describe('importing a map', () => {
     const f = fileOf(maker());
     const db = home();
     db.assets = db.assets.map((a) => (a.id === 'skeletonWarrior' ? { ...a, stats: { ...a.stats, hp: 99 } } : a));
-    const plan = planMapImport(db, f, NOW);
+    const plan = planPackageImport(db, f, NOW);
     expect(plan.partials.map((p) => p.local.id).sort()).toEqual(['goblin', 'necromancer', 'skeletonWarrior']);
-    const once = applyMapImport(db, plan).db;
-    const again = planMapImport(once, f, NOW);
+    const once = applyPackageImport(db, plan).db;
+    const again = planPackageImport(once, f, NOW);
     expect(again.additions).toHaveLength(0);
     expect(again.partials).toHaveLength(0);
   });
@@ -127,7 +128,7 @@ describe('importing a map', () => {
     const m = maker();
     const own = { ...m.map, waves: null };
     const db = { ...m.db, maps: [own] };
-    const plan = planMapImport(db, fileOf({ db, map: own }), NOW);
+    const plan = planPackageImport(db, fileOf({ db, map: own }), NOW);
     expect(plan.additions).toHaveLength(0);
     expect(plan.partials).toHaveLength(0);
     expect(plan.maps).toEqual(['map-1']);
@@ -137,9 +138,9 @@ describe('importing a map', () => {
     const m = maker();
     const db = home();
     db.assets = db.assets.map((a) => (a.id === 'goblin' ? { ...a, images: [pic('their-goblin')] } : a));
-    const first = applyMapImport(db, planMapImport(db, fileOf(m), NOW)).db;
+    const first = applyPackageImport(db, planPackageImport(db, fileOf(m), NOW)).db;
     const changed = fileOf({ ...m, map: { ...m.map, waves: { ...m.map.waves, startCoins: 99 } } });
-    const plan = planMapImport(first, changed, NOW);
+    const plan = planPackageImport(first, changed, NOW);
     expect(plan.partials.map((p) => p.record.name)).toEqual(['Zelené údolí (2)']);
     expect(plan.maps).toEqual([plan.partials[0].record.id]);
   });
@@ -148,8 +149,8 @@ describe('importing a map', () => {
     const f = fileOf(maker());
     const db = home();
     db.assets = db.assets.map((a) => (a.id === 'skeleton' ? { ...a, stats: { ...a.stats, hp: 99 } } : a));
-    const plan = planMapImport(db, f, NOW);
-    const imported = applyMapImport(db, plan).db;
+    const plan = planPackageImport(db, f, NOW);
+    const imported = applyPackageImport(db, plan).db;
     const pick = { goblin: 'mine', skeleton: 'theirs', necromancer: 'both' };
     const { db: after, rename, summary } = resolveDuplicates(imported, plan, (p) => pick[p.local.id], NOW);
     expect(summary).toEqual({ both: 1, mine: 1, theirs: 1 });

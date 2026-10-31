@@ -114,6 +114,10 @@
     "description_placeholder": "co to je, co to umí…"
   },
   "studio": {
+    "load": "Nahrát",
+    "load_title": "Nahrát ze souboru",
+    "load_hint": "Hrdinu, nepřítele, budovu, zbraň… kterou někdo stáhl (⬇), i se vším, co potřebuje. Co už máš stejné, se použije; co je trochu jiné, přibude jako kopie a na konci si vybereš, co sloučit.",
+    "download_title": "Stáhnout i se vším, co potřebuje (pomocníci, střely, vojáci, další vzhledy)",
     "title": "Ateliér – součásti hry",
     "add": "Přidat",
     "levels_done": "{{n}} z {{total}} úrovní",
@@ -159,6 +163,12 @@
     "texture": "Fotky nebo kresby povrchů – tráva, kameny, písek, koberec… V editoru map (Povrch) jimi můžeš pokrýt barvu mapy.",
     "icon": "Ikony na ovládání hry – srdce, mince, dělníci, tlačítka útoku… Nakresli vlastní; do té doby hra ukazuje obrázkový znak."
   },
+  "load": {
+    "from_computer": "Ze svého počítače",
+    "from_address": "Z adresy na internetu",
+    "load": "Načíst",
+    "error_address": "Tohle není adresa souboru (začíná https://)."
+  },
   "import": {
     "done": "Nahráno: {{added}} nových, {{updated}} aktualizovaných, {{skipped}} beze změny.",
     "error_not_json": "Tohle není soubor s daty hry.",
@@ -187,6 +197,16 @@
     "kind_rules": "Pravidla",
     "kind_settings": "Nastavení",
     "done_map": "Mapa nahrána – nové věci: {{added}}, kopie s novým jménem: {{copies}}, už stejné: {{unchanged}}, sloučeno: {{merged}}.",
+    "done_component": "Nahráno – nové věci: {{added}}, kopie s novým jménem: {{copies}}, už stejné: {{unchanged}}, sloučeno: {{merged}}.",
+    "dup_title_component": "Podobné věci ze souboru",
+    "dup_intro_component": "Tyhle věci ({{n}}) už máš, ale v souboru vypadají nebo fungují trochu jinak. Přidaly se jako kopie s novým jménem, aby se nepletly s tvými. Chceš je sloučit?",
+    "dup_col_map_component": "Ze souboru",
+    "dup_both_component": "Nechat obě",
+    "dup_mine_component": "Jen moje",
+    "dup_theirs_component": "Jen ze souboru",
+    "dup_both_hint_component": "„{{copy}}“ zůstane vedle tvého „{{mine}}“.",
+    "dup_mine_hint_component": "Kopie zmizí a všechno, co ji používá, bude používat tvoje „{{mine}}“.",
+    "dup_theirs_hint_component": "Tvoje „{{mine}}“ dostane verzi ze souboru a kopie zmizí.",
     "dup_title": "Podobné věci z mapy",
     "dup_intro": "Tyhle věci ({{n}}) už máš, ale v mapě vypadají nebo fungují trochu jinak. Mapa teď hraje se svými verzemi – mají nové jméno, aby se nepletly s tvými. Chceš je sloučit?",
     "dup_col_mine": "Tvoje",
@@ -240,6 +260,9 @@
     "pack_howto": "Stáhni všechno (tlačítko výše), přejmenuj soubor na default-data.json a nahraď jím public/default-data.json v GitHub repozitáři hry. Po aktualizaci webu s ním začne každý nový počítač a ostatní mohou zmáčknout „Nahrát balíček třídy“."
   },
   "maps": {
+    "load": "Nahrát mapu",
+    "load_title": "Nahrát mapu",
+    "load_hint": "Mapu, kterou někdo stáhl (⬇ Stáhnout), ze souboru nebo z adresy. Co už máš stejné, se použije; co je trochu jiné, přibude jako kopie se jménem mapy a na konci si vybereš, co sloučit.",
     "title": "Mapy",
     "new_blank": "Nová prázdná mapa",
     "new_sample": "Ukázková mapa",

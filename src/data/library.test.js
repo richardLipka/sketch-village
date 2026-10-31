@@ -3,7 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { resolveDataUrl, isOwnSite, dataParam, withoutDataParam, shareLink, parseLibrary, localText, fetchSaveFile, LIBRARY_FORMAT } from './library.js';
 import { parseSaveFile, mergeSaveFile } from './saveFile.js';
-import { planMapImport, isMapFile } from './mapImport.js';
+import { planPackageImport } from './packageImport.js';
+import { isMapFile } from './packageFile.js';
 import { migrateDb } from './migrate.js';
 import { buildIndex, indexText, LIBRARY } from '../../scripts/library-index.mjs';
 
@@ -87,7 +88,7 @@ describe('public/library (what the website serves)', () => {
       for (const r of file.maps[0].waves.rounds) for (const g of r.groups) expect(ids.has(g.enemy), g.enemy).toBe(true);
       expect(file.assets.some((a) => a.category === 'icon')).toBe(false);
       // a fresh game (built-ins + the class pack) gets just the map and its decorations, nothing twice
-      const plan = planMapImport(fresh, file);
+      const plan = planPackageImport(fresh, file);
       expect(plan.partials).toHaveLength(0);
       expect(plan.additions.filter((x) => x.collection === 'assets').every((x) => x.record.category === 'decoration')).toBe(true);
       expect(plan.maps).toEqual(file.maps.map((m) => m.id));

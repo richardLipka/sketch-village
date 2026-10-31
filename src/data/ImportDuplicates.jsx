@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Modal from '../ui/Modal.jsx';
 
-// After a map is imported (data/mapImport.js): the things that were here
-// already but are partly different in the map were added as copies with a new
-// name. One row per copy – mine, the map's, what differs – and the choice:
-// keep both (default), only mine, only the map's.
+// After a map or a component file is imported (data/packageImport.js): the
+// things that were here already but are partly different in the file were
+// added as copies with a new name. One row per copy – mine, the file's, what
+// differs – and the choice: keep both (default), only mine, only the file's.
+// The texts name the map or the file (`plan.source`, i18next context).
 
 export const CHOICES = ['both', 'mine', 'theirs'];
 
@@ -26,6 +27,7 @@ function whatDiffers(diff, t) {
 export default function ImportDuplicates({ plan, onDone }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
+  const ctx = plan.source === 'component' ? 'component' : undefined; // the map's texts are the plain keys
   const [choice, setChoice] = useState(() => new Map(plan.partials.map((p) => [p, 'both'])));
   const set = (p, c) => setChoice((cur) => new Map(cur).set(p, c));
   const all = (c) => setChoice(new Map(plan.partials.map((p) => [p, c])));
@@ -34,12 +36,12 @@ export default function ImportDuplicates({ plan, onDone }) {
   return (
     <Modal onClose={done} wide
       header={<>
-        <h2>🔀 {t('import.dup_title')}</h2>
-        <p className="small" style={{ margin: '4px 0 0' }}>{t('import.dup_intro', { n: plan.partials.length })}</p>
+        <h2>🔀 {t('import.dup_title', { context: ctx })}</h2>
+        <p className="small" style={{ margin: '4px 0 0' }}>{t('import.dup_intro', { n: plan.partials.length, context: ctx })}</p>
       </>}
       footer={<div className="row review-actions" style={{ marginTop: 0 }}>
         <span className="small muted">{t('import.dup_all')}</span>
-        {CHOICES.map((c) => <button key={c} className="btn" onClick={() => all(c)}>{t(`import.dup_${c}`)}</button>)}
+        {CHOICES.map((c) => <button key={c} className="btn" onClick={() => all(c)}>{t(`import.dup_${c}`, { context: ctx })}</button>)}
         <span className="spacer" />
         <button className="btn primary" onClick={done} data-testid="dup-done">✓ {t('import.dup_done')}</button>
       </div>}
@@ -47,7 +49,7 @@ export default function ImportDuplicates({ plan, onDone }) {
       <div className="review-table-wrap">
         <table className="review-table dup-table">
           <thead>
-            <tr><th>{t('import.dup_col_mine')}</th><th>{t('import.dup_col_map')}</th><th>{t('import.dup_col_diff')}</th><th>{t('import.dup_col_choice')}</th></tr>
+            <tr><th>{t('import.dup_col_mine')}</th><th>{t('import.dup_col_map', { context: ctx })}</th><th>{t('import.dup_col_diff')}</th><th>{t('import.dup_col_choice')}</th></tr>
           </thead>
           <tbody>
             {plan.partials.map((p) => {
@@ -71,9 +73,9 @@ export default function ImportDuplicates({ plan, onDone }) {
                   <td>
                     <div className="dup-choice" role="radiogroup" aria-label={mineName}>
                       {CHOICES.map((c) => (
-                        <label key={c} className={`btn chip ${choice.get(p) === c ? 'active' : ''}`} title={t(`import.dup_${c}_hint`, { mine: mineName, copy: copyName })}>
+                        <label key={c} className={`btn chip ${choice.get(p) === c ? 'active' : ''}`} title={t(`import.dup_${c}_hint`, { mine: mineName, copy: copyName, context: ctx })}>
                           <input type="radio" name={`dup-${p.record.id}`} value={c} checked={choice.get(p) === c} onChange={() => set(p, c)} />
-                          {t(`import.dup_${c}`)}
+                          {t(`import.dup_${c}`, { context: ctx })}
                         </label>
                       ))}
                     </div>

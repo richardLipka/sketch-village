@@ -1,35 +1,25 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Screen from '../ui/Screen.jsx';
-import { parseSaveFile, COLLECTIONS } from './saveFile.js';
+import { COLLECTIONS } from './saveFile.js';
 import { purgeAll, saveCollection } from './store.js';
 import { CATEGORY_IDS } from '../assets/categories.js';
 import { fetchDefaultData } from './defaultData.js';
 import SafetyCard from './SafetyCard.jsx';
+import LoadFile from './LoadFile.jsx';
 
 // Export everything to one JSON file (components with their pictures and
-// animations, maps, themes, rules, settings incl. the language), import with a
-// review of changed elements (data/useImporter.jsx), purge (SPEC §13a).
+// animations, maps, themes, rules, settings incl. the language), import a file
+// from the computer or an address (LoadFile → data/useImporter.jsx: changed
+// elements are reviewed), the class pack, purge (SPEC §13a).
 export default function DataPanel({ db, onReplaceDb, onBackup, onImport }) {
   const { t } = useTranslation();
-  const fileRef = useRef(null);
   const [message, setMessage] = useState(null);
   const [purgeCat, setPurgeCat] = useState('');
 
   const mergeIn = async (file) => {
     const r = await onImport(file);
     setMessage(r ? { ok: true, text: t(r.message ?? 'import.done_review', r.summary) } : { ok: false, text: t('import.cancelled') });
-  };
-
-  const doImport = async (e) => {
-    const f = e.target.files?.[0];
-    e.target.value = '';
-    if (!f) return;
-    try {
-      await mergeIn(parseSaveFile(await f.text()));
-    } catch (err) {
-      setMessage({ ok: false, text: t(err.message, { defaultValue: t('import.error_generic') }) });
-    }
   };
 
   const doClassPack = async () => {
@@ -71,8 +61,7 @@ export default function DataPanel({ db, onReplaceDb, onBackup, onImport }) {
       <div className="sketch-card" style={{ marginBottom: 20 }}>
         <h2>{t('data.import_title')}</h2>
         <p className="small muted">{t('data.import_hint')}</p>
-        <button className="btn" onClick={() => fileRef.current.click()}>⬆ {t('data.import')}</button>
-        <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={doImport} />
+        <LoadFile label={t('data.import')} title={t('data.import_title')} hint={t('data.import_hint')} onImport={onImport} testId="data-load" />
       </div>
 
       <div className="sketch-card" style={{ marginBottom: 20 }}>

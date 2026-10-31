@@ -40,7 +40,8 @@ test('a map file: download, load into a game drawn differently, merge the copies
   await page.reload();
   await expect(page.getByRole('button', { name: /Hrát/ })).toBeVisible();
   await page.getByRole('button', { name: /Uložit a nahrát/ }).click();
-  await page.locator('input[type=file]').setInputFiles({ name: 'map.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
+  await page.getByTestId('data-load').click();
+  await page.getByTestId('load-file-input').setInputFiles({ name: 'map.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
 
   // the table of copies: the goblin, the goblin king who calls goblins, the map that sends them
   const table = page.locator('.modal');
@@ -78,7 +79,8 @@ test('a map file: loaded back into the same game adds nothing', async ({ page })
 
   await page.getByRole('button', { name: /←/ }).click();
   await page.getByRole('button', { name: /Uložit a nahrát/ }).click();
-  await page.locator('input[type=file]').setInputFiles({ name: 'map.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
+  await page.getByTestId('data-load').click();
+  await page.getByTestId('load-file-input').setInputFiles({ name: 'map.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
   await expect(page.locator('.toast:not(.toast-top)')).toContainText('nové věci: 0, kopie s novým jménem: 0');
   await expect(page.locator('.modal')).toHaveCount(0);
   const after = await readDb(page);

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { migrateDb } from './migrate.js';
 import { planImport, applyImport } from './mergePlan.js';
-import { planMapImport, applyMapImport, resolveDuplicates } from './mapImport.js';
+import { planPackageImport, applyPackageImport, resolveDuplicates } from './packageImport.js';
 import { DEFAULT_COMPONENTS, PERMANENT_IDS, GAME_LOOKS, SURFACE_NAMES, isPermanent, keepPermanent, projectilesOf } from '../config/components.js';
 import { BUILT_IN_IDS } from '../maps/textures.js';
 import { mapPackage } from '../maps/shareMap.js';
@@ -92,10 +92,10 @@ describe('they are never deleted', () => {
 
     for (const choice of ['both', 'mine', 'theirs']) {
       const db = fresh();
-      const plan = planMapImport(db, file);
+      const plan = planPackageImport(db, file);
       const grass = plan.partials.find((p) => p.local.id === 'grass');
       expect(grass.record.name.cs).toBe('Tráva (Louka)'); // a copy named after the map
-      const applied = applyMapImport(db, plan).db;
+      const applied = applyPackageImport(db, plan).db;
       const done = resolveDuplicates(applied, plan, () => choice).db;
       const ours = done.assets.find((a) => a.id === 'grass');
       expect(ours?.builtIn).toBe(true);

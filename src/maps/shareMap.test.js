@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { mapPackage, mapFileName } from './shareMap.js';
 import { parseSaveFile } from '../data/saveFile.js';
-import { planMapImport } from '../data/mapImport.js';
+import { planPackageImport } from '../data/packageImport.js';
 
 const asset = (id, category, stats = {}) => ({ id, category, name: id, images: [], stats });
 const db = {
@@ -33,7 +33,7 @@ describe('sharing one map', () => {
 
   it('is a normal save file a friend can import', () => {
     const f = parseSaveFile(JSON.stringify(mapPackage(map, db)));
-    const plan = planMapImport({ assets: [], maps: [], themes: [], rules: [], settings: {} }, f);
+    const plan = planPackageImport({ assets: [], maps: [], themes: [], rules: [], settings: {} }, f);
     expect(plan.additions).toHaveLength(7); // theme, 5 components, the map
     expect(plan.partials).toHaveLength(0);
   });
