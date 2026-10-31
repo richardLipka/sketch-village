@@ -21,7 +21,8 @@
     "data": "Save & load",
     "rules": "Rules",
     "weapons": "Weapons",
-    "chronicle": "Chronicle"
+    "chronicle": "Chronicle",
+    "library": "Library"
   },
   "common": {
     "cancel": "Cancel",
@@ -824,5 +825,26 @@
     "label": "Projectile",
     "default": "arrow",
     "none_drawn": "draw projectiles in the studio (➶) to choose one"
+  },
+  "library": {
+    "title": "Library",
+    "hint": "Ready-made maps and packs from the game's website. Load them like a save file.",
+    "empty": "The library is empty for now.",
+    "counts": "maps: {{maps}} · components: {{components}}",
+    "load": "Load",
+    "play": "Play this map",
+    "link": "Link",
+    "copy_link": "Copy a link that opens the game with this file",
+    "copied": "Copied",
+    "copy_manually": "Copy the link:",
+    "teacher": "For teachers: adding a file to the library",
+    "howto": "Save a map (📤 in Maps) or everything (Save & load), put the file into public/library in the game's GitHub repository and run “npm run library” – that refreshes the list public/library/index.json. After the website updates, everyone sees the file. The link …/?data=file-name opens the game with it.",
+    "link_title": "Open the file from the link?",
+    "link_ask": "The link wants to load a file from {{host}}. New things are added; you look at changed ones first.",
+    "link_loading": "Loading the file from the link…",
+    "error_link": "The link to the file can't be used.",
+    "error_fetch": "The file couldn't be downloaded (are you online?).",
+    "error_missing": "The library couldn't be loaded.",
+    "error_format": "The library list is broken."
   }
 }

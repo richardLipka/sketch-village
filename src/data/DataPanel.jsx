@@ -2,36 +2,23 @@ import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Screen from '../ui/Screen.jsx';
 import { parseSaveFile, COLLECTIONS } from './saveFile.js';
-import { planImport, applyImport } from './mergePlan.js';
-import ImportReview from './ImportReview.jsx';
-import { saveDb, purgeAll, saveCollection } from './store.js';
+import { purgeAll, saveCollection } from './store.js';
 import { CATEGORY_IDS } from '../assets/categories.js';
 import { fetchDefaultData } from './defaultData.js';
 import SafetyCard from './SafetyCard.jsx';
 
 // Export everything to one JSON file (components with their pictures and
 // animations, maps, themes, rules, settings incl. the language), import with a
-// review of changed elements (data/mergePlan.js), purge (SPEC §13a).
-export default function DataPanel({ db, onReplaceDb, onBackup }) {
-  const { t, i18n } = useTranslation();
+// review of changed elements (data/useImporter.jsx), purge (SPEC §13a).
+export default function DataPanel({ db, onReplaceDb, onBackup, onImport }) {
+  const { t } = useTranslation();
   const fileRef = useRef(null);
-  const [review, setReview] = useState(null); // an import plan waiting for the kid's decisions
   const [message, setMessage] = useState(null);
   const [purgeCat, setPurgeCat] = useState('');
 
-  // new elements are added at once; changed ones are reviewed first
-  const finish = async (plan, accept) => {
-    setReview(null);
-    const { db: next, language, summary } = applyImport(db, plan, accept);
-    await saveDb(next);
-    onReplaceDb(next);
-    if (language && language !== i18n.language) i18n.changeLanguage(language);
-    setMessage({ ok: true, text: t('import.done_review', summary) });
-  };
   const mergeIn = async (file) => {
-    const plan = planImport(db, file, { language: i18n.language });
-    if (plan.changes.length) setReview(plan);
-    else await finish(plan, () => true);
+    const r = await onImport(file);
+    setMessage(r ? { ok: true, text: t('import.done_review', r.summary) } : { ok: false, text: t('import.cancelled') });
   };
 
   const doImport = async (e) => {
@@ -111,8 +98,6 @@ export default function DataPanel({ db, onReplaceDb, onBackup }) {
           <button className="btn danger" onClick={doPurgeAll}>🗑 {t('data.purge_all')}</button>
         </div>
       </div>
-
-      {review && <ImportReview plan={review} onDone={(accept) => finish(review, accept)} onCancel={() => { setReview(null); setMessage({ ok: false, text: t('import.cancelled') }); }} />}
 
       {message && (
         <div className={`toast sketch-card ${message.ok ? '' : 'error-text'}`} style={message.ok ? undefined : { background: 'var(--hl-red)' }} onClick={() => setMessage(null)}>

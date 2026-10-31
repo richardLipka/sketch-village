@@ -1,0 +1,2 @@
+# the public library: byte sizes in index.json are of the LF files
+public/library/*.json text eol=lf

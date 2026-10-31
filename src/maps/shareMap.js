@@ -7,7 +7,7 @@ import { buildSaveFile } from '../data/saveFile.js';
 import { DATA_VERSION } from '../data/migrate.js';
 import { wavesOf } from '../config/waves.js';
 
-export function mapPackage(map, db, balance, now = new Date()) {
+export function mapPackage(map, db, balance, now = new Date(), { thumbnail } = {}) {
   const byId = new Map((db.assets ?? []).map((a) => [a.id, a]));
   const ids = new Set();
   const add = (id) => {
@@ -26,7 +26,13 @@ export function mapPackage(map, db, balance, now = new Date()) {
     maps: [map],
     themes: theme ? [theme] : [],
     assets: (db.assets ?? []).filter((a) => ids.has(a.id)),
-  }, now);
+  }, now, {
+    // what the public library lists (SPEC §13c)
+    title: map.name || '',
+    ...(map.description ? { description: map.description } : {}),
+    ...(map.author ? { author: map.author } : {}),
+    ...(thumbnail ? { thumbnail } : {}),
+  });
 }
 
 /** A file name from the map's name: "map-green-valley.json". */

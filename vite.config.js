@@ -62,6 +62,8 @@ export default defineConfig({
         runtimeCaching: [
           // the class pack: fresh when online, the last copy when offline
           { urlPattern: /default-data\.json$/, handler: 'NetworkFirst', options: { cacheName: 'class-pack' } },
+          // the public library (SPEC §13c): the list and the files someone loaded – fresh online, kept for offline
+          { urlPattern: /\/library\/[^/]+\.json$/, handler: 'NetworkFirst', options: { cacheName: 'library', expiration: { maxEntries: 60 } } },
           // handwriting fonts
           {
             urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\//,

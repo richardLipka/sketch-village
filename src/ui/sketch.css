@@ -549,3 +549,14 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 .device-phone .decor-side { width: 150px; font-size: 0.9em; }
 .device-phone .decor-list .decor-tile img { width: 32px; height: 32px; }
 .decor-list .decor-tile span { max-width: none; flex: 1; }
+
+/* the public library (data/Library.jsx): one entry per line – picture, texts, buttons */
+.library-list { display: flex; flex-direction: column; gap: 12px; }
+.library-entry { display: grid; grid-template-columns: 192px 1fr auto; gap: 14px; align-items: center; padding: 10px; }
+.library-thumb { width: 192px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 4px; border: 1.5px solid var(--ink); background: var(--hl-green); }
+.library-thumb.no-pic { display: grid; place-items: center; font-size: 44px; }
+.library-text { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.library-actions { display: flex; flex-direction: column; gap: 6px; }
+.device-phone .library-entry { grid-template-columns: 96px 1fr; gap: 8px; }
+.device-phone .library-thumb { width: 96px; }
+.device-phone .library-actions { grid-column: 1 / -1; flex-direction: row; }

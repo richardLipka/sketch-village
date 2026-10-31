@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { watchErrors, openMenu, startGame } from './helpers.js';
+import { watchErrors, openMenu, startGame, readDb, writeDb } from './helpers.js';
 
 // Decorations in the map editor (SPEC §5.1): the list on the left with search,
 // one click = one decoration, the selection frame with handles, Delete, filling
@@ -7,29 +7,22 @@ import { watchErrors, openMenu, startGame } from './helpers.js';
 
 /** Two decoration drawings in the library (stored straight into IndexedDB). */
 async function addDecorations(page) {
-  await page.evaluate(async () => {
-    const pic = (color) => {
-      const c = document.createElement('canvas');
-      c.width = c.height = 64;
-      const g = c.getContext('2d');
-      g.fillStyle = color;
-      g.beginPath(); g.arc(32, 32, 28, 0, 7); g.fill();
-      return c.toDataURL('image/png');
-    };
-    const db = await new Promise((ok) => { const r = indexedDB.open('keyval-store'); r.onsuccess = () => ok(r.result); });
-    const st = () => db.transaction('keyval', 'readwrite').objectStore('keyval');
-    const assets = await new Promise((ok) => { const r = st().get('sv:assets'); r.onsuccess = () => ok(r.result ?? []); });
-    assets.push({ id: 'tree1', category: 'decoration', name: 'Strom', description: 'zelený listnatý', images: [pic('#166534')] });
-    assets.push({ id: 'rock1', category: 'decoration', name: 'Kámen', images: [pic('#57534e')] });
-    await new Promise((ok) => { const r = st().put(assets, 'sv:assets'); r.onsuccess = ok; });
-  });
+  const [green, grey] = await page.evaluate(() => ['#166534', '#57534e'].map((color) => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const g = c.getContext('2d');
+    g.fillStyle = color;
+    g.beginPath(); g.arc(32, 32, 28, 0, 7); g.fill();
+    return c.toDataURL('image/png');
+  }));
+  const file = await readDb(page);
+  file.assets.push({ id: 'tree1', category: 'decoration', name: 'Strom', description: 'zelený listnatý', images: [green] });
+  file.assets.push({ id: 'rock1', category: 'decoration', name: 'Kámen', images: [grey] });
+  await writeDb(page, file);
   await page.reload();
 }
 
-const storedMap = (page) => page.evaluate(async () => {
-  const db = await new Promise((ok) => { const r = indexedDB.open('keyval-store'); r.onsuccess = () => ok(r.result); });
-  return new Promise((ok) => { const r = db.transaction('keyval').objectStore('keyval').get('sv:maps'); r.onsuccess = () => ok(r.result[0]); });
-});
+const storedMap = async (page) => (await readDb(page)).maps[0];
 
 test('decorations: list on the left, one click = one, frame, resize, stretch, Delete, fill a polygon', async ({ page, isMobile }) => {
   test.skip(isMobile, 'the editor is checked on the PC');

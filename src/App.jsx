@@ -1,18 +1,16 @@
-import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef, Suspense, lazy } from 'react';
 import { useTranslation } from 'react-i18next';
 import Screen from './ui/Screen.jsx';
+import Modal from './ui/Modal.jsx';
 import { loadDb, saveCollection, saveSettings, saveDb } from './data/store.js';
 import { mergeSaveFile } from './data/saveFile.js';
 import { fetchDefaultData } from './data/defaultData.js';
 import { migrateDb } from './data/migrate.js';
-import AssetStudio from './assets/AssetStudio.jsx';
-import DataPanel from './data/DataPanel.jsx';
+import useImporter from './data/useImporter.jsx';
+import { dataParam, withoutDataParam, resolveDataUrl, isOwnSite, fetchSaveFile } from './data/library.js';
 import LanguageSwitcher from './ui/LanguageSwitcher.jsx';
 import FullscreenButton from './ui/FullscreenButton.jsx';
-import MapList from './maps/MapList.jsx';
 import PlaySetup from './game/PlaySetup.jsx';
-import RulesEditor from './game/RulesEditor.jsx';
-import Chronicle from './game/Chronicle.jsx';
 import { rulesOf } from './config/rules.js';
 import { buildingsOf, enemyTypesOf, itemsOf } from './config/components.js';
 import { starterMap } from './maps/mapRuntime.js';
@@ -23,7 +21,16 @@ import { backupDue, noteChange, noteBackup, snoozeBackup, downloadSaveFile, stor
 import { BackupReminder } from './data/SafetyCard.jsx';
 import UpdateToast from './ui/UpdateToast.jsx';
 
-// Screens: menu · components (studio) · maps · rules · play · save & load.
+// The editors and other screens load when they are first opened, so the menu
+// (and a game) starts with less to download.
+const AssetStudio = lazy(() => import('./assets/AssetStudio.jsx'));
+const MapList = lazy(() => import('./maps/MapList.jsx'));
+const RulesEditor = lazy(() => import('./game/RulesEditor.jsx'));
+const Chronicle = lazy(() => import('./game/Chronicle.jsx'));
+const DataPanel = lazy(() => import('./data/DataPanel.jsx'));
+const Library = lazy(() => import('./data/Library.jsx'));
+
+// Screens: menu · components (studio) · maps · rules · play · library · save & load.
 // Everything the game uses is derived from the components (db.assets) and the
 // global rules, memoized so a running game isn't restarted by unrelated renders.
 export default function App() {
@@ -31,6 +38,8 @@ export default function App() {
   const [db, setDb] = useState(null);
   const [screen, setScreen] = useState('menu');
   const [loadError, setLoadError] = useState(null);
+  const [playMap, setPlayMap] = useState(null); // a map to have picked when the play screen opens
+  const [link, setLink] = useState(null); // a ?data= file: { url, asking?, loading?, error? }
   const { device } = useDevice(); // phone: the lists show one thing per line (sketch.css)
 
   useEffect(() => {
@@ -91,12 +100,45 @@ export default function App() {
     updateSettings(noteBackup());
   }, [db, i18n.language, updateSettings]);
 
-  // after an import: merge happened in DataPanel; bring old data into components
+  // after an import or a purge: bring old data into components, store everything
   const replaceDb = useCallback(async (next) => {
     const m = migrateDb(next);
-    if (m.changed) await saveDb(m.db);
     setDb(m.db);
+    await saveDb(m.db);
   }, []);
+
+  const { importFile, reviewModal } = useImporter(db, replaceDb);
+
+  const play = useCallback((mapId) => {
+    setPlayMap(mapId ?? null);
+    setScreen('play');
+  }, []);
+
+  const loadLink = useCallback(async (url) => {
+    setLink({ url, loading: true });
+    try {
+      const r = await importFile(await fetchSaveFile(url));
+      setLink(null);
+      if (r?.maps.length) play(r.maps[0]);
+    } catch (e) {
+      setLink({ url, error: e.message });
+    }
+  }, [importFile, play]);
+
+  // A link with ?data=<file> opens the game with that file loaded (SPEC §13c):
+  // from the game's own website at once, from anywhere else after asking.
+  const linkChecked = useRef(false);
+  useEffect(() => {
+    if (!db || linkChecked.current) return;
+    linkChecked.current = true;
+    const value = dataParam();
+    if (value === null) return;
+    history.replaceState(history.state, '', withoutDataParam(location.href)); // a reload doesn't load it again
+    const url = resolveDataUrl(value);
+    if (!url) setLink({ error: 'library.error_link' });
+    else if (isOwnSite(url)) loadLink(url);
+    else setLink({ url, asking: true });
+  }, [db, loadLink]);
 
   if (loadError) return <div className="page error-text">{t('app.load_error')} {loadError}</div>;
   if (!db) return <div className="page">{t('app.loading')}</div>;
@@ -123,6 +165,7 @@ export default function App() {
             <button className="btn big primary" onClick={() => setScreen('play')}>▶ {t('menu.play')}</button>
             <button className="btn big" onClick={() => setScreen('studio')}>🧩 {t('menu.studio')}</button>
             <button className="btn big" onClick={() => setScreen('maps')}>🗺️ {t('menu.maps')}</button>
+            <button className="btn big" onClick={() => setScreen('library')}>📚 {t('menu.library')}</button>
             <button className="btn big" onClick={() => setScreen('chronicle')}>📖 {t('menu.chronicle')}</button>
             <button className="btn big" onClick={() => setScreen('rules')}>⚙️ {t('menu.rules')}</button>
             <button className="btn big" onClick={() => setScreen('data')}>💾 {t('menu.data')}</button>
@@ -130,6 +173,7 @@ export default function App() {
         </main>
       )}
 
+      <Suspense fallback={<p className="muted">{t('app.loading')}</p>}>
       {screen === 'studio' && (
         <AssetStudio
           assets={db.assets} heroRules={rules.hero} buildingTypes={buildings.types} enemyTypes={enemyTypes} themes={db.themes} maps={db.maps}
@@ -152,12 +196,35 @@ export default function App() {
       {screen === 'play' && (
         <PlaySetup
           maps={db.maps} assets={db.assets} enemyTypes={enemyTypes} buildings={buildings} rules={rules} weapons={items} themes={db.themes}
-          settings={db.settings} onSettings={updateSettings} onExit={() => setScreen('menu')}
+          settings={db.settings} onSettings={updateSettings} onExit={() => setScreen('menu')} initialMapId={playMap}
         />
       )}
 
-      {screen === 'data' && <DataPanel db={db} onReplaceDb={replaceDb} onBackup={backupNow} />}
+      {screen === 'library' && <Library onImport={importFile} onPlay={play} />}
+
+      {screen === 'data' && <DataPanel db={db} onReplaceDb={replaceDb} onBackup={backupNow} onImport={importFile} />}
+      </Suspense>
       </div>
+
+      {reviewModal}
+
+      {link?.asking && (
+        <Modal onClose={() => setLink(null)}
+          header={<h2>🔗 {t('library.link_title')}</h2>}
+          footer={<div className="row">
+            <button className="btn primary" onClick={() => loadLink(link.url)}>⬇ {t('library.load')}</button>
+            <button className="btn" onClick={() => setLink(null)}>{t('common.cancel')}</button>
+          </div>}
+        >
+          <p>{t('library.link_ask', { host: new URL(link.url).host })}</p>
+          <p className="small muted" style={{ wordBreak: 'break-all' }}>{link.url}</p>
+        </Modal>
+      )}
+      {(link?.loading || link?.error) && (
+        <div className={`toast sketch-card ${link.error ? 'error-text' : ''}`} role="status" style={link.error ? { background: 'var(--hl-red)' } : undefined} onClick={() => link.error && setLink(null)}>
+          {link.loading ? t('library.link_loading') : t(link.error, { defaultValue: t('import.error_generic') })}
+        </div>
+      )}
 
       {screen !== 'play' && <UpdateToast />}
     </div>

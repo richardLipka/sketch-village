@@ -21,7 +21,8 @@
     "data": "Uložit a nahrát",
     "rules": "Pravidla",
     "weapons": "Zbraně",
-    "chronicle": "Kronika"
+    "chronicle": "Kronika",
+    "library": "Knihovna"
   },
   "common": {
     "cancel": "Zrušit",
@@ -840,5 +841,26 @@
     "label": "Střela",
     "default": "šíp",
     "none_drawn": "nakresli střely v ateliéru (➶), pak si můžeš vybrat"
+  },
+  "library": {
+    "title": "Knihovna",
+    "hint": "Hotové mapy a balíčky ze stránek hry. Nahraj si je jako uložený soubor.",
+    "empty": "Knihovna je zatím prázdná.",
+    "counts": "mapy: {{maps}} · součásti: {{components}}",
+    "load": "Nahrát",
+    "play": "Hrát tuto mapu",
+    "link": "Odkaz",
+    "copy_link": "Zkopírovat odkaz, který otevře hru s tímto souborem",
+    "copied": "Zkopírováno",
+    "copy_manually": "Zkopíruj si odkaz:",
+    "teacher": "Pro učitele: jak přidat soubor do knihovny",
+    "howto": "Ulož mapu (📤 v Mapách) nebo všechno (Uložit a nahrát), soubor dej do složky public/library v GitHub repozitáři hry a spusť „npm run library“ – seznam public/library/index.json se tím obnoví. Po aktualizaci webu soubor uvidí všichni. Odkaz …/?data=jmeno-souboru otevře hru rovnou s ním.",
+    "link_title": "Otevřít soubor z odkazu?",
+    "link_ask": "Odkaz chce nahrát soubor ze stránky {{host}}. Nové věci se přidají, změněné si nejdřív prohlédneš.",
+    "link_loading": "Nahrávám soubor z odkazu…",
+    "error_link": "Odkaz na soubor se nedá použít.",
+    "error_fetch": "Soubor se nepodařilo stáhnout (jsi připojený k internetu?).",
+    "error_missing": "Knihovnu se nepodařilo načíst.",
+    "error_format": "Seznam knihovny je poškozený."
   }
 }

@@ -4,6 +4,8 @@ import { makeCanvas, loadImage } from '../assets/imageEncoding.js';
 import { buildGrid } from '../logic/pathGrid.js';
 import { CENTRE_RADIUS, emptyMap, validateMap } from '../logic/mapModel.js';
 import { newId } from '../data/saveFile.js';
+import { texturedCanvas } from './textures.js';
+import { decorSize } from './decorEdit.js';
 
 export function gridFromCanvas(canvas, palette) {
   const { width, height } = canvas;
@@ -23,6 +25,29 @@ export async function mapCanvas(map) {
     ctx.fillRect(0, 0, width, height);
   }
   return c;
+}
+
+/**
+ * A small JPEG of the map as the game shows it – textures, rugged roads,
+ * decorations (`assets` has their pictures) – for the library listing: 192×108 px.
+ */
+export async function mapThumbnail(map, assets = [], width = 192) {
+  if (!map.background) return null;
+  const base = await mapCanvas(map);
+  const shown = await texturedCanvas(ruggedRoads(base, map.palette, map.id), map.textures ?? {}, assets).catch(() => base);
+  const k = width / map.world.width;
+  const c = makeCanvas(width, Math.round(map.world.height * k));
+  const ctx = c.getContext('2d');
+  ctx.drawImage(shown, 0, 0, c.width, c.height);
+  const pics = {};
+  for (const d of [...(map.decorations ?? [])].sort((a, b) => a.y - b.y)) {
+    const src = assets.find((a) => a.id === d.asset)?.images?.[0];
+    if (!src) continue;
+    pics[d.asset] ??= await loadImage(src).catch(() => null);
+    const { w, h } = decorSize(d);
+    if (pics[d.asset]) ctx.drawImage(pics[d.asset], (d.x - w / 2) * k, (d.y - h / 2) * k, w * k, h * k);
+  }
+  return c.toDataURL('image/jpeg', 0.75);
 }
 
 /**

@@ -25,6 +25,9 @@ describe('sharing one map', () => {
     expect(f.themes.map((t) => t.id)).toEqual(['graveyard']);
     expect(f.assets.map((a) => a.id).sort()).toEqual(['mud', 'necro', 'skel', 'tree']);
     expect(f.settings).toEqual({ dataVersion: 4 }); // nothing else travels with a shared map
+    expect(f.info).toEqual({ title: 'Žluťoučký kůň' }); // for the public library
+    expect(mapPackage({ ...map, author: 'Ema', description: 'les' }, db, undefined, new Date(), { thumbnail: 'data:image/jpeg;base64,x' }).info)
+      .toEqual({ title: 'Žluťoučký kůň', author: 'Ema', description: 'les', thumbnail: 'data:image/jpeg;base64,x' });
   });
 
   it('is a normal save file a friend can import', () => {

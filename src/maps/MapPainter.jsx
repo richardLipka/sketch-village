@@ -9,8 +9,10 @@ import { floodFill, hexToRgba } from '../assets/pixelOps.js';
 import { loadImage } from '../assets/imageEncoding.js';
 import { newId } from '../data/saveFile.js';
 import DecorPanel from './DecorPanel.jsx';
+import { PainterTools, TerrainPanel, DECOR_COLORS, ROAD_SIZES, PENCIL_SIZES } from './PainterTools.jsx';
+import { drawOverlay } from './painterOverlay.js';
 import { matchesQuery, searchTexts } from '../ui/search.js';
-import { DECOR_BASE, decorSize, onDecor, handleAt, handlePoints, resizeDecor, fillPolygon, seededRng } from './decorEdit.js';
+import { DECOR_BASE, onDecor, handleAt, resizeDecor, fillPolygon, seededRng } from './decorEdit.js';
 
 // Map Painter & Map Editor (SPEC §5.1).
 //   Paint – yellow road brush, grass brush (erases road), decoration pencil, bucket fill.
@@ -23,13 +25,11 @@ import { DECOR_BASE, decorSize, onDecor, handleAt, handlePoints, resizeDecor, fi
 //             painting itself stays in plain colours so the bucket fills exactly.
 // The map also has a theme (world): it decides which buildings can be built on it.
 // Everything is point-and-click; markers can also be dragged.
+// Parts: PainterTools.jsx (tool bars, terrain panel), DecorPanel.jsx (the
+// decoration list), painterOverlay.js (drawing the overlay).
 
-const DECOR_COLORS = ['#1f2937', '#78350f', '#166534', '#2563eb', '#dc2626', '#ffffff'];
-const ROAD_SIZES = [24, 40, 64];
-const PENCIL_SIZES = [3, 6, 12];
 const UNDO_LIMIT = 15;
 const HIT = 28; // px radius for grabbing a marker
-const HANDLE = 9; // px half-size of a frame handle as drawn
 const HANDLE_HIT = 22; // px – grabbing a handle (fingers too)
 const CLOSE_POLY = 24; // px – a click this near the first corner closes the polygon
 
@@ -145,113 +145,7 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
   useEffect(() => {
     const c = overRef.current;
     if (!c || c.width !== W) return; // not sized yet (bitmap still loading)
-    const ctx = c.getContext('2d');
-    ctx.clearRect(0, 0, W, H);
-
-    if (showGrid && grid) {
-      ctx.fillStyle = 'rgba(30,58,138,0.22)';
-      for (let y = 0; y < grid.rows; y++) for (let x = 0; x < grid.cols; x++) {
-        if (grid.walk[y * grid.cols + x]) ctx.fillRect(x * grid.cell + 1, y * grid.cell + 1, grid.cell - 2, grid.cell - 2);
-      }
-    }
-
-    for (const d of map.decorations) {
-      const img = images.current[d.asset];
-      const { w, h } = decorSize(d);
-      if (img) ctx.drawImage(img, d.x - w / 2, d.y - h / 2, w, h);
-      else { ctx.save(); ctx.strokeStyle = '#16653480'; ctx.strokeRect(d.x - w / 2, d.y - h / 2, w, h); ctx.restore(); } // still loading
-    }
-
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = '#1e3a8a';
-    ctx.fillStyle = '#1e3a8a';
-    ctx.font = '22px "Patrick Hand", cursive';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    if (map.centre) {
-      ctx.save();
-      ctx.setLineDash([10, 8]);
-      ctx.beginPath();
-      ctx.arc(map.centre.x, map.centre.y, map.centre.radius ?? CENTRE_RADIUS, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-      const img = images.current.townhall;
-      if (img) ctx.drawImage(img, map.centre.x - 48, map.centre.y - 48, 96, 96);
-      else ctx.fillText(t('maps.marker_centre'), map.centre.x, map.centre.y);
-    }
-
-    map.spots.forEach((s, i) => {
-      ctx.save();
-      ctx.setLineDash([6, 5]);
-      ctx.fillStyle = 'rgba(255,253,247,0.75)';
-      ctx.fillRect(s.x - 26, s.y - 26, 52, 52);
-      ctx.strokeRect(s.x - 26, s.y - 26, 52, 52);
-      ctx.restore();
-      ctx.fillText(String(i + 1), s.x, s.y);
-    });
-
-    for (const cv of map.caves) {
-      const img = images.current.cave;
-      if (img) ctx.drawImage(img, cv.x - 32, cv.y - 32, 64, 64);
-      else {
-        ctx.save();
-        ctx.fillStyle = '#3f3f46';
-        ctx.beginPath();
-        ctx.arc(cv.x, cv.y + 10, 26, Math.PI, 0);
-        ctx.lineTo(cv.x + 26, cv.y + 18);
-        ctx.lineTo(cv.x - 26, cv.y + 18);
-        ctx.fill();
-        ctx.restore();
-      }
-    }
-
-    // the selected thing: a frame; a decoration also gets its 8 handles
-    const picked = sel && (sel.kind === 'centre' ? map.centre : map[sel.kind]?.[sel.i]);
-    if (picked) {
-      ctx.save();
-      ctx.strokeStyle = '#ca8a04';
-      ctx.lineWidth = 3;
-      ctx.setLineDash([8, 5]);
-      if (sel.kind === 'decorations') {
-        const { w, h } = decorSize(picked);
-        ctx.strokeRect(picked.x - w / 2, picked.y - h / 2, w, h);
-        ctx.setLineDash([]);
-        ctx.fillStyle = '#fde68a';
-        ctx.lineWidth = 2;
-        for (const hp of handlePoints(picked)) {
-          ctx.fillRect(hp.x - HANDLE, hp.y - HANDLE, HANDLE * 2, HANDLE * 2);
-          ctx.strokeRect(hp.x - HANDLE, hp.y - HANDLE, HANDLE * 2, HANDLE * 2);
-        }
-      } else {
-        ctx.beginPath();
-        ctx.arc(picked.x, picked.y, sel.kind === 'centre' ? (picked.radius ?? CENTRE_RADIUS) + 10 : 36, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-
-    // the polygon being drawn for a fill
-    if (poly.length) {
-      ctx.save();
-      ctx.strokeStyle = '#7c3aed';
-      ctx.fillStyle = 'rgba(124,58,237,0.12)';
-      ctx.lineWidth = 3;
-      ctx.setLineDash([10, 6]);
-      ctx.beginPath();
-      poly.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
-      if (poly.length > 2) { ctx.closePath(); ctx.fill(); }
-      ctx.stroke();
-      ctx.setLineDash([]);
-      poly.forEach((p, i) => {
-        ctx.fillStyle = i === 0 ? '#7c3aed' : '#fff';
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, i === 0 ? 10 : 6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-      });
-      ctx.restore();
-    }
+    drawOverlay(c.getContext('2d'), { map, grid, showGrid, images: images.current, sel, poly, centreLabel: t('maps.marker_centre') });
   }, [map, grid, showGrid, W, H, t, sel, poly, imgTick]);
 
   // ---------- helpers ----------
@@ -456,10 +350,7 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
     if (m === 'terrain') setPreview(true);
     else if (m === 'paint') setPreview(false); // paint on the real colours
   };
-  const colourLabel = (c) => (c === map.palette.path ? t('maps.tool_road') : c === map.palette.grass ? t('maps.tool_grass') : c);
 
-  const PAINT_TOOLS = [['road', '🟨'], ['grass', '🟩'], ['pencil', '✏️'], ['fill', '🪣']];
-  const PLACE_TOOLS = [['centre', '🏛️'], ['spot', '⬚'], ['cave', '🕳️'], ['decoration', '🌳'], ['erase', '✕']];
   const pickPlaceTool = (id) => { setPlaceTool(id); setPlaceMsg(null); setPoly([]); };
 
   return (
@@ -491,68 +382,13 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
         <button className="btn icon" onClick={doUndo} disabled={!undo.current.length} title={t('sketch.undo')}>↶</button>
       </div>
 
-      {mode === 'terrain' && (
-        <div className="sketch-card terrain-panel" style={{ marginBottom: 8 }}>
-          <p className="small muted" style={{ margin: '0 0 6px' }}>{t('maps.terrain_hint')}</p>
-          {!colours.length && <span className="small muted">{t('maps.terrain_none')}</span>}
-          {colours.map((c) => {
-            const chosen = textureChoices.find((x) => x.id === map.textures?.[c]);
-            return (
-              <div key={c} className="row terrain-row">
-                <span className="swatch on" style={{ background: c }} title={c} />
-                <span className="small" style={{ minWidth: 70 }}>{colourLabel(c)}</span>
-                <span>→</span>
-                {chosen ? <img className="tex-swatch" src={chosen.swatch} alt="" /> : <span className="tex-swatch" style={{ background: c }} />}
-                <select value={map.textures?.[c] ?? ''} onChange={(e) => setTexture(c, e.target.value)}>
-                  <option value="">{t('maps.texture_none')}</option>
-                  {textureChoices.filter((x) => !x.mine).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
-                  {textureChoices.some((x) => x.mine) && (
-                    <optgroup label={t('maps.my_textures')}>
-                      {textureChoices.filter((x) => x.mine).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
-                    </optgroup>
-                  )}
-                </select>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {mode === 'terrain' && <TerrainPanel map={map} colours={colours} choices={textureChoices} onTexture={setTexture} />}
 
-      <div className="row" style={{ marginBottom: 8, minHeight: mode === 'terrain' ? 0 : 44 }}>
-        {mode === 'terrain' ? null : mode === 'paint' ? (
-          <>
-            {PAINT_TOOLS.map(([id, icon]) => (
-              <button key={id} className={`btn icon ${tool === id ? 'active' : ''}`} onClick={() => setTool(id)}>{icon} {t(`maps.tool_${id}`)}</button>
-            ))}
-            <span className="muted">|</span>
-            {(tool === 'road' || tool === 'grass') && ROAD_SIZES.map((s) => (
-              <button key={s} className={`btn icon ${roadSize === s ? 'active' : ''}`} onClick={() => setRoadSize(s)}>
-                <span style={{ display: 'inline-block', width: s / 3, height: s / 3, borderRadius: '50%', background: tool === 'road' ? map.palette.path : map.palette.grass, border: '1px solid var(--ink)' }} />
-              </button>
-            ))}
-            {(tool === 'pencil' || tool === 'fill') && (
-              <>
-                {tool === 'pencil' && PENCIL_SIZES.map((s) => (
-                  <button key={s} className={`btn icon ${pencilSize === s ? 'active' : ''}`} onClick={() => setPencilSize(s)}>
-                    <span style={{ display: 'inline-block', width: s + 2, height: s + 2, borderRadius: '50%', background: 'var(--ink)' }} />
-                  </button>
-                ))}
-                {[...DECOR_COLORS, map.palette.path, map.palette.grass].map((c) => (
-                  <button key={c} className={`swatch ${c === color ? 'on' : ''}`} style={{ background: c }} onClick={() => setColor(c)} aria-label={c} />
-                ))}
-              </>
-            )}
-          </>
-        ) : (
-          <>
-            {PLACE_TOOLS.map(([id, icon]) => (
-              <button key={id} className={`btn icon ${placeTool === id ? 'active' : ''}`} onClick={() => pickPlaceTool(id)}>
-                {icon} {t(`maps.place_${id}`)}{id === 'spot' ? ` (${map.spots.length})` : ''}
-              </button>
-            ))}
-          </>
-        )}
-      </div>
+      <PainterTools
+        mode={mode} map={map} tool={tool} onTool={setTool} roadSize={roadSize} onRoadSize={setRoadSize}
+        pencilSize={pencilSize} onPencilSize={setPencilSize} color={color} onColor={setColor}
+        placeTool={placeTool} onPlaceTool={pickPlaceTool}
+      />
 
       <p className="small muted" style={{ margin: '0 0 6px' }}>
         {mode !== 'terrain' && t(mode === 'paint' ? `maps.hint_${tool}` : placeTool === 'decoration' ? `maps.hint_decor_${decorMode}` : `maps.hint_place_${placeTool}`)}

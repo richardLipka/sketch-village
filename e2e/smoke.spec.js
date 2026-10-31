@@ -15,6 +15,7 @@ test('everything opens and works without errors or warnings', async ({ page }) =
   // studio: every category, open the first item (or a new one), poke the editor, cancel
   await page.getByRole('button', { name: /Ateliér/ }).click();
   const tabs = page.locator('.screen-head .tabs .tab');
+  await expect(tabs.first()).toBeVisible(); // the studio loads when first opened
   const n = await tabs.count();
   for (let i = 0; i < n; i++) {
     const label = (await tabs.nth(i).innerText()).split('\n')[0];

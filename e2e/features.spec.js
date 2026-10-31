@@ -37,6 +37,7 @@ test('lists can be searched by name and description', async ({ page }) => {
   await page.getByRole('button', { name: /←/ }).click();
   await page.getByRole('button', { name: /Kronika/ }).click();
   const cards = page.locator('.chronicle-card');
+  await expect(cards.first()).toBeVisible(); // the screen loads when first opened
   const allCards = await cards.count();
   await page.getByRole('searchbox').fill('drak');
   await expect(cards.filter({ hasText: 'Drak' }).first()).toBeVisible();

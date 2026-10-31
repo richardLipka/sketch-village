@@ -15,11 +15,17 @@ export function newId() {
   return 'id-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
 }
 
-export function buildSaveFile(db, now = new Date()) {
+/**
+ * `info` (optional) describes the file for the public library (data/library.js):
+ * { title, description, author, thumbnail } – texts may be { cs, en }, the
+ * thumbnail is a small JPEG data URL. Older games ignore it.
+ */
+export function buildSaveFile(db, now = new Date(), info = null) {
   const file = {
     format: SAVE_FORMAT,
     version: SAVE_VERSION,
     exportedAt: now.toISOString(),
+    ...(info ? { info } : {}),
     settings: db.settings ?? {},
   };
   for (const c of COLLECTIONS) file[c] = db[c] ?? [];

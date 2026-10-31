@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { watchErrors, openMenu, startGame, patchSettings } from './helpers.js';
+import { watchErrors, openMenu, startGame, patchSettings, readDb } from './helpers.js';
 
 test('every menu screen opens without errors', async ({ page }) => {
   const errors = watchErrors(page);
@@ -87,10 +87,7 @@ test('difficulty: the choice is kept for the next game', async ({ page }) => {
   await easy.click();
   await expect(easy).toHaveAttribute('aria-checked', 'true');
   // the browser stores it a moment later – reload only then (it was flaky on a slow CI runner)
-  await expect.poll(() => page.evaluate(async () => {
-    const db = await new Promise((ok) => { const r = indexedDB.open('keyval-store'); r.onsuccess = () => ok(r.result); });
-    return new Promise((ok) => { const r = db.transaction('keyval').objectStore('keyval').get('sv:settings'); r.onsuccess = () => ok(r.result?.difficulty); });
-  })).toBe('easy');
+  await expect.poll(async () => (await readDb(page))?.settings?.difficulty).toBe('easy');
   await page.reload();
   await page.getByRole('button', { name: /Hrát/ }).click();
   await expect(page.getByRole('radio', { name: /Lehká/ })).toHaveAttribute('aria-checked', 'true');

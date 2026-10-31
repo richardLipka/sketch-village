@@ -32,7 +32,7 @@ A short, replayable village-defense game for a group of kids who also produce al
 
 ### 2.1 Hosting & deployment
 - Source in a public GitHub repo (`richardLipka/sketch-village`, name `TBD`), deployed to `https://richardlipka.github.io/<repo>/`.
-- **Fully static, no backend.** All data lives in the browser (IndexedDB) and moves between computers only via the JSON save file (§13a).
+- **Fully static, no backend.** All data lives in the browser (IndexedDB, as one save file) and moves between computers only via the JSON save file (§13a) – downloaded, or loaded from the public library / a `?data=` link (§13c).
 - GitHub Actions workflow (`.github/workflows/deploy.yml`): on every push and pull request → `npm ci` → `npm run lint` → `npm test` → `npm run e2e` (Playwright, Chromium); on push to `main` then → `vite build` → deploy `dist/` to Pages. A failed browser test uploads its trace.
 - Vite `base` = `/<repo>/` so asset URLs work under the sub-path. No client-side routing that needs server rewrites (use in-app state or hash routes).
 - **Class pack** (bundled default content): `public/default-data.json` shipped with the site is merged on a browser's first run and can be loaded any time (Save & load → Load class pack). Updating it = export JSON from the game, rename, commit it to the repo (steps in README). The shipped file is empty, so a fresh browser gets the built-in sample map.
@@ -414,7 +414,8 @@ Everything is downloadable as **one JSON file** and importable on another comput
 }
 ```
 
-- Storage at runtime: IndexedDB; the JSON is the exchange format.
+- **Storage at runtime = the same single file**: IndexedDB holds exactly one record, `sv:db`, which *is* a complete save file in this format – every component with its pictures, animation frames and sounds as data URLs, maps, themes, rules, settings. What the browser keeps can be read, copied or replaced as one thing (the browser tests do just that). Writes are coalesced (`data/store.js`): a change starts a write at once, changes made meanwhile are written together right after it, and every save resolves only when its change is stored. Older browsers' data (one key per collection) is moved into the record on the first start. Size is no concern here: tens of MB are fine for a class's drawings.
+- `info` (optional): `{ title, description, author, thumbnail }` for the public library (§13c); texts may be `{ cs, en }`, the thumbnail is a 192 × 108 JPEG of the map as the game shows it. A shared map file gets it automatically.
 - Version 3 adds the `themes` collection, `themes` on components and `theme` / `textures` on maps. Built-in components are tracked by id (`settings.builtInsSeeded`), so built-ins added in a later version arrive in existing browsers, but one a kid deleted never comes back.
 - Version field + migration (`data/migrate.js`): version-1 files (separate `enemyTypes`, `buildingTypes`, `weapons`, `rules.townHallLevels`, per-type drawing categories) are converted into components on load and after import.
 - **Share one map** (📤 in the map list, `maps/shareMap.js`): a normal save file `map-<name>.json` with just the map, its theme and the components it uses – decorations, studio terrain textures, the enemies of its waves and the minions they call. A friend imports it like any file (new things added, changes reviewed).
@@ -427,6 +428,16 @@ All data lives only in the browser, which may clear it (low disk space; Safari a
 - **Backup reminder**: the first change after a backup is remembered (`settings.unsavedSince`); when it is **2 days** old the menu shows "Your drawings from N days ago are only in this browser" with **Download backup** and **Later** (quiet for a day). Downloading clears it and remembers the date (`lastBackupAt`, shown on Save & load). Importing or seeding doesn't count as a change.
 - **Install the game** (§2.2) – the Save & load screen explains why and how.
 
+## 13c. Public library and data links
+
+Ready-made save files for everyone, served with the website (`public/library/`):
+
+- **The files**: normal save files (§13a), one per map or pack, pictures inside. The game ships three example maps – *Zelené údolí* (plains, a pond, three roads), *Skřetí les* (goblin forest, two winding roads, a spruce forest), *Strašidelný hřbitov* (graveyard, four roads and a ring, harder) – each with its own pencil-drawn decorations. They are drawn by `scripts/library/maker.js` in a headless browser (`npm run make-library`), checked to be valid, and played by the balance robot on normal (the first two are won every time, the graveyard 2 of 3).
+- **The listing** `public/library/index.json` (`{ format: "sketch-village-library", version: 1, files: [{ file, title, description, author, kind, maps, components, size, thumbnail }] }`) is made from the files' `info` by `npm run library` (`scripts/library-index.mjs`); a unit test fails when it is out of date. To add a file: share a map (📤) or download everything, put the file into `public/library/`, run `npm run library`, push.
+- **Library screen** (📚 in the menu, `data/Library.jsx`): the listing with pictures, search by title / description / author, **Load** (imports like any save file – new things added, changed ones reviewed, `data/useImporter.jsx`), then **Play this map** opens the play screen with it picked; **Link** copies a link that opens the game with that file.
+- **Data links** `?data=<file>` (`data/library.js`): a bare name is a library file (`?data=goblin-forest` → `library/goblin-forest.json`), a path is relative to the game, a full `https://` address loads a file from anywhere (CORS permitting). Files from the game's own site load at once; from another site the kid is asked first (the host is shown). After loading, the play screen opens with the file's first map picked, and the parameter is removed from the address so a reload doesn't load it again. A missing file or a web page instead of a file says "couldn't be downloaded".
+- Offline: the listing and every file someone loaded are kept by the service worker (network first).
+
 ## 13. Project structure
 
 ```
@@ -434,14 +445,17 @@ src/
   main.jsx, App.jsx
   ui/            Screen.jsx (fixed head + scrolling body), sketch.css (CSS wobble instead of Rough.js, safe areas), device.js (phone / tablet / pc), install.js (install prompt, iOS, standalone), UpdateToast (new version / offline ready), LanguageSwitcher, FullscreenButton, Modal
   assets/        categories.js, clipboard.js + PasteButton (paste pictures), SoundEditor + audioClip.js (monster sounds: record, trim), CameraCapture, AssetCropper, BackgroundRemover + bgRemoval.js, SketchPad, ImageSlot, AssetStudio, AssetEditor (component editor), BuildingStatsEditor, EnemyStatsEditor, ItemStatsEditor, HeroStatsEditor, ThemesEditor, AnimationEditor + AnimPreview + animation.js (frames, strip cutting, frame-count guess), NumField
-  data/          saveFile.js (JSON format), mergePlan.js + ImportReview (reviewed import), safety.js + SafetyCard (backup reminder, persistent storage), migrate.js (v1 → components), store.js (IndexedDB), defaultData.js (class pack), DataPanel
+  data/          saveFile.js (JSON format), mergePlan.js + ImportReview + useImporter (reviewed import, shared by all ways of loading a file), safety.js + SafetyCard (backup reminder, persistent storage), migrate.js (v1 → components), store.js (IndexedDB: one save-file record, coalesced writes), defaultData.js (class pack), library.js + Library (public library, ?data= links), DataPanel
   config/        components.js (built-in components + derived lists), features.js, themes.js, legends.js (monster legends), balance, buildings, heroStats, enemies, weapons, waves (defaults) + rules.js (global rules over defaults)
   logic/         pathGrid, pathfinding, mapModel, waves, world (the simulation's core: setup, rounds, events, HUD), balanceBot  ← pure, unit-tested
   logic/world/   the rest of the World by topic, mixed into the class: equipment, buildings (+ FEATURE_BEHAVIOUR), soldiers, enemies, combat (damage, projectiles), hero (+ walking on roads), coins, shared
-  maps/          MapList, MapPainter + DecorPanel + decorEdit.js (decorations: frame, resize, polygon fill), WaveEditor, MapTestPanel + mapTest.js + mapTest.worker.js (robot test), shareMap.js, mapRuntime (canvas helpers, sample map), textures.js (terrain textures)
-  game/          monsterVoices.js (when monster sounds play), viewport.js (the map covers the screen), PlaySetup, GameView (React ↔ Phaser), GameScene (incl. playing animations), GameOverlay, BuildPanel, Chronicle, RulesEditor, sound.js, tutorial.js
+  maps/          MapList, MapPainter + PainterTools (tool bars, terrain panel) + painterOverlay.js (overlay drawing) + DecorPanel + decorEdit.js (decorations: frame, resize, polygon fill), WaveEditor, MapTestPanel + mapTest.js + mapTest.worker.js (robot test), shareMap.js, mapRuntime (canvas helpers, sample map), textures.js (terrain textures)
+  game/          monsterVoices.js (when monster sounds play), viewport.js (the map covers the screen), PlaySetup, GameView (React ↔ Phaser), GameScene (setup, animations, events), GameOverlay, BuildPanel, Chronicle, RulesEditor, sound.js, tutorial.js
+  game/scene/    the rest of GameScene by topic, mixed into the class: Textures (placeholders), Input (clicks, pan, zoom), Effects (floating numbers, rings, bars), Entities (sprites following the world), draw.js
   locales/       cs.json, en.json
 public/default-data.json   class pack (empty by default)
+public/library/            the public library: save files + index.json (§13c)
+scripts/                   library-index.mjs (npm run library), make-library.mjs + library/maker.js (npm run make-library), make-icons.mjs
 public/icons/              app icon (icon.svg → PNGs via npm run icons)
 e2e/                       Playwright browser tests (§15a)
 ```
@@ -461,6 +475,7 @@ e2e/                       Playwright browser tests (§15a)
 5f. **Components** ✅ – every game part is one component (pictures + all numbers) edited in the studio, which became the general component editor (§7.1). Buildings are made from **features** (workers, arrows, soldiers, income, hero healing) with a table of 1–5 levels whose fields follow the features; the Town Hall is the `core` building type with the same features; "another look" components add drawings to an existing type. Enemies, weapons/shields/armor and coins carry their numbers next to their drawings; the separate Enemies and Weapons screens are gone and the Rules editor keeps only global rules. Old data and version-1 save files are migrated automatically. Tests cover new building kinds made only from data (market, well, 4-level tower).
 5g. **Lives & backpack** ✅ – every lost life sends the hero away for 10 s and back to the Town Hall; losing all 5 loses the game (the end screen says why). The bot now walks back to heal below 40 % HP and still wins every seed without losing a life; the same bot without healing loses every seed (new test). Small retune: dragon 280 HP / speed 36, rounds 14–15 spawns. **Backpack** rebuilt: three slots (right hand, left hand, armor) with the hero's attack / reach / armor shown live, items dragged onto slots with mouse or finger (or tap item → tap slot), wrong slots refused, worn items dragged back to take them off.
 5h. **Summoners, catapult, themes, terrain** ✅ – enemies can **call minions** (any enemies, several kinds mixed; how many, how often, at most alive, more on death; minions never summon): new built-ins **necromancer** → skeletons, **spider queen** → spiderlings (more when she dies), plus skeleton and spiderling. New building feature **lobs** and built-in **catapult** (rounds 6 / 10 / 15): area damage to walking enemies. **Themes** (§7.2) with an editor; maps have a theme. **Terrain textures** in the map editor with preview (§5.1). Waves: spider queen in rounds 8 and 19, necromancers in 12 and 17; necromancer tuned to 90 HP / every 8 s; the bot builds a catapult – all seeds won, waves 40–60 s. Architecture: building features run from a behaviour table, one spawn path for caves and summoners, ground-target projectiles, built-ins seeded by id.
+5v. **Single-file storage, public library, data links** ✅ – the browser keeps everything as one save-file record with coalesced writes, and a save resolves only once it is stored (§13a); the public library with three example maps, its listing and the Library screen; `?data=` links that open the game with a file loaded (§13c); the editors and other screens load when first opened (main bundle 548 → 411 kB); `GameScene` and `MapPainter` split into parts (§13); shared map files carry a title and a thumbnail. Open issues: §17.
 5u. **Architecture review** ✅ – fixed: a soldier's attack played the default soldier's animation instead of its own kind's; enemies could aim at a soldier killed earlier in the same frame; settings were saved inside React state updaters (which React may run twice) – now outside them; the map editor copied the 3.7 MB bitmap into undo for every marker change and even for a click that only selected something – now only painting copies it and a selection makes an undo step only when it moves; dragged markers can't leave the map; older backups and class packs (before data version 4) brought the 20 % higher building HP back on import – files are now upgraded when read; the game loaded every picture, animation frame and sound one after another – now once each and in parallel, and an unreadable picture no longer stops the game from starting. Open structural issues: §17.
 5t. **Decoration editing, full-screen phone map** ✅ – decorations: a searchable panel left of the map, one click = one (fixed double placement), selection frame with handles to resize / stretch, Delete key, polygon fill with density and size variety (§5.1); the game map covers the whole screen on phones (§4a). Also: the nearest frame handle wins; the decoration panel is its own component; a flaky browser test (difficulty, reloading before the setting was stored) fixed.
 5s. **Soldiers, projectiles, area damage, icons, search** ✅ – castle soldier kind per level (drawn soldiers or enemies, soldier-sized), upgraded with the castle; projectile choice for every shooter (default arrow); area damage for shooting buildings (new field, existing buildings unchanged) and enemies; buildings still and bigger per level; building HP −20 % (data version 4; balance retuned); hero Magic attribute; editable GUI icons (§4b); list search and one-per-line phone lists (§12b). Fixed: the in-game toolbar wrapped at half the screen and hid the tips behind it.
@@ -492,6 +507,7 @@ e2e/                       Playwright browser tests (§15a)
 - difficulty: the choice is remembered across a reload;
 - the robot test in the wave editor finishes with a verdict and times for all 20 rounds;
 - sharing a map downloads a file with one map and only the components it uses;
+- library: the list from `index.json` with pictures and search; Load imports a map (stored in the single save-file record, pictures inside) and Play this map opens it picked; a `?data=` link loads the file at once and removes itself from the address, again without anything to review; a file from another site is asked about first; a missing file says it couldn't be downloaded;
 - phone with a pretend notch: game buttons big enough, inside the safe area, not overlapping (also with the ⋯ menu open), menus clear of the notch;
 - offline: after the first visit the game reloads and starts a game with the network switched off.
 
@@ -557,14 +573,16 @@ The structure (checked in the review of 5u):
 - `config/` holds data and pure helpers; `data/` the save format, migration, import plan and storage; `maps/`, `assets/`, `game/` the screens; pure helpers next to them (`decorEdit.js`, `viewport.js`, `monsterVoices.js`, `audioClip.js`, `clipboard.js`, `ui/search.js`) are unit-tested, the screens are covered by the Playwright suite (PC and phone) including a smoke crawl.
 - Data versions: `DATA_VERSION` (stored data, upgraded by `migrate.js`) and the file's `settings.dataVersion` (older files upgraded by `parseSaveFile`).
 
-Open issues, not bugs, in order of value:
+The open issues of 5u and what became of them (5v):
 
-1. **Storage writes whole collections**: every edit saves the whole `assets` list (all pictures, animation frames and sounds as data URLs) to IndexedDB. With a big library that is megabytes per click. Better: one IndexedDB record per component (a store keyed by id), saving only what changed – needs a migration of `store.js`.
-2. **Main bundle 548 kB** (179 kB gzipped): both languages, every editor and the camera / animation / sound tools load before the menu. The studio, map editor and data screen could be lazy-loaded like the game (`GameView`, 888 kB, already is).
-3. **Large modules**: `GameScene.js` (~660 lines: textures, input, drawing, effects) and `MapPainter.jsx` (~600 lines: painting, placing, terrain) would read better split by concern (e.g. scene input / entity drawing; painter tools per mode).
-4. **Image data URLs everywhere**: pictures are base64 strings inside the records – about a third bigger than the bytes, and decoded again on every game start. Blobs in IndexedDB (and object URLs) would be smaller and faster; it changes the save format, so it waits.
-5. **Settings saved without waiting**: a setting changed right before the page is closed can be lost (seen as a flaky test). Rare in practice.
-6. **Undo in the map editor** keeps up to 15 bitmap copies while painting (~55 MB at worst); storing only the changed rectangle of a stroke would cut that.
+1. **Storage writes whole collections** – decided: everything stays **one file**, also in the browser (one IndexedDB record that is a save file), because a single file is easy to look at, copy and move; tens of MB are fine. What was wrong is fixed: writes are coalesced (a burst of edits costs one or two writes) and serialized, so the newest data always ends up stored.
+2. **Main bundle 548 kB** – fixed: the studio, maps, rules, chronicle, library and data screens load when first opened; the menu bundle is 411 kB (136 kB gzipped). Both languages still load up front (≈ 70 kB).
+3. **Large modules** – fixed: `GameScene.js` is split into `game/scene/` parts (textures, input, effects, entities; about 200 lines left), `MapPainter.jsx` into the tool bars (`PainterTools.jsx`) and the overlay drawing (`painterOverlay.js`; 440 lines left – the pointer handling stays together).
+4. **Image data URLs** – decided: they stay. Pictures, frames and sounds are serialized inside the one file on purpose.
+5. **Settings saved without waiting** – fixed: every save returns a promise that resolves only once that change is stored (`flushDb` waits for all); the browser tests read the stored file instead of waiting for luck.
+6. **Undo in the map editor (~55 MB)** – decided: fine for this game's computers.
+
+Still open: a change made in the last moment before the tab is closed can be lost while a previous write is still running (IndexedDB can't be forced to finish on close); the non-current language could be loaded on demand.
 
 ## 16. Balance draft (v1 – starting values, tune by playtesting)
 

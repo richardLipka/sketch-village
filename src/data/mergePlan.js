@@ -1,6 +1,6 @@
 // Importing a save file (SPEC §13a) as a reviewed merge – pure, unit-tested.
 //
-//   planImport(db, file, { language })  →  { additions, changes, unchanged, file }
+//   planImport(db, file, { language })  →  { additions, changes, unchanged, maps }
 //   applyImport(db, plan, accept)       →  { db, language?, summary }
 //
 // Elements (components, maps, themes, the rules, the settings) are found by id,
@@ -115,7 +115,10 @@ export function planImport(db, file, { language } = {}) {
   const prefDiff = diffRecords(Object.fromEntries(Object.keys(theirs).map((k) => [k, mine[k]])), theirs);
   if (prefDiff.length) changes.push({ collection: 'settings', id: 'settings', name: null, local: mine, record: theirs, diff: prefDiff });
 
-  return { additions, changes, unchanged };
+  // the file's maps as they are called here after the import (to open one to play)
+  const maps = matches.filter((m) => m.collection === 'maps').map((m) => m.local?.id ?? m.rec.id);
+
+  return { additions, changes, unchanged, maps };
 }
 
 /** Apply a plan; `accept(change)` decides each change (true = take the imported version). */

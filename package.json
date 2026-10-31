@@ -11,7 +11,9 @@
     "test": "vitest run",
     "e2e": "playwright test",
     "lint": "eslint .",
-    "icons": "node scripts/make-icons.mjs"
+    "icons": "node scripts/make-icons.mjs",
+    "library": "node scripts/library-index.mjs",
+    "make-library": "node scripts/make-library.mjs"
   },
   "dependencies": {
     "i18next": "^24.2.0",

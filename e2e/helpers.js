@@ -23,19 +23,32 @@ export async function startGame(page) {
   await expect(page.locator('.game-screen canvas')).toBeVisible();
 }
 
-/** Change the stored settings (IndexedDB via idb-keyval), then reload. */
-export async function patchSettings(page, patch) {
-  await page.evaluate(async (p) => {
-    const db = await new Promise((ok, fail) => {
-      const r = indexedDB.open('keyval-store');
-      r.onsuccess = () => ok(r.result);
-      r.onerror = () => fail(r.error);
-    });
-    const store = () => db.transaction('keyval', 'readwrite').objectStore('keyval');
-    const cur = await new Promise((ok) => { const r = store().get('sv:settings'); r.onsuccess = () => ok(r.result ?? {}); });
-    await new Promise((ok) => { const r = store().put({ ...cur, ...p }, 'sv:settings'); r.onsuccess = ok; });
+// The browser keeps everything as one save file in IndexedDB (src/data/store.js).
+const DB_KEY = 'sv:db';
+
+/** The stored save file (null before anything was stored). */
+export function readDb(page) {
+  return page.evaluate(async (key) => {
+    const db = await new Promise((ok) => { const r = indexedDB.open('keyval-store'); r.onsuccess = () => ok(r.result); });
+    const v = await new Promise((ok) => { const r = db.transaction('keyval').objectStore('keyval').get(key); r.onsuccess = () => ok(r.result ?? null); });
     db.close();
-  }, patch);
+    return v;
+  }, DB_KEY);
+}
+
+/** Replace the stored save file (reload afterwards to use it). */
+export function writeDb(page, file) {
+  return page.evaluate(async ([key, f]) => {
+    const db = await new Promise((ok) => { const r = indexedDB.open('keyval-store'); r.onsuccess = () => ok(r.result); });
+    await new Promise((ok) => { const r = db.transaction('keyval', 'readwrite').objectStore('keyval').put(f, key); r.onsuccess = ok; });
+    db.close();
+  }, [DB_KEY, file]);
+}
+
+/** Change the stored settings, then reload. */
+export async function patchSettings(page, patch) {
+  const file = await readDb(page);
+  await writeDb(page, { ...file, settings: { ...file.settings, ...patch } });
   await page.reload();
   await expect(page.getByRole('button', { name: /Hrát/ })).toBeVisible();
 }

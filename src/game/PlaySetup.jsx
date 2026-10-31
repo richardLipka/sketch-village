@@ -11,11 +11,12 @@ import { DIFFICULTIES, DIFFICULTY_IDS, DEFAULT_DIFFICULTY } from '../config/diff
 const GameView = lazy(() => import('./GameView.jsx'));
 
 // Pick a level (map), a hero and how hard it should be, then play (fullscreen).
-export default function PlaySetup({ maps, assets, enemyTypes, buildings, rules, weapons, themes = [], settings, onSettings }) {
+export default function PlaySetup({ maps, assets, enemyTypes, buildings, rules, weapons, themes = [], settings, onSettings, initialMapId = null }) {
   const { t, i18n } = useTranslation();
   const playable = maps.filter((m) => m.valid);
   const heroes = assets.filter((a) => a.category === 'hero');
-  const [mapId, setMapId] = useState(playable[0]?.id ?? null);
+  // a map just loaded from the library or a link is already picked
+  const [mapId, setMapId] = useState(() => (playable.some((m) => m.id === initialMapId) ? initialMapId : playable[0]?.id ?? null));
   const [heroId, setHeroId] = useState(heroes[0]?.id ?? null);
   const [playing, setPlaying] = useState(false);
   const [query, setQuery] = useState(''); // filters maps and heroes
