@@ -74,6 +74,7 @@
     "clear": "Clear all"
   },
   "slot": {
+    "game_picture": "the game's picture",
     "photo": "Take photo",
     "upload": "Upload file",
     "edit": "Edit by drawing",
@@ -420,6 +421,8 @@
     "msg_hero_upgraded": "Hero: {{stat}} +1 (level {{n}})"
   },
   "component": {
+    "back_to_game_picture": "Back to the game's picture",
+    "permanent": "This is a picture the game draws itself. You can replace it with your own (draw, photo, upload) or draw over it, but it can't be deleted. ✕ on the picture brings the game's one back.",
     "own_type": "Its own kind of building",
     "look_of": "Another look of",
     "look_hint": "Only pictures – the game picks one of the looks at random for every building of that kind.",

@@ -6,7 +6,8 @@ import Screen from '../ui/Screen.jsx';
 import { CATEGORY_IDS } from './categories.js';
 import AssetEditor, { emptyAsset } from './AssetEditor.jsx';
 import { newId } from '../data/saveFile.js';
-import { compName } from '../config/components.js';
+import { compName, isPermanent } from '../config/components.js';
+import { defaultPicture } from './defaultLooks.js';
 import { FEATURES } from '../config/features.js';
 import { getCategory } from './categories.js';
 import { fitsTheme, themeName } from '../config/themes.js';
@@ -48,6 +49,7 @@ export default function AssetStudio({ assets, heroRules, buildingTypes = [], ene
   };
 
   const remove = (id) => {
+    if (isPermanent(id)) return; // the game's own pictures are never deleted
     onChange(assets.filter((a) => a.id !== id));
     setEditing(null);
   };
@@ -56,7 +58,9 @@ export default function AssetStudio({ assets, heroRules, buildingTypes = [], ene
     const now = new Date().toISOString();
     const { builtIn, ...rest } = asset;
     const stats = asset.stats?.core ? { ...asset.stats, core: false } : asset.stats; // only one Town Hall
-    onChange([...assets, { ...rest, id: newId(), name: `${compName(asset, lang)} 2`, stats, createdAt: now, updatedAt: now }]);
+    // a copy of the game's own picture starts from that picture
+    const images = asset.images?.some(Boolean) || !defaultPicture(asset.id) ? asset.images : [defaultPicture(asset.id)];
+    onChange([...assets, { ...rest, images, id: newId(), name: `${compName(asset, lang)} 2`, stats, createdAt: now, updatedAt: now }]);
   };
 
   // a line under the name saying what the component is
@@ -100,6 +104,7 @@ export default function AssetStudio({ assets, heroRules, buildingTypes = [], ene
         </button>}
         {list.map((a) => {
           const pics = (a.images ?? []).filter(Boolean);
+          if (!pics.length && defaultPicture(a.id)) pics.push(defaultPicture(a.id)); // the game's own picture
           return (
             <div key={a.id} className="asset-tile" onClick={() => setEditing({ asset: a, isNew: false })}>
               <div className="checker" style={{ borderRadius: 6, display: 'grid', placeItems: 'center' }}>

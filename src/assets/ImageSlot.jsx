@@ -12,8 +12,10 @@ import { normalizeAssetImage } from './imageEncoding.js';
 // Also a frame of an animation (AnimationEditor): `compact` panel, `underlay` =
 // the previous frame shown faded while drawing, `onSelect` / `selected` (only
 // the selected frame shows its buttons), `adder` (the "+ frame" panel) and
-// `children` for the frame's own buttons.
-export default function ImageSlot({ label, image, fallback, placeholder, category, onChange, underlay = null, compact = false, selected = false, adder = false, onSelect, removeTitle, children }) {
+// `children` for the frame's own buttons. `standard` = the game's own picture
+// (a permanent built-in, assets/defaultLooks.js): shown until replaced, the
+// drawing pad starts from it, ✕ goes back to it.
+export default function ImageSlot({ label, image, fallback, standard = null, placeholder, category, onChange, underlay = null, compact = false, selected = false, adder = false, onSelect, removeTitle, children }) {
   const { t } = useTranslation();
   const fileRef = useRef(null);
   const [stage, setStage] = useState(null); // camera | crop | bg | sketch
@@ -38,7 +40,7 @@ export default function ImageSlot({ label, image, fallback, placeholder, categor
     reader.readAsDataURL(file);
   };
 
-  const shown = image || fallback;
+  const shown = image || fallback || standard;
 
   return (
     <div className={`slot ${compact ? 'compact' : ''} ${selected ? 'selected' : ''} ${adder ? 'adder' : ''}`}>
@@ -46,6 +48,7 @@ export default function ImageSlot({ label, image, fallback, placeholder, categor
       <div className="pic checker" style={!image && fallback ? { opacity: 0.45 } : undefined} onClick={onSelect} role={onSelect ? 'button' : undefined}>
         {shown ? <img src={shown} alt="" /> : <span className="muted" style={{ fontSize: 40 }}>{placeholder ?? '?'}</span>}
       </div>
+      {!image && !fallback && standard && <div className="small muted" data-testid="game-picture">{t('slot.game_picture')}</div>}
       <div className="row" style={{ justifyContent: 'center', gap: 4 }}>
         <button className="btn icon" title={t('slot.photo')} onClick={() => setStage('camera')}>📷</button>
         <button className="btn icon" title={t('slot.upload')} onClick={() => fileRef.current.click()}>📁</button>
@@ -73,7 +76,7 @@ export default function ImageSlot({ label, image, fallback, placeholder, categor
       {stage === 'sketch' && (
         <SketchPad
           size={category.size}
-          initialImage={image || fallback}
+          initialImage={image || fallback || standard}
           underlay={underlay}
           onCancel={() => setStage(null)}
           onSave={(img) => { onChange(img); setStage(null); }}

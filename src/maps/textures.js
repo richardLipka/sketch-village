@@ -6,6 +6,9 @@
 //
 //   map.textures = { '#rrggbb': textureId }   textureId = built-in id or component id
 //
+// The built-in surfaces are built-in `texture` components too (same ids): a
+// picture the kids gave one replaces the drawn texture everywhere.
+//
 // Pure pixel work on ImageData-like objects ({ width, height, data }), so it is
 // unit-tested; the canvas helpers are at the bottom.
 
@@ -163,14 +166,15 @@ export function applyTextures(img, layers) {
 
 // ---------------- canvas helpers (browser) ----------------
 
-const cache = new Map(); // texture id → { width, height, data } (built-ins and loaded photos)
+const cache = new Map(); // built-in id or picture → { width, height, data }
 
-/** Texture pixels for an id: a built-in one, or a `texture` component's picture. */
+/** Texture pixels for an id: the `texture` component's picture, else the built-in one drawn here. */
 export async function loadTexture(id, assets = []) {
-  if (cache.has(id)) return cache.get(id);
-  let tex = builtInTexture(id);
+  const src = assets.find((a) => a.id === id)?.images?.find(Boolean);
+  const key = src ?? id; // a changed picture is a new entry
+  if (cache.has(key)) return cache.get(key);
+  let tex = src ? null : builtInTexture(id);
   if (!tex) {
-    const src = assets.find((a) => a.id === id)?.images?.find(Boolean);
     if (!src) return null;
     const img = await loadImage(src);
     const c = makeCanvas(TEXTURE_SIZE, TEXTURE_SIZE);
@@ -178,7 +182,7 @@ export async function loadTexture(id, assets = []) {
     ctx.drawImage(img, 0, 0, TEXTURE_SIZE, TEXTURE_SIZE);
     tex = ctx.getImageData(0, 0, TEXTURE_SIZE, TEXTURE_SIZE);
   }
-  cache.set(id, tex);
+  cache.set(key, tex);
   return tex;
 }
 

@@ -74,6 +74,7 @@
     "clear": "Smazat vše"
   },
   "slot": {
+    "game_picture": "obrázek hry",
     "photo": "Vyfotit",
     "upload": "Nahrát soubor",
     "edit": "Upravit kreslením",
@@ -424,6 +425,8 @@
     "msg_hero_upgraded": "Hrdina: {{stat}} +1 (úroveň {{n}})"
   },
   "component": {
+    "back_to_game_picture": "Vrátit obrázek hry",
+    "permanent": "Tohle je obrázek, který hra kreslí sama. Můžeš ho nahradit vlastním (nakresli, vyfoť, nahraj) nebo ho překreslit, ale smazat ho nejde. ✕ u obrázku vrátí ten herní.",
     "own_type": "Vlastní druh budovy",
     "look_of": "Jiný vzhled budovy",
     "look_hint": "Jen obrázky – hra pro každou budovu toho druhu náhodně vybere jeden ze vzhledů.",

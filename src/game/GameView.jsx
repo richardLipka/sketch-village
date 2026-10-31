@@ -20,7 +20,7 @@ import { DEFAULT_RULES } from '../config/rules.js';
 import { wavesOf } from '../config/waves.js';
 import { unlockLabel } from '../config/unlocks.js';
 import { DEFAULT_WEAPONS, isWeapon } from '../config/weapons.js';
-import { coinTypesOf } from '../config/components.js';
+import { coinTypesOf, GAME_LOOKS } from '../config/components.js';
 import { World } from '../logic/world.js';
 import { play, setMuted, soundFor, loadClip, playClip } from './sound.js';
 import { VoiceDirector } from './monsterVoices.js';
@@ -193,7 +193,10 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
       const soldier = assets.find((a) => a.category === 'soldier' && (a.images?.some(Boolean) || firstFrame(a.anims)));
       load('soldier', soldier?.images.find(Boolean) || firstFrame(soldier?.anims));
       load('cave', firstImage('cave'));
-      load('projectile', firstImage('projectile'));
+      // the default arrow / magic bolt / catapult stone: the kids' picture of that built-in…
+      for (const [id, key] of Object.entries(GAME_LOOKS)) load(key, assets.find((a) => a.id === id)?.images?.find(Boolean));
+      // …(older saves: the first drawn projectile was the arrow), else the game's own
+      load('projectile', assets.find((a) => a.category === 'projectile' && !a.builtIn && a.images?.some(Boolean))?.images.find(Boolean));
       // every drawn projectile and soldier on its own (buildings / enemies / castles pick them)
       for (const a of assets) {
         if (a.category === 'projectile') load(`proj:${a.id}`, a.images?.find(Boolean));

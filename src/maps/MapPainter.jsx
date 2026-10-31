@@ -96,10 +96,13 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
     setColours(terrainColours(c.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, c.width, c.height), map.palette));
   }, [map.palette]);
 
-  // textures to choose from: built-in ones and the kids' texture components
+  // textures to choose from: the built-in surfaces (with the kids' picture when they gave one) and the kids' own
   const textureChoices = useMemo(() => [
-    ...BUILT_IN_IDS.map((id) => ({ id, name: t(`maps.tex_${id}`), swatch: textureSwatch(builtInTexture(id, 64)) })),
-    ...assets.filter((a) => a.category === 'texture' && a.images?.[0]).map((a) => ({ id: a.id, name: compName(a, i18n.language), swatch: a.images[0], mine: true })),
+    ...BUILT_IN_IDS.map((id) => {
+      const a = assets.find((x) => x.id === id);
+      return { id, name: a ? compName(a, i18n.language) : t(`maps.tex_${id}`), swatch: a?.images?.find(Boolean) ?? textureSwatch(builtInTexture(id, 64)) };
+    }),
+    ...assets.filter((a) => a.category === 'texture' && !BUILT_IN_IDS.includes(a.id) && a.images?.[0]).map((a) => ({ id: a.id, name: compName(a, i18n.language), swatch: a.images[0], mine: true })),
   ], [assets, t, i18n.language]);
 
   // the preview: what the game will show (rugged road edges + textures); redrawn after changes

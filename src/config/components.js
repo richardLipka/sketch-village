@@ -19,6 +19,13 @@
 //
 // Built-in components (`builtIn: true`) are added on the first start; kids can
 // change them like their own and restore their default numbers.
+//
+// The game's own pictures – the default projectiles (arrow, magic bolt,
+// catapult stone) and the built-in surfaces (grass, water…) – are built-in
+// components too (PERMANENT_IDS): the studio shows them with the game's
+// picture (assets/defaultLooks.js), a drawing or photo replaces it, ✕ brings
+// it back, and they can never be deleted (the migration puts a missing one
+// back). The simple shapes standing in for undrawn things stay in the game.
 
 import { DEFAULT_BUILDING_TYPES } from './buildings.js';
 import { DEFAULT_ENEMY_TYPES } from './enemies.js';
@@ -36,12 +43,44 @@ const itemStats = (w) => (isWeapon(w)
   ? { kind: w.kind, hands: w.slot === 'twohand' ? 2 : 1, damage: w.damage, range: w.range, cooldown: w.cooldown, splash: w.splash, price: w.price, shop: w.shop, round: w.round, drop: w.drop, starter: !!w.starter }
   : { armor: w.armor, price: w.price, shop: w.shop, round: w.round, drop: w.drop, starter: !!w.starter });
 
+/** Default projectiles: id → the game's texture key it replaces (game/scene/Entities.js). */
+export const GAME_LOOKS = { arrow: 'projectile', magicBolt: 'magic', catapultStone: 'stone' };
+const PROJECTILE_NAMES = {
+  arrow: { cs: 'Šíp', en: 'Arrow' },
+  magicBolt: { cs: 'Kouzelná střela', en: 'Magic bolt' },
+  catapultStone: { cs: 'Kámen z katapultu', en: 'Catapult stone' },
+};
+/** Built-in surfaces: the ids maps use in `map.textures` (maps/textures.js BUILT_IN_TEXTURES). */
+export const SURFACE_NAMES = {
+  grass: { cs: 'Tráva', en: 'Grass' },
+  meadow: { cs: 'Kvetoucí louka', en: 'Flower meadow' },
+  dirt: { cs: 'Polní cesta', en: 'Dirt road' },
+  sand: { cs: 'Písek', en: 'Sand' },
+  cobble: { cs: 'Dlažba', en: 'Cobblestones' },
+  stone: { cs: 'Skála', en: 'Rock' },
+  water: { cs: 'Voda', en: 'Water' },
+  snow: { cs: 'Sníh', en: 'Snow' },
+};
+/** Built-ins that are the game's own pictures: never deleted. */
+export const PERMANENT_IDS = new Set([...Object.keys(GAME_LOOKS), ...Object.keys(SURFACE_NAMES)]);
+export const isPermanent = (a) => PERMANENT_IDS.has(typeof a === 'string' ? a : a?.id);
+
+/** `next` with every permanent built-in that is missing put back (as it was in `before`, else the default). */
+export function keepPermanent(next, before = []) {
+  const have = new Set(next.map((a) => a.id));
+  const back = [...PERMANENT_IDS].filter((id) => !have.has(id))
+    .map((id) => before.find((a) => a.id === id) ?? structuredClone(DEFAULT_COMPONENTS.find((c) => c.id === id)));
+  return back.length ? [...next, ...back] : next;
+}
+
 export const DEFAULT_COMPONENTS = [
   ...DEFAULT_BUILDING_TYPES.map(({ id, name, themes, ...stats }) => component('building', id, name, stats, themes)),
   ...DEFAULT_ENEMY_TYPES.map(({ id, name, themes, ...stats }) => ({ ...component('enemy', id, name, stats, themes), legend: BUILT_IN_LEGENDS[id] })),
   ...DEFAULT_WEAPONS.map((w) => component(isWeapon(w) ? 'weapon' : w.slot, w.id, w.name, itemStats(w))),
   component('coin', 'coin1', { cs: 'Měďák', en: 'Copper coin' }, { value: 1 }),
   component('coin', 'coin5', { cs: 'Zlaťák', en: 'Gold coin' }, { value: 5 }),
+  ...Object.entries(PROJECTILE_NAMES).map(([id, name]) => component('projectile', id, name, {})),
+  ...Object.entries(SURFACE_NAMES).map(([id, name]) => component('texture', id, name, {})),
   // the game's GUI icons, to be drawn by the kids (config/uiIcons.js)
   ...UI_ICONS.map((i) => component('icon', uiIconId(i.key), i.name, { icon: i.key, emoji: i.emoji })),
 ];

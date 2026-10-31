@@ -2,6 +2,7 @@
 // Methods of GameScene (../GameScene.js mixes them in); `this` is the scene.
 
 import { hasFeature, buildingScale } from '../../config/features.js';
+import { GAME_LOOKS } from '../../config/components.js';
 import { INK, BUILDING_SIZE, TOWN_HALL_SIZE, drawBar } from './draw.js';
 
 export class Entities {
@@ -86,9 +87,10 @@ export class Entities {
     }
 
     for (const p of w.projectiles) {
-      // a projectile drawn in the studio when the shooter picked one, else arrow / spell / stone
+      // a projectile drawn in the studio when the shooter picked one (a built-in one not
+      // redrawn is the game's own: arrow / spell / stone), else by who shoots
       const drawn = p.look && this.textures.exists(`proj:${p.look}`) ? `proj:${p.look}` : null;
-      const key = drawn ?? (p.owner === 'magic' ? 'magic' : p.owner === 'stone' ? 'stone' : 'projectile');
+      const key = drawn ?? GAME_LOOKS[p.look] ?? (p.owner === 'magic' ? 'magic' : p.owner === 'stone' ? 'stone' : 'projectile');
       const s = this.sprite(`p${p.id}`, () => ({ img: this.add.image(p.x, p.y, key).setDisplaySize(key === 'stone' ? 22 : 26, key === 'stone' ? 22 : 26).setDepth(9100) }));
       if (p.owner === 'stone') {
         // a thrown stone (or the catapult's own projectile) flies in an arc: highest half way

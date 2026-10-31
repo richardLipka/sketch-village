@@ -13,7 +13,8 @@ import { getCategory } from './categories.js';
 import { DEFAULT_HERO_POINTS } from '../config/heroStats.js';
 import { defaultItemStats } from '../config/weapons.js';
 import { newLevel } from '../config/features.js';
-import { DEFAULT_ENEMY_STATS, defaultComponent, compName, projectilesOf, soldierChoicesOf } from '../config/components.js';
+import { DEFAULT_ENEMY_STATS, defaultComponent, compName, projectilesOf, soldierChoicesOf, isPermanent } from '../config/components.js';
+import { defaultPicture } from './defaultLooks.js';
 import { themeName } from '../config/themes.js';
 import { legendText } from '../config/legends.js';
 import { newId } from '../data/saveFile.js';
@@ -110,6 +111,9 @@ export default function AssetEditor({ asset, isNew, heroRules, assets = [], buil
     set({ legend: { ...draft.legend, [key]: cur && typeof cur === 'object' ? { ...cur, [lang]: v } : v } });
   };
   const isCore = !!draft.stats?.core;
+  // the game's own pictures (arrow, surfaces…): replaced by a drawing, never deleted
+  const permanent = isPermanent(draft.id);
+  const standard = permanent ? defaultPicture(draft.id) : null;
 
   const canSave = name.trim() && !(draft.category === 'building' && draft.stats?.variantOf && !images.some(Boolean));
 
@@ -128,7 +132,7 @@ export default function AssetEditor({ asset, isNew, heroRules, assets = [], buil
       header={<h2>{isNew ? t('editor.new_title', { cat: t(`cat.${asset.category}`) }) : t('editor.edit_title', { name: compName(asset, lang) || t(`cat.${asset.category}`) })}</h2>}
       footer={
         <div className="row">
-          {!isNew && !isCore && !cat.fixed && <button className="btn danger" onClick={() => { if (confirm(t('editor.confirm_delete'))) onDelete(draft.id); }}>🗑 {t('common.delete')}</button>}
+          {!isNew && !isCore && !cat.fixed && !permanent && <button className="btn danger" onClick={() => { if (confirm(t('editor.confirm_delete'))) onDelete(draft.id); }}>🗑 {t('common.delete')}</button>}
           {builtIn && <button className="btn" onClick={restore}>↺ {t('component.restore')}</button>}
           <span className="spacer" />
           {!canSave && <span className="small muted">{t('component.need_name')}</span>}
@@ -145,6 +149,7 @@ export default function AssetEditor({ asset, isNew, heroRules, assets = [], buil
         </label>
         {builtIn && <span className="small muted">⭐ {t('component.built_in')}</span>}
       </div>
+      {permanent && <p className="small muted" data-testid="permanent-note">🔒 {t('component.permanent')}</p>}
 
       {cat.themed && themes.length > 0 && (
         <div style={{ marginBottom: 12 }}><ThemeChips value={draft.themes ?? []} themes={themes} onChange={(v) => set({ themes: v })} /></div>
@@ -158,7 +163,10 @@ export default function AssetEditor({ asset, isNew, heroRules, assets = [], buil
           if (cat.slots) fallback = i > 0 ? images[0] : null;
           else for (let j = i - 1; j >= 0 && !fallback; j--) fallback = images[j];
           const label = cat.slots ? t(`editor.slot_${cat.slots[i]}`) : images.length > 1 ? t('editor.level', { n: i + 1 }) : null;
-          return <ImageSlot key={i} label={label} image={img} fallback={fallback} placeholder={draft.stats?.emoji} category={cat} onChange={(v) => setImage(i, v)} />;
+          return (
+            <ImageSlot key={i} label={label} image={img} fallback={fallback} standard={i === 0 ? standard : null} placeholder={draft.stats?.emoji} category={cat}
+              removeTitle={standard ? t('component.back_to_game_picture') : undefined} onChange={(v) => setImage(i, v)} />
+          );
         })}
       </div>
       <p className="small muted">{t(cat.slots ? 'editor.slots_hint' : images.length > 1 ? 'editor.levels_hint' : 'component.picture_hint')}</p>

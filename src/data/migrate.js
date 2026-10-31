@@ -14,10 +14,13 @@
 //  A new built-in that a kid has already made under the same name (the class's
 //  goblin pack, skeleton warrior and roc became built-ins) takes over the kid's
 //  component – pictures, numbers and all – instead of appearing twice.
+//  Always: the game's own pictures (the default arrow, magic bolt and catapult
+//  stone, the built-in surfaces – config/components.js PERMANENT_IDS) are never
+//  missing: one gone from an old or edited file comes back, still built-in.
 //  Always: building levels get the numbers of features added later (e.g. the
 //  soldiers' patrol distance) – a built-in its own default, otherwise the feature's.
 
-import { DEFAULT_COMPONENTS, defaultComponent } from '../config/components.js';
+import { DEFAULT_COMPONENTS, defaultComponent, isPermanent } from '../config/components.js';
 import { DEFAULT_THEMES } from '../config/themes.js';
 import { FEATURES } from '../config/features.js';
 import { DEFAULT_BUILDING_TYPES } from '../config/buildings.js';
@@ -95,6 +98,16 @@ export function migrateDb(db) {
     } else if (!byId.has(c.id)) upsert(structuredClone(c));
     seeded.add(c.id);
     changed = true;
+  }
+  // the game's own pictures can't be deleted: a missing one comes back, and stays built-in
+  for (const c of DEFAULT_COMPONENTS) {
+    if (!isPermanent(c)) continue;
+    const i = byId.get(c.id);
+    if (i === undefined) { upsert(structuredClone(c)); changed = true; }
+    else if (!assets[i].builtIn || assets[i].category !== c.category) {
+      assets[i] = { ...assets[i], builtIn: true, category: c.category };
+      changed = true;
+    }
   }
   if (!settings.builtInsSeeded || settings.builtInsSeeded.length !== seeded.size) {
     settings.builtInsSeeded = [...seeded];

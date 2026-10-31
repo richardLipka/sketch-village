@@ -12,7 +12,7 @@ import LanguageSwitcher from './ui/LanguageSwitcher.jsx';
 import FullscreenButton from './ui/FullscreenButton.jsx';
 import PlaySetup from './game/PlaySetup.jsx';
 import { rulesOf } from './config/rules.js';
-import { buildingsOf, enemyTypesOf, itemsOf } from './config/components.js';
+import { buildingsOf, enemyTypesOf, itemsOf, keepPermanent } from './config/components.js';
 import { starterMap } from './maps/mapRuntime.js';
 import { uiIconsOf } from './config/uiIcons.js';
 import { UiIconContext } from './ui/UiIcon.jsx';
@@ -75,6 +75,8 @@ export default function App() {
   // (React may run an updater twice), so saving happens here, not inside them.
   const settingsRef = useRef({});
   useEffect(() => { if (db) settingsRef.current = db.settings; }, [db]);
+  const dbRef = useRef(null);
+  useEffect(() => { dbRef.current = db; }, [db]);
 
   const updateSettings = useCallback((patch) => {
     const settings = { ...settingsRef.current, ...patch };
@@ -85,7 +87,9 @@ export default function App() {
 
   // Replace one collection in memory and persist it. The kid made something:
   // note it for the backup reminder and ask the browser to keep the data.
-  const updateCollection = useCallback(async (name, records) => {
+  const updateCollection = useCallback(async (name, list) => {
+    // the game's own pictures (arrow, surfaces…) are never deleted, whatever a screen sends
+    const records = name === 'assets' ? keepPermanent(list, dbRef.current?.assets) : list;
     setDb((cur) => ({ ...cur, [name]: records }));
     const patch = noteChange(settingsRef.current);
     if (patch) {
