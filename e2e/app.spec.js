@@ -106,20 +106,22 @@ test('the robot plays a map in the wave editor and says how it went', async ({ p
   expect(errors).toEqual([]);
 });
 
-test('sharing one map downloads a file with just that map and what it uses', async ({ page }) => {
+test('downloading one map gives a file with that map and everything needed to play it', async ({ page }) => {
   await openMenu(page);
   await page.getByRole('button', { name: /Mapy/ }).click();
   const downloading = page.waitForEvent('download');
-  await page.getByTitle(/Sdílet mapu/).first().click();
+  await page.getByTitle(/Stáhnout mapu/).first().click();
   const download = await downloading;
   expect(download.suggestedFilename()).toMatch(/^map-.*\.json$/);
   const chunks = [];
   for await (const c of await download.createReadStream()) chunks.push(c);
   const file = JSON.parse(Buffer.concat(chunks).toString());
   expect(file.format).toBe('sketch-village');
+  expect(file.kind).toBe('map');
   expect(file.maps).toHaveLength(1);
-  expect(file.assets.every((a) => a.category === 'enemy' || a.category === 'decoration' || a.category === 'texture')).toBe(true);
-  expect(file.assets.length).toBeGreaterThan(0); // the enemies of its waves
+  const kinds = new Set(file.assets.map((a) => a.category));
+  for (const k of ['building', 'enemy', 'hero', 'weapon', 'coin', 'soldier']) expect(kinds.has(k), k).toBe(true);
+  expect(kinds.has('icon')).toBe(false); // the game's own GUI icons stay home
 });
 
 test('keyboard: I opens and closes the backpack; no shortcuts behind an open dialog', async ({ page, isMobile }) => {

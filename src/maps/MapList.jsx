@@ -38,7 +38,8 @@ export default function MapList({ maps, assets, enemyTypes, themes = [], balance
     onChange([...maps, { ...m, id: newId(), name: `${m.name} 2`, createdAt: now, updatedAt: now }]);
   };
 
-  // one file with the map and what it uses; its small picture is for the public library
+  // one file with the map and everything needed to play it (maps/shareMap.js);
+  // its small picture is for the public library
   const share = async (m) => {
     const thumbnail = await mapThumbnail(m, assets).catch(() => null);
     downloadJson(mapPackage(m, { assets, themes }, balance, new Date(), { thumbnail }), mapFileName(m));
@@ -85,7 +86,7 @@ export default function MapList({ maps, assets, enemyTypes, themes = [], balance
             <div className="row" style={{ justifyContent: 'center', gap: 4 }}>
               <button className="btn icon" onClick={(e) => { e.stopPropagation(); setWavesFor(m); }} title={t('waves.edit')}>🌊 {t('waves.edit')}</button>
               <button className="btn icon" onClick={(e) => { e.stopPropagation(); duplicate(m); }} title={t('studio.duplicate')}>⧉</button>
-              <button className="btn icon" onClick={(e) => { e.stopPropagation(); share(m); }} title={t('maps.share')}>📤</button>
+              <button className="btn icon" onClick={(e) => { e.stopPropagation(); share(m); }} title={t('maps.share')} data-testid="map-download">⬇ {t('maps.download')}</button>
               <button className="btn icon danger" onClick={(e) => { e.stopPropagation(); remove(m); }} title={t('common.delete')}>🗑</button>
             </div>
           </div>

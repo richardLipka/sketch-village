@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { mapPackage, mapFileName } from './shareMap.js';
 import { parseSaveFile } from '../data/saveFile.js';
-import { planImport } from '../data/mergePlan.js';
+import { planMapImport } from '../data/mapImport.js';
 
 const asset = (id, category, stats = {}) => ({ id, category, name: id, images: [], stats });
 const db = {
@@ -19,11 +19,12 @@ const map = {
 };
 
 describe('sharing one map', () => {
-  it('holds the map, its theme and only what it uses (minions too)', () => {
+  it('holds the map, its theme and what it uses (minions too, the buildings of its world)', () => {
     const f = mapPackage(map, db);
+    expect(f.kind).toBe('map');
     expect(f.maps).toEqual([map]);
     expect(f.themes.map((t) => t.id)).toEqual(['graveyard']);
-    expect(f.assets.map((a) => a.id).sort()).toEqual(['mud', 'necro', 'skel', 'tree']);
+    expect(f.assets.map((a) => a.id).sort()).toEqual(['house', 'mud', 'necro', 'skel', 'tree']); // not the unused flower and dragon
     expect(f.settings).toEqual({ dataVersion: 4 }); // nothing else travels with a shared map
     expect(f.info).toEqual({ title: 'Žluťoučký kůň' }); // for the public library
     expect(mapPackage({ ...map, author: 'Ema', description: 'les' }, db, undefined, new Date(), { thumbnail: 'data:image/jpeg;base64,x' }).info)
@@ -32,9 +33,9 @@ describe('sharing one map', () => {
 
   it('is a normal save file a friend can import', () => {
     const f = parseSaveFile(JSON.stringify(mapPackage(map, db)));
-    const plan = planImport({ assets: [], maps: [], themes: [], rules: [], settings: {} }, f);
-    expect(plan.additions).toHaveLength(6);
-    expect(plan.changes).toHaveLength(0);
+    const plan = planMapImport({ assets: [], maps: [], themes: [], rules: [], settings: {} }, f);
+    expect(plan.additions).toHaveLength(7); // theme, 5 components, the map
+    expect(plan.partials).toHaveLength(0);
   });
 
   it('names the file after the map', () => {

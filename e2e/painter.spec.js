@@ -5,7 +5,7 @@ import { watchErrors, openMenu, startGame, readDb, writeDb } from './helpers.js'
 // one click = one decoration, the selection frame with handles, Delete, filling
 // a polygon; and the phone game covering the whole screen (SPEC §4a).
 
-/** Two decoration drawings in the library (stored straight into IndexedDB). */
+/** Two decoration drawings in the library, instead of the class pack's (stored straight into IndexedDB). */
 async function addDecorations(page) {
   const [green, grey] = await page.evaluate(() => ['#166534', '#57534e'].map((color) => {
     const c = document.createElement('canvas');
@@ -16,6 +16,7 @@ async function addDecorations(page) {
     return c.toDataURL('image/png');
   }));
   const file = await readDb(page);
+  file.assets = file.assets.filter((a) => a.category !== 'decoration');
   file.assets.push({ id: 'tree1', category: 'decoration', name: 'Strom', description: 'zelený listnatý', images: [green] });
   file.assets.push({ id: 'rock1', category: 'decoration', name: 'Kámen', images: [grey] });
   await writeDb(page, file);

@@ -18,7 +18,7 @@ export default function DataPanel({ db, onReplaceDb, onBackup, onImport }) {
 
   const mergeIn = async (file) => {
     const r = await onImport(file);
-    setMessage(r ? { ok: true, text: t('import.done_review', r.summary) } : { ok: false, text: t('import.cancelled') });
+    setMessage(r ? { ok: true, text: t(r.message ?? 'import.done_review', r.summary) } : { ok: false, text: t('import.cancelled') });
   };
 
   const doImport = async (e) => {

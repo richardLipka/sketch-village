@@ -2,8 +2,9 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { resolveDataUrl, isOwnSite, dataParam, withoutDataParam, shareLink, parseLibrary, localText, fetchSaveFile, LIBRARY_FORMAT } from './library.js';
-import { parseSaveFile } from './saveFile.js';
-import { planImport } from './mergePlan.js';
+import { parseSaveFile, mergeSaveFile } from './saveFile.js';
+import { planMapImport, isMapFile } from './mapImport.js';
+import { migrateDb } from './migrate.js';
 import { buildIndex, indexText, LIBRARY } from '../../scripts/library-index.mjs';
 
 const SITE = 'https://richardlipka.github.io/sketch-village/';
@@ -59,6 +60,8 @@ describe('the listing', () => {
 
 describe('public/library (what the website serves)', () => {
   const index = JSON.parse(fs.readFileSync(path.join(LIBRARY, 'index.json'), 'utf8'));
+  const pack = parseSaveFile(fs.readFileSync(path.join(LIBRARY, '..', 'default-data.json'), 'utf8'));
+  const fresh = migrateDb(mergeSaveFile({ settings: {}, assets: [], maps: [], themes: [], rules: [] }, pack).db).db;
 
   it('index.json is up to date with the files (run npm run library after adding one)', () => {
     expect(fs.readFileSync(path.join(LIBRARY, 'index.json'), 'utf8').replace(/\r\n/g, '\n')).toBe(indexText(buildIndex()));
@@ -77,10 +80,16 @@ describe('public/library (what the website serves)', () => {
         const ids = new Set(file.assets.map((a) => a.id));
         for (const d of m.decorations) expect(ids.has(d.asset)).toBe(true);
       }
-      for (const a of file.assets) expect(a.images[0]).toMatch(/^data:image\/png;base64,/);
-      // loading it into an empty game adds everything, nothing to review
-      const plan = planImport({ assets: [], maps: [], themes: [], rules: [], settings: {} }, file);
-      expect(plan.changes).toHaveLength(0);
+      expect(isMapFile(file)).toBe(true);
+      for (const a of file.assets) for (const src of a.images.filter(Boolean)) expect(src).toMatch(/^data:image\/(png|webp|jpeg);base64,/);
+      // everything the map's waves send is in the file, and no GUI icons
+      const ids = new Set(file.assets.map((a) => a.id));
+      for (const r of file.maps[0].waves.rounds) for (const g of r.groups) expect(ids.has(g.enemy), g.enemy).toBe(true);
+      expect(file.assets.some((a) => a.category === 'icon')).toBe(false);
+      // a fresh game (built-ins + the class pack) gets just the map and its decorations, nothing twice
+      const plan = planMapImport(fresh, file);
+      expect(plan.partials).toHaveLength(0);
+      expect(plan.additions.filter((x) => x.collection === 'assets').every((x) => x.record.category === 'decoration')).toBe(true);
       expect(plan.maps).toEqual(file.maps.map((m) => m.id));
     }
   });

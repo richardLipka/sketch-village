@@ -21,7 +21,7 @@ test('library: the list, loading a map, playing it', async ({ page }) => {
   await page.getByRole('searchbox').fill('');
 
   await forest.getByRole('button', { name: /Nahrát/ }).click();
-  await expect(forest.getByRole('status')).toContainText(/Hotovo: \d+ přidáno/);
+  await expect(forest.getByRole('status')).toContainText(/Mapa nahrána – nové věci: \d+, kopie s novým jménem: 0/); // a fresh game has the same drawings
   const stored = await readDb(page);
   expect(stored.format).toBe('sketch-village'); // the browser keeps one save file
   expect(stored.maps.some((m) => m.name === 'Skřetí les')).toBe(true);

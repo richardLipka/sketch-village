@@ -16,22 +16,22 @@ test('lists can be searched by name and description', async ({ page }) => {
   await studio(page, /Nepřátelé/);
   const tiles = page.locator('.screen-body .asset-tile:not(.new)');
   const all = await tiles.count();
-  await page.getByRole('searchbox').fill('skret'); // without the accent
-  await expect(tiles.filter({ hasText: 'Skřet' })).toHaveCount(1);
-  expect(await tiles.count()).toBeLessThan(all); // only those whose name or legend says goblin
+  await page.getByRole('searchbox').fill('jezdec'); // the goblin on a spider
+  await expect(tiles.filter({ hasText: 'Pavoučí jezdec' })).toHaveCount(1);
+  expect(await tiles.count()).toBeLessThan(all); // only those whose name or legend says rider
   await page.getByRole('searchbox').fill('kolace'); // from the goblin's legend: it steals cakes
   await expect(tiles).toHaveCount(1);
-  await expect(tiles.first()).toContainText('Skřet');
+  await expect(tiles.first()).toContainText('Goblin');
   await page.getByTitle('Smazat hledání').click();
   await expect(tiles).toHaveCount(all);
 
   // a description written in the editor is found too
-  await tiles.filter({ hasText: 'Vlk' }).click();
+  await tiles.filter({ hasText: 'Pavoučí jezdec' }).click();
   await page.getByLabel('Popis').fill('rychlý šedý lovec');
   await page.locator('.modal-foot').getByRole('button', { name: /Uložit/ }).click();
   await page.getByRole('searchbox').fill('sedy lovec');
   await expect(tiles).toHaveCount(1);
-  await expect(tiles.first()).toContainText('Vlk');
+  await expect(tiles.first()).toContainText('Pavoučí jezdec');
 
   // the chronicle has its own search
   await page.getByRole('button', { name: /←/ }).click();
@@ -39,8 +39,8 @@ test('lists can be searched by name and description', async ({ page }) => {
   const cards = page.locator('.chronicle-card');
   await expect(cards.first()).toBeVisible(); // the screen loads when first opened
   const allCards = await cards.count();
-  await page.getByRole('searchbox').fill('drak');
-  await expect(cards.filter({ hasText: 'Drak' }).first()).toBeVisible();
+  await page.getByRole('searchbox').fill('kral');
+  await expect(cards.filter({ hasText: 'Král goblinů' }).first()).toBeVisible();
   expect(await cards.count()).toBeLessThan(allCards);
   expect(errors).toEqual([]);
 });
@@ -99,7 +99,7 @@ test('building editor: projectile for shooters, area damage, soldier kind per ca
   await page.locator('.screen-body .asset-tile', { hasText: 'Hrad' }).click();
   const kinds = page.getByRole('combobox', { name: /Kdo bojuje/ });
   await expect(kinds).toHaveCount(3); // one per level
-  await kinds.nth(1).selectOption({ label: 'Skřet' });
+  await kinds.nth(1).selectOption({ label: 'Goblin' });
   await page.locator('.modal-foot').getByRole('button', { name: /Uložit/ }).click();
   await page.locator('.screen-body .asset-tile', { hasText: 'Hrad' }).click();
   await expect(page.getByRole('combobox', { name: /Kdo bojuje/ }).nth(1)).toHaveValue('goblin');

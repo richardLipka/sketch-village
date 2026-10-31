@@ -12,27 +12,34 @@ export function legendText(v, lang = 'cs') {
 
 const L = (storyCs, storyEn, hintCs, hintEn) => ({ story: { cs: storyCs, en: storyEn }, hint: { cs: hintCs, en: hintEn } });
 
+// (the texts follow the class's drawings: the wolf is a goblin riding a spider,
+// the archer a shaman, the orc a hobgoblin, the dragon the goblin king)
 export const BUILT_IN_LEGENDS = {
   goblin: L(
-    'Skřeti žijí v lese za kopcem a nejradši kradou koláče. Chodí ve velkých skupinách a hrozně u toho hlučí.',
+    'Goblini žijí v lese za kopcem a nejradši kradou koláče. Chodí ve velkých skupinách a hrozně u toho hlučí.',
     'Goblins live in the forest behind the hill and love stealing pies. They come in big noisy groups.',
     'Jsou slabí, ale je jich hodně – věž nebo katapult u cesty je zastaví.',
     'Weak but many – a tower or a catapult by the road stops them.'),
+  goblinPack: L(
+    'Dva goblini v kápích chodí vždycky spolu. Co nesebere jeden, sebere druhý.',
+    'Two hooded goblins always go together. What one doesn’t grab, the other does.',
+    'Jsou slabí jako goblini – věž nebo katapult u cesty je zastaví.',
+    'As weak as goblins – a tower or a catapult by the road stops them.'),
   wolf: L(
-    'Šedí vlci běhají rychleji než vítr. Když zavyjí, ptáci v lese ztichnou.',
-    'Grey wolves run faster than the wind. When they howl, the birds in the forest go quiet.',
+    'Goblin si osedlal obřího pavouka a teď je rychlejší než vítr. Pavouk cvaká kusadly a jezdec se chechtá.',
+    'A goblin saddled a giant spider and now he is faster than the wind. The spider clicks its jaws and the rider cackles.',
     'Jsou rychlí: postav věže dál od radnice, ať je trefí dřív, než doběhnou.',
     'They are fast: build towers far from the town hall so they are hit before they arrive.'),
   archer: L(
-    'Lučištníci se schovávají za kameny a střílejí z dálky. Prý nikdy neminou jablko.',
-    'Archers hide behind rocks and shoot from far away. They say they never miss an apple.',
-    'Střílejí z dálky na budovy – pošli na ně hrdinu nebo vojáky.',
-    'They shoot buildings from afar – send the hero or soldiers after them.'),
+    'Šaman nosí masku z lebky a kouzelné kopí. Z dálky metá na budovy jiskry a zaříkadla.',
+    'The shaman wears a skull mask and carries a magic spear. From far away he throws sparks and spells at the buildings.',
+    'Útočí z dálky na budovy – pošli na něj hrdinu nebo vojáky.',
+    'He attacks buildings from afar – send the hero or soldiers after him.'),
   orc: L(
-    'Zlobři jsou velcí, pomalí a mají tvrdou kůži. Spí celou zimu a na jaře mají hlad.',
-    'Orcs are big, slow and thick-skinned. They sleep all winter and wake up hungry.',
-    'Mají brnění – silné věže a katapult na ně platí nejlíp.',
-    'They wear armor – strong towers and the catapult work best.'),
+    'Hopgoblin je větší a silnější bratranec goblina. Nosí kroužkovou zbroj, kopí a červený štít.',
+    'The hobgoblin is the goblin’s bigger, stronger cousin. He wears chain mail and carries a spear and a red shield.',
+    'Má brnění – silné věže a katapult na něj platí nejlíp.',
+    'He wears armor – strong towers and the catapult work best.'),
   bat: L(
     'Netopýři létají z hřbitova, jakmile zapadne slunce. Cesty je nezajímají.',
     'Bats fly out of the graveyard as soon as the sun sets. They don’t care about roads.',
@@ -48,9 +55,14 @@ export const BUILT_IN_LEGENDS = {
     'Skeletons rattle their bones and obey only the necromancer. Without him they fall apart.',
     'Jsou slabí, ale přicházejí pořád znovu – zastav nekromanta.',
     'Weak, but they keep coming – stop the necromancer.'),
+  skeletonWarrior: L(
+    'Kostlivý bojovník si ze hřbitova přinesl staré kopí. Nekromant ho volá spolu s kostlivci.',
+    'The skeleton warrior brought an old spear from the graveyard. The necromancer calls him along with the skeletons.',
+    'Je slabý, ale přichází pořád znovu – zastav nekromanta.',
+    'Weak, but he keeps coming – stop the necromancer.'),
   necromancer: L(
-    'Nekromant čte ze staré knihy a volá kostlivce ze země. Nosí plášť z pavučin.',
-    'The necromancer reads from an old book and calls skeletons out of the ground. His cloak is made of cobwebs.',
+    'Nekromant čte ze staré knihy a volá ze země kostlivce a kostlivé bojovníky. Nosí plášť z pavučin.',
+    'The necromancer reads from an old book and calls skeletons and skeleton warriors out of the ground. His cloak is made of cobwebs.',
     'Každých pár sekund povolá kostlivce. Zaútoč na něj co nejdřív!',
     'Every few seconds he calls skeletons. Attack him as soon as you can!'),
   spiderling: L(
@@ -64,8 +76,13 @@ export const BUILT_IN_LEGENDS = {
     'Když zemře, vypustí další pavoučata – měj připravený katapult.',
     'When she dies more spiderlings come out – have a catapult ready.'),
   dragon: L(
-    'Drak spí na hoře z mincí. Jednou za čas se vzbudí a letí se podívat, kdo mu je bere.',
-    'The dragon sleeps on a mountain of coins. Now and then he wakes up to see who is taking them.',
-    'Létá a chrlí oheň z dálky: luk, kouzla a hodně věží. Za odměnu dá velký poklad.',
-    'He flies and breathes fire from afar: bow, magic and many towers. He pays a big treasure.'),
+    'Král vládne goblinům a útočí se svou suitou.',
+    'The king rules the goblins and attacks with his retinue.',
+    'Útočí na dálku, volá své pomocníky. Pozor na něj.',
+    'He attacks from afar and calls his helpers. Watch out for him.'),
+  rukh: L(
+    'Rukh je obrovský pták z dalekých hor. Když roztáhne křídla, zakryje slunce.',
+    'The roc is a giant bird from faraway mountains. When it spreads its wings it hides the sun.',
+    'Létá rychle a má tuhé peří: meč ani katapult na něj nedosáhnou – použij luk, kouzla a věže.',
+    'It flies fast and has tough feathers: swords and the catapult can’t reach it – use a bow, magic and towers.'),
 };

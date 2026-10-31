@@ -44,7 +44,7 @@ test('component editor: title and Save stay in view while the content scrolls', 
   await openMenu(page);
   await page.getByRole('button', { name: /Ateliér/ }).click();
   await page.getByRole('button', { name: /Nepřátelé/ }).click();
-  await page.locator('.asset-tile', { hasText: 'Skřet' }).click();
+  await page.locator('.asset-tile', { hasText: /⭐ Goblin / }).click();
   const { can } = await checkFixedHead(page, '.modal-head h2', '.modal-body');
   expect(can).toBe(true);
   await expect(page.locator('.modal-head h2')).toBeInViewport();

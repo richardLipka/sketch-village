@@ -14,8 +14,8 @@ async function openGoblin(page) {
   await openMenu(page);
   await page.getByRole('button', { name: /Ateliér/ }).click();
   await page.getByRole('button', { name: /Nepřátelé/ }).click();
-  await page.locator('.asset-tile', { hasText: 'Skřet' }).click();
-  await expect(page.locator('.modal h2').first()).toContainText('Skřet');
+  await page.locator('.asset-tile', { hasText: /⭐ Goblin / }).click();
+  await expect(page.locator('.modal h2').first()).toContainText('Goblin');
 }
 
 test('a picture from the clipboard goes to cropping like a photo', async ({ page }) => {
@@ -70,7 +70,7 @@ test('record a monster sound, trim it, keep it, and the game still runs', async 
   await page.locator('.modal').getByRole('button', { name: /Uložit/ }).last().click();
 
   // still there after reopening
-  await page.locator('.asset-tile', { hasText: 'Skřet' }).click();
+  await page.locator('.asset-tile', { hasText: /⭐ Goblin / }).click();
   await expect(page.locator('.sound-row').first().locator('canvas.waveform')).toBeVisible();
   await page.locator('.modal').getByRole('button', { name: 'Zrušit' }).last().click();
 
@@ -89,7 +89,7 @@ test('Escape closes only the top dialog', async ({ page }) => {
   await expect(page.locator('.modal')).toHaveCount(2);
   await page.keyboard.press('Escape');
   await expect(page.locator('.modal')).toHaveCount(1);
-  await expect(page.locator('.modal h2').first()).toContainText('Skřet');
+  await expect(page.locator('.modal h2').first()).toContainText('Goblin');
   await page.keyboard.press('Escape');
   await expect(page.locator('.modal')).toHaveCount(0);
 });
@@ -191,7 +191,7 @@ test('an animation made of frame panels: draw, copy, trace over the previous, pa
 
   // saved with the component
   await page.locator('.modal').getByRole('button', { name: /Uložit/ }).last().click();
-  await page.locator('.asset-tile', { hasText: 'Skřet' }).click();
+  await page.locator('.asset-tile', { hasText: /⭐ Goblin / }).click();
   await expect(page.locator('.anim-editor .frame-panels .slot:not(.adder)')).toHaveCount(2);
   expect(errors).toEqual([]);
 });

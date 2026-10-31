@@ -123,4 +123,25 @@ describe('data version 4: buildings have 20 % less HP', async () => {
     const fresh = migrateDb({ settings: {}, assets: [], maps: [], themes: [], rules: [] }).db;
     expect(fresh.assets.find((a) => a.id === 'tower').stats.levels.map((l) => l.hp)).toEqual(tower.stats.levels.map((l) => l.hp));
   });
+
+  it('a new built-in takes over the component a kid already made under its name', () => {
+    const seeded = DEFAULT_COMPONENTS.map((c) => c.id).filter((id) => !['goblinPack', 'skeletonWarrior', 'rukh'].includes(id));
+    const base = migrateDb({ settings: {}, assets: [] }).db;
+    const rukh = { id: 'uuid-rukh', category: 'enemy', name: 'Rukh', author: 'Bárník', images: [pic], stats: { hp: 150, flying: true }, updatedAt: T };
+    const pack = { id: 'uuid-pack', category: 'enemy', name: 'Smečka goblinů', images: [pic], stats: { hp: 25 }, legend: { story: { cs: 'kopie', en: 'copy' }, hint: '' } };
+    const warrior = { id: 'uuid-war', category: 'enemy', name: 'Kostlivý bojovník', images: [pic], stats: { hp: 18 }, legend: { story: 'Náš bojovník', hint: '' } };
+    // a browser from before they were built-in: its necromancer calls the kid's warrior, a map sends the kid's roc
+    const older = base.assets.filter((a) => seeded.includes(a.id)).map((a) => (a.id === 'necromancer' ? { ...a, stats: { ...a.stats, minions: ['skeleton', 'uuid-war'] } } : a));
+    const map = { id: 'm', waves: { rounds: [{ groups: [{ enemy: 'uuid-rukh', count: 1 }, { enemy: 'uuid-pack', count: 2 }] }] } };
+    const { db, changed } = migrateDb({ ...base, settings: { ...base.settings, builtInsSeeded: seeded }, assets: [...older, rukh, pack, warrior], maps: [map] });
+    expect(changed).toBe(true);
+    const got = db.assets.find((a) => a.id === 'rukh');
+    expect(got).toMatchObject({ builtIn: true, author: 'Bárník', images: [pic], stats: { hp: 150, flying: true }, name: { cs: 'Rukh', en: 'Roc' } });
+    expect(got.legend).toEqual(DEFAULT_COMPONENTS.find((c) => c.id === 'rukh').legend);
+    expect(db.assets.find((a) => a.id === 'goblinPack').legend).toEqual(DEFAULT_COMPONENTS.find((c) => c.id === 'goblinPack').legend); // a copied legend is replaced
+    expect(db.assets.find((a) => a.id === 'skeletonWarrior').legend.story).toBe('Náš bojovník'); // the kid's own is kept
+    expect(db.assets.filter((a) => a.category === 'enemy' && a.id.startsWith('uuid'))).toHaveLength(0); // nothing twice
+    expect(db.assets.find((a) => a.id === 'necromancer').stats.minions).toEqual(['skeleton', 'skeletonWarrior']);
+    expect(db.maps[0].waves.rounds[0].groups.map((g) => g.enemy)).toEqual(['rukh', 'goblinPack']);
+  });
 });

@@ -383,6 +383,15 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 .review-pic { width: 72px; height: 72px; object-fit: contain; border: 1.5px solid var(--ink); border-radius: 6px; }
 .review-pic.small { width: 40px; height: 40px; }
 .review-actions { gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.review-pic.no-pic { display: inline-block; background: #f3eee0; }
+/* the copies a map import made (data/ImportDuplicates) */
+.dup-table td { min-width: 120px; }
+.dup-thing { display: flex; align-items: center; gap: 8px; }
+.dup-choice { display: flex; flex-wrap: nowrap; gap: 4px; }
+.dup-choice .btn.chip { min-height: 38px; padding: 2px 10px; white-space: nowrap; }
+.dup-choice label { position: relative; cursor: pointer; }
+.dup-choice input { position: absolute; opacity: 0; width: 0; height: 0; }
+.dup-choice label:focus-within { outline: 2px solid var(--ink); outline-offset: 1px; }
 
 .turn-phone { position: absolute; inset: 30% 10% auto; z-index: 60; text-align: center; font-size: 1.2em; padding: 1em; background: var(--hl-yellow); }
 

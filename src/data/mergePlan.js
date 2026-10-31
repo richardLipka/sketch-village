@@ -12,7 +12,8 @@
 // (decorations on a map, minions, looks, themes) are pointed at the local copy.
 
 import { migrateDb } from './migrate.js';
-import { DEFAULT_COMPONENTS } from '../config/components.js';
+import { DEFAULT_COMPONENTS, DEFAULT_ENEMY_STATS } from '../config/components.js';
+import { defaultItemStats } from '../config/weapons.js';
 import { SAVE_VERSION } from './saveFile.js';
 
 export const REVIEW_COLLECTIONS = ['themes', 'assets', 'maps', 'rules'];
@@ -30,6 +31,44 @@ export function stable(v) {
   return JSON.stringify(v ?? null);
 }
 const same = (a, b) => stable(a) === stable(b);
+
+const isPlainObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+const isEmpty = (v) => v === undefined || v === null || v === '' || v === false
+  || (Array.isArray(v) && !v.length) || (isPlainObj(v) && !Object.keys(v).length);
+
+/** Drop what means "nothing" (an empty text, false, 0, empty lists, unused picture slots). */
+function prune(v) {
+  if (Array.isArray(v)) {
+    const a = v.map(prune);
+    while (a.length && isEmpty(a.at(-1))) a.pop();
+    return a;
+  }
+  if (isPlainObj(v)) {
+    const o = {};
+    for (const [k, x] of Object.entries(v)) {
+      const p = prune(x);
+      if (!isEmpty(p) && p !== 0) o[k] = p;
+    }
+    return o;
+  }
+  return v;
+}
+
+/**
+ * A record as it plays: the studio writes default numbers into a component the
+ * moment it is saved (`flying: false`, `splash: 0`…), so a component with and
+ * one without them are the same thing.
+ */
+export function comparable(rec) {
+  if (!rec) return rec;
+  const r = { ...rec };
+  for (const k of IGNORE) delete r[k];
+  if (r.category === 'enemy') r.stats = { ...DEFAULT_ENEMY_STATS, ...r.stats };
+  if (['weapon', 'shield', 'armor'].includes(r.category)) r.stats = { ...defaultItemStats(r.category), ...r.stats };
+  return prune(r);
+}
+
+export const sameThing = (a, b) => stable(comparable(a)) === stable(comparable(b));
 
 /** Lower-case names of a record (built-ins have one per language). */
 export function namesOf(rec) {
@@ -61,7 +100,7 @@ export function diffRecords(a, b, path = '', out = [], depth = 0) {
 }
 
 /** Replace every string equal to a remapped id, anywhere inside `v`. */
-function remapIds(v, remap) {
+export function remapIds(v, remap) {
   if (typeof v === 'string') return remap[v] ?? v;
   if (Array.isArray(v)) return v.map((x) => remapIds(x, remap));
   if (isObj(v)) return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, remapIds(x, remap)]));
@@ -70,14 +109,17 @@ function remapIds(v, remap) {
 
 const pickPrefs = (s = {}) => Object.fromEntries(PREF_KEYS.filter((k) => s[k] !== undefined).map((k) => [k, s[k]]));
 
+/**
+ * An older file's enemy / building / weapon lists as components (without
+ * adding the built-ins – the importing browser has its own).
+ */
+export function upgradeIncoming(file) {
+  const settings = { builtInsSeeded: DEFAULT_COMPONENTS.map((c) => c.id), themesSeeded: true };
+  return { ...migrateDb({ ...file, settings }).db, settings: file.settings };
+}
+
 export function planImport(db, file, { language } = {}) {
-  // older files: their enemy / building / weapon lists become components first
-  // (without adding the built-ins – the importing browser has its own)
-  let incoming = file;
-  if ((file.version ?? 1) < SAVE_VERSION) {
-    const settings = { builtInsSeeded: DEFAULT_COMPONENTS.map((c) => c.id), themesSeeded: true };
-    incoming = { ...migrateDb({ ...file, settings }).db, settings: file.settings };
-  }
+  const incoming = (file.version ?? 1) < SAVE_VERSION ? upgradeIncoming(file) : file;
 
   // 1) match every incoming element to a local one: by id, else by name (and kind)
   const matches = []; // { collection, local, rec }
@@ -104,7 +146,7 @@ export function planImport(db, file, { language } = {}) {
   for (const { collection, local, rec: raw } of matches) {
     const rec = remapIds(raw, remap);
     if (!local) { additions.push({ collection, record: rec }); continue; }
-    const diff = diffRecords(local, rec);
+    const diff = diffRecords(comparable(local), comparable(rec));
     if (!diff.length) { unchanged++; continue; }
     changes.push({ collection, id: local.id, name: local.name ?? rec.name, category: local.category, local, record: rec, diff });
   }

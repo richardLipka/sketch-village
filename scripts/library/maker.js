@@ -1,7 +1,9 @@
 // Runs in the browser (scripts/make-library.mjs loads it through Vite): draws
 // the example maps of the public library – roads, a pond, building spots,
 // caves – and the decorations standing on them, pencil-style, and returns
-// them as save files (one per map, everything inside, pictures as data URLs).
+// them as map files (one per map, everything inside, pictures as data URLs):
+// the class pack's drawings of the buildings, monsters, heroes… (a fresh game
+// starts with them, so importing a library map into it adds just the map).
 // Seeded: the same code gives the same files.
 
 import { emptyMap, validateMap, placeCave, CENTRE_RADIUS, MAX_SPOT_DISTANCE } from '/src/logic/mapModel.js';
@@ -13,6 +15,8 @@ import { fillPolygon, seededRng } from '/src/maps/decorEdit.js';
 import { DEFAULT_THEMES, fitsTheme } from '/src/config/themes.js';
 import { DEFAULT_BUILDING_TYPES } from '/src/config/buildings.js';
 import { playGame } from '/src/logic/balanceBot.js';
+import { parseSaveFile, mergeSaveFile } from '/src/data/saveFile.js';
+import { migrateDb } from '/src/data/migrate.js';
 
 const STAMP = '2026-10-31T00:00:00.000Z';
 const AUTHOR = 'Kreslená vesnice';
@@ -241,7 +245,7 @@ const MAPS = [
   },
 ];
 
-async function makeMap(def, decorById) {
+async function makeMap(def, decorById, home) {
   const m = { ...emptyMap(def.name), id: `lib-${def.file}`, author: AUTHOR, description: def.description.cs, theme: def.theme, createdAt: STAMP, updatedAt: STAMP };
   const { width: W, height: H } = m.world;
   const cx = W / 2, cy = H / 2;
@@ -291,15 +295,19 @@ async function makeMap(def, decorById) {
   const results = [1, 2, 3].map((seed) => playGame({ map: { ...m, background: null }, grid, buildingTypes: types, seed })).map((g) => `${g.result}@${g.round}`);
 
   const used = new Set(m.decorations.map((d) => d.asset));
-  const db = { assets: [...used].map((id) => decorById[id]), themes: DEFAULT_THEMES };
-  const file = mapPackage(m, db, undefined, new Date(STAMP), { thumbnail: await mapThumbnail(m, db.assets) });
+  const decor = [...used].map((id) => decorById[id]);
+  const db = { assets: [...home.assets, ...decor], themes: DEFAULT_THEMES };
+  const file = mapPackage(m, db, undefined, new Date(STAMP), { thumbnail: await mapThumbnail(m, decor) });
   file.info = { ...file.info, title: def.title, description: def.description }; // both languages in the library
   return { name: `${def.file}.json`, file, problems: check.problems, results, decorations: m.decorations.length, spots: m.spots.length };
 }
 
 export async function makeLibrary() {
   const decorById = Object.fromEntries(Object.keys(DRAW).map((k, i) => [`lib-${k}`, decoration(k, 100 + i)]));
+  // what a fresh game has: the built-ins with the class pack's drawings
+  const pack = parseSaveFile(await (await fetch('/default-data.json')).text());
+  const home = migrateDb(mergeSaveFile({ settings: {}, assets: [], maps: [], themes: [], rules: [] }, pack).db).db;
   const out = [];
-  for (const def of MAPS) out.push(await makeMap(def, decorById));
+  for (const def of MAPS) out.push(await makeMap(def, decorById, home));
   return out;
 }

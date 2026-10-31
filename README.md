@@ -35,13 +35,23 @@ All data lives in each browser. To give every computer the same drawings, maps a
 2. Rename the file to `default-data.json` and replace [`public/default-data.json`](public/default-data.json) in this repository, then push.
 3. A new computer loads it on its first start; others press **Save & load → Load class pack** (merges, deletes nothing).
 
-The shipped file is empty, so a fresh browser gets the built-in sample map instead.
+The shipped file holds the class's drawings: the built-in buildings, monsters and coins as the kids drew them, the goblin pack, skeleton warrior and roc, four heroes, the castle's soldiers, a chest and a few decorations. It has no maps, so a fresh browser also gets the built-in sample map.
+
+## Sharing one map
+
+**Maps → ⬇ Download** on a map gives one `map-<name>.json` with the map and everything needed to play it as you see it: the buildings of its world, heroes, weapons, coins, soldiers, the monsters of its waves and what they call, decorations, textures (not the game's own icons). Loading it on another computer (**Save & load**, the Library or a `?data=` link):
+
+- things that are exactly the same there are used as they are;
+- things with the same name but another picture or other numbers come as copies named after the map – *Goblin (Zelené údolí)* – so the map plays as you made it;
+- at the end a table lists the copies: **Keep both** (default), **Only mine** or **Only the map's**.
+
+Loading the same map again adds nothing.
 
 ## Public library and data links
 
 Ready-made maps for everyone live in [`public/library/`](public/library/): each one is a normal save file with its pictures inside, listed in [`public/library/index.json`](public/library/index.json). The game's **📚 Library** screen shows that list; **Load** imports a file like any save file and **Play this map** starts with it.
 
-- **Add a file**: share a map (📤 in Maps) or download everything, put the `.json` into `public/library/`, run `npm run library` (rebuilds `index.json` from the files' titles and pictures), push.
+- **Add a file**: download a map (**⬇ Download** on a map in Maps) or everything, put the `.json` into `public/library/`, run `npm run library` (rebuilds `index.json` from the files' titles and pictures), push.
 - **Links**: `https://richardlipka.github.io/sketch-village/?data=goblin-forest` opens the game with `library/goblin-forest.json` loaded and its map picked. `?data=` also takes a path (`?data=packs/class-3b.json`) or a full `https://…` address of a file elsewhere (the game asks first). The Library's **Link** button copies such a link.
 - `npm run make-library` re-draws the three example maps (`scripts/library/maker.js`, in a headless browser; `PW_CHANNEL=chrome` uses the installed Chrome).
 
@@ -50,12 +60,12 @@ All data is always one file: the browser itself keeps exactly one save-file reco
 ## Code map
 
 - `src/assets/` – studio, the general component editor: `categories.js` (registry), `CameraCapture`, `AssetCropper`, `BackgroundRemover` + `bgRemoval.js`, `SketchPad`, `ImageSlot` (pipeline), `AssetStudio` (library), `AssetEditor` (pictures + all numbers of one component), `BuildingStatsEditor` (features + levels), `EnemyStatsEditor` (numbers + minions), `ProjectilePick` (which projectile a shooter flies), `SoundEditor` + `audioClip.js` (monster sounds: record, auto-trim, trim), `SoundPreview` (hear them as in the game), `PasteButton` + `clipboard.js` (pictures from the clipboard), `AnimationEditor` + `AnimPreview` + `animation.js` (animation strips: cutting, lining up, speed, preview), `ThemesEditor`, `ItemStatsEditor`, `HeroStatsEditor`, `NumField`
-- `src/data/` – `safety.js` + `SafetyCard` (backup reminder, asking the browser to keep the data), `saveFile.js` (JSON format), `mergePlan.js` + `ImportReview` + `useImporter` (import: add new, review changed – matched by name), `migrate.js` (old data → components), `store.js` (IndexedDB: one save-file record, coalesced writes), `defaultData.js` (class pack), `library.js` + `Library` (public library, `?data=` links), `DataPanel`
+- `src/data/` – `safety.js` + `SafetyCard` (backup reminder, asking the browser to keep the data), `saveFile.js` (JSON format), `mergePlan.js` + `ImportReview` + `useImporter` (import: add new, review changed – matched by name), `mapImport.js` + `ImportDuplicates` (a map file: the same things used, partly different ones copied as "Name (Map)", then a table to merge them), `migrate.js` (old data → components), `store.js` (IndexedDB: one save-file record, coalesced writes), `defaultData.js` (class pack), `library.js` + `Library` (public library, `?data=` links), `DataPanel`
 - `src/config/` – `uiIcons.js` (editable GUI icons), `components.js` (built-in components + `buildingsOf` / `enemyTypesOf` / `itemsOf` / `coinTypesOf`), `features.js` (what a building can do), `themes.js` (worlds), `difficulty.js` (easy / normal / hard), `legends.js` (monster stories and hints), default numbers `balance.js`, `buildings.js`, `heroStats.js`, `enemies.js`, `weapons.js`, `waves.js`; `rules.js` merges the kids' global rules over them
 
 Every game part – building type, enemy, weapon, shield, armor, coin, hero – is one **component** (a record in `assets`) holding its pictures and all its numbers. A new kind of building is just a component with a different set of features; no code change is needed.
 - `src/logic/` – pure, unit-tested game logic: `pathGrid.js` (bitmap → walkable grid), `pathfinding.js` (A*, flow field), `mapModel.js` (map record + validation), `waves.js` (wave engine), `world.js` (the game simulation; its parts by topic in `world/`: equipment, buildings, soldiers, enemies, combat, hero, coins), `balanceBot.js` (plays 20 rounds for `balance.test.js`, and the kids' own maps for "Let the robot try")
-- `src/maps/` – `MapList`, `MapPainter` (paint + place + terrain, theme) with `PainterTools` (tool bars, terrain panel) and `painterOverlay.js` (overlay drawing), `DecorPanel` + `decorEdit.js` (decorations: searchable list, frame and handles, polygon fill), `WaveEditor`, `MapTestPanel` + `mapTest.js` + `mapTest.worker.js` ("Let the robot try"), `shareMap.js` (one map as a file), `mapRuntime.js` (canvas helpers, sample/starter map), `textures.js` (terrain textures)
+- `src/maps/` – `MapList`, `MapPainter` (paint + place + terrain, theme) with `PainterTools` (tool bars, terrain panel) and `painterOverlay.js` (overlay drawing), `DecorPanel` + `decorEdit.js` (decorations: searchable list, frame and handles, polygon fill), `WaveEditor`, `MapTestPanel` + `mapTest.js` + `mapTest.worker.js` ("Let the robot try"), `shareMap.js` (one map as a file with everything needed to play it), `mapRuntime.js` (canvas helpers, sample/starter map), `textures.js` (terrain textures)
 - `src/game/` – `monsterVoices.js` (when the kids' monster sounds may play), `viewport.js` (the map covers the screen), `PlaySetup` (pick map + hero), `GameView` (React ↔ Phaser, fullscreen layout), `phaser.js` (the trimmed Phaser the game uses), `GameScene` (draws the World, animations, wobble; its parts in `scene/`: Textures, Input, Effects, Entities), `GameOverlay` (HUD), `BuildPanel`, `Chronicle` (monster legends), `RulesEditor` (global rules only), `sound.js` (WebAudio effects), `tutorial.js` (first-game tips)
 - `src/locales/` – `cs.json`, `en.json` (a test checks both have the same keys)
 - `src/ui/` – `Screen.jsx` (fixed head, scrolling body), `search.js` + `SearchBox` (list search), `UiIcon` (drawn GUI icons), `Modal.jsx` (fixed header / footer), `sketch.css` (pen-and-pencil look, phone layout), `device.js` (phone / tablet / PC detection), `install.js` + `UpdateToast` (installing, new versions), `LanguageSwitcher`, `FullscreenButton`, `Modal`

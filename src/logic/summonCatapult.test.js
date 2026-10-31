@@ -24,7 +24,7 @@ const at = (w, type, x, y = 360) => { const e = w.spawnEnemy(type, { x, y }); e.
 const freeze = (w) => { for (const t of Object.values(w.types)) t.speed = 0; }; // nobody walks: easier to count
 
 describe('summoners call minions', () => {
-  it('a necromancer calls skeletons every few seconds, never more than its maximum', () => {
+  it('a necromancer calls skeletons (and skeleton warriors) every few seconds, never more than its maximum', () => {
     const w = makeWorld();
     freeze(w);
     w.hero.dead = true; // keep the hero out of it
@@ -35,7 +35,8 @@ describe('summoners call minions', () => {
     expect(mine()).toHaveLength(0);
     run(w, 1);
     expect(mine()).toHaveLength(type.minionCount);
-    expect(mine().every((e) => e.type === 'skeleton')).toBe(true);
+    expect(mine().every((e) => type.minions.includes(e.type))).toBe(true);
+    expect(type.minions).toEqual(['skeleton', 'skeletonWarrior']);
     run(w, type.minionEvery * 6);
     expect(mine()).toHaveLength(type.minionMax); // capped
     expect(w.drainEvents().some((e) => e.type === 'summon')).toBe(true);

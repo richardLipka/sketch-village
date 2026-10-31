@@ -51,7 +51,7 @@ describe('legends and the chronicle', () => {
   it('a map’s chronicle lists the monsters of its waves and the minions they call', () => {
     const enemies = enemyTypesOf(DEFAULT_COMPONENTS);
     const waves = { rounds: [{ groups: [{ enemy: 'goblin', count: 3 }] }, { groups: [{ enemy: 'necromancer', count: 1 }] }] };
-    expect(monstersOfWaves(waves, enemies).map((e) => e.id).sort()).toEqual(['goblin', 'necromancer', 'skeleton']);
+    expect(monstersOfWaves(waves, enemies).map((e) => e.id).sort()).toEqual(['goblin', 'necromancer', 'skeleton', 'skeletonWarrior']);
     expect(enemies.find((e) => e.id === 'spider').legend.hint.en).toMatch(/spiderlings/);
   });
 

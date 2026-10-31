@@ -35,7 +35,7 @@ A short, replayable village-defense game for a group of kids who also produce al
 - **Fully static, no backend.** All data lives in the browser (IndexedDB, as one save file) and moves between computers only via the JSON save file (§13a) – downloaded, or loaded from the public library / a `?data=` link (§13c).
 - GitHub Actions workflow (`.github/workflows/deploy.yml`): on every push and pull request → `npm ci` → `npm run lint` → `npm test` → `npm run e2e` (Playwright, Chromium); on push to `main` then → `vite build` → deploy `dist/` to Pages. A failed browser test uploads its trace.
 - Vite `base` = `/<repo>/` so asset URLs work under the sub-path. No client-side routing that needs server rewrites (use in-app state or hash routes).
-- **Class pack** (bundled default content): `public/default-data.json` shipped with the site is merged on a browser's first run and can be loaded any time (Save & load → Load class pack). Updating it = export JSON from the game, rename, commit it to the repo (steps in README). The shipped file is empty, so a fresh browser gets the built-in sample map.
+- **Class pack** (bundled default content): `public/default-data.json` shipped with the site is merged on a browser's first run and can be loaded any time (Save & load → Load class pack). Updating it = export JSON from the game, rename, commit it to the repo (steps in README). The shipped pack holds **the class’s drawings** (5w): the built-in buildings, monsters and coins drawn by the kids, three new monsters (goblin pack, skeleton warrior, roc), four heroes, three soldiers the castle sends, a chest and three decorations – 32 components, no maps, so a fresh browser still gets the sample map. A unit test checks that every built-in monster and building in it has a picture, the game’s names and legends and the game’s numbers.
 - Note: data in IndexedDB is per browser + per origin; kids on different computers must export/import JSON (or the teacher commits a combined file as the new default).
 
 ### 2.2 Installable app, offline play
@@ -418,7 +418,13 @@ Everything is downloadable as **one JSON file** and importable on another comput
 - `info` (optional): `{ title, description, author, thumbnail }` for the public library (§13c); texts may be `{ cs, en }`, the thumbnail is a 192 × 108 JPEG of the map as the game shows it. A shared map file gets it automatically.
 - Version 3 adds the `themes` collection, `themes` on components and `theme` / `textures` on maps. Built-in components are tracked by id (`settings.builtInsSeeded`), so built-ins added in a later version arrive in existing browsers, but one a kid deleted never comes back.
 - Version field + migration (`data/migrate.js`): version-1 files (separate `enemyTypes`, `buildingTypes`, `weapons`, `rules.townHallLevels`, per-type drawing categories) are converted into components on load and after import.
-- **Share one map** (📤 in the map list, `maps/shareMap.js`): a normal save file `map-<name>.json` with just the map, its theme and the components it uses – decorations, studio terrain textures, the enemies of its waves and the minions they call. A friend imports it like any file (new things added, changes reviewed).
+- **Download one map** (⬇ Download on a map in the map list, `maps/shareMap.js`): a save file `map-<name>.json` marked `"kind": "map"` with the map, its theme and **everything needed to play it as its maker sees it** – the Town Hall and the buildings of its world with every other look of them, heroes, weapons, shields, armor, coins, chests, soldiers, projectiles and caves, the monsters of its waves and whatever they call (and whatever those refer to: a castle's soldiers, projectiles…), its decorations and terrain textures. The game's GUI icons stay out. The waves travel with the map (a map still on the default plan gets it written in, so the friend's game sends the same monsters).
+- **Importing a map file** (`data/mapImport.js`, `ImportDuplicates`) – a file with `kind: "map"`, or with `info` and one map (older shared maps, the library): every component is compared with the ones here (by id, else by kind and name; the studio's default numbers like `flying: false` count as no value):
+  - **exactly the same** → the map uses the one here; nothing is added;
+  - **partly the same** (same name, but another picture, other numbers…) → added as a **copy with a new name** made from its name and the map's name – *Goblin (Zelené údolí)* – so the map plays with the maker's version. Whatever uses a changed thing becomes a copy too (a necromancer whose skeletons differ must call the maker's skeletons), and a changed map becomes *name (2)*;
+  - **not here** → added as it is.
+  A copy made by an earlier import of the same map is recognised (same content, derived name), so loading a map twice adds nothing twice. At the end a **table of the copies** shows each one next to mine with what differs (picture, name, speed…) and three choices: **Keep both** (default), **Only mine** (the copy goes and everything that used it uses mine) or **Only the map's** (mine gets the map's version, keeping its id and name; the copy goes). Themes are matched by id or name and never copied. Summary: new things / copies / already the same / merged.
+  Known limit: buildings, heroes and items aren't tied to a map, so a kept copy of one (*Tower (Zelené údolí)*) is offered in every game – merge it to have one.
 
 ## 13b. Keeping the drawings safe
 
@@ -432,8 +438,8 @@ All data lives only in the browser, which may clear it (low disk space; Safari a
 
 Ready-made save files for everyone, served with the website (`public/library/`):
 
-- **The files**: normal save files (§13a), one per map or pack, pictures inside. The game ships three example maps – *Zelené údolí* (plains, a pond, three roads), *Skřetí les* (goblin forest, two winding roads, a spruce forest), *Strašidelný hřbitov* (graveyard, four roads and a ring, harder) – each with its own pencil-drawn decorations. They are drawn by `scripts/library/maker.js` in a headless browser (`npm run make-library`), checked to be valid, and played by the balance robot on normal (the first two are won every time, the graveyard 2 of 3).
-- **The listing** `public/library/index.json` (`{ format: "sketch-village-library", version: 1, files: [{ file, title, description, author, kind, maps, components, size, thumbnail }] }`) is made from the files' `info` by `npm run library` (`scripts/library-index.mjs`); a unit test fails when it is out of date. To add a file: share a map (📤) or download everything, put the file into `public/library/`, run `npm run library`, push.
+- **The files**: normal save files (§13a), one per map or pack, pictures inside. The game ships three example maps – *Zelené údolí* (plains, a pond, three roads), *Skřetí les* (goblin forest, two winding roads, a spruce forest), *Strašidelný hřbitov* (graveyard, four roads and a ring, harder) – each with its own pencil-drawn decorations. They are drawn by `scripts/library/maker.js` in a headless browser (`npm run make-library`), checked to be valid, and played by the balance robot on normal (the first two are won every time, the graveyard 2 of 3). Each is a map file (§13a) with the class pack's drawings inside, so a fresh game loads just the map and its decorations.
+- **The listing** `public/library/index.json` (`{ format: "sketch-village-library", version: 1, files: [{ file, title, description, author, kind, maps, components, size, thumbnail }] }`) is made from the files' `info` by `npm run library` (`scripts/library-index.mjs`); a unit test fails when it is out of date. To add a file: download a map (⬇ Download) or everything, put the file into `public/library/`, run `npm run library`, push.
 - **Library screen** (📚 in the menu, `data/Library.jsx`): the listing with pictures, search by title / description / author, **Load** (imports like any save file – new things added, changed ones reviewed, `data/useImporter.jsx`), then **Play this map** opens the play screen with it picked; **Link** copies a link that opens the game with that file.
 - **Data links** `?data=<file>` (`data/library.js`): a bare name is a library file (`?data=goblin-forest` → `library/goblin-forest.json`), a path is relative to the game, a full `https://` address loads a file from anywhere (CORS permitting). Files from the game's own site load at once; from another site the kid is asked first (the host is shown). After loading, the play screen opens with the file's first map picked, and the parameter is removed from the address so a reload doesn't load it again. A missing file or a web page instead of a file says "couldn't be downloaded".
 - Offline: the listing and every file someone loaded are kept by the service worker (network first).
@@ -445,7 +451,7 @@ src/
   main.jsx, App.jsx
   ui/            Screen.jsx (fixed head + scrolling body), sketch.css (CSS wobble instead of Rough.js, safe areas), device.js (phone / tablet / pc), install.js (install prompt, iOS, standalone), UpdateToast (new version / offline ready), LanguageSwitcher, FullscreenButton, Modal
   assets/        categories.js, clipboard.js + PasteButton (paste pictures), SoundEditor + audioClip.js (monster sounds: record, trim), CameraCapture, AssetCropper, BackgroundRemover + bgRemoval.js, SketchPad, ImageSlot, AssetStudio, AssetEditor (component editor), BuildingStatsEditor, EnemyStatsEditor, ItemStatsEditor, HeroStatsEditor, ThemesEditor, AnimationEditor + AnimPreview + animation.js (frames, strip cutting, frame-count guess), NumField
-  data/          saveFile.js (JSON format), mergePlan.js + ImportReview + useImporter (reviewed import, shared by all ways of loading a file), safety.js + SafetyCard (backup reminder, persistent storage), migrate.js (v1 → components), store.js (IndexedDB: one save-file record, coalesced writes), defaultData.js (class pack), library.js + Library (public library, ?data= links), DataPanel
+  data/          saveFile.js (JSON format), mergePlan.js + ImportReview + useImporter (reviewed import, shared by all ways of loading a file), mapImport.js + ImportDuplicates (importing a map file: same things used, partly different ones copied, then merged), safety.js + SafetyCard (backup reminder, persistent storage), migrate.js (v1 → components), store.js (IndexedDB: one save-file record, coalesced writes), defaultData.js (class pack), library.js + Library (public library, ?data= links), DataPanel
   config/        components.js (built-in components + derived lists), features.js, themes.js, legends.js (monster legends), balance, buildings, heroStats, enemies, weapons, waves (defaults) + rules.js (global rules over defaults)
   logic/         pathGrid, pathfinding, mapModel, waves, world (the simulation's core: setup, rounds, events, HUD), balanceBot  ← pure, unit-tested
   logic/world/   the rest of the World by topic, mixed into the class: equipment, buildings (+ FEATURE_BEHAVIOUR), soldiers, enemies, combat (damage, projectiles), hero (+ walking on roads), coins, shared
@@ -453,7 +459,7 @@ src/
   game/          monsterVoices.js (when monster sounds play), viewport.js (the map covers the screen), PlaySetup, GameView (React ↔ Phaser), GameScene (setup, animations, events), GameOverlay, BuildPanel, Chronicle, RulesEditor, sound.js, tutorial.js
   game/scene/    the rest of GameScene by topic, mixed into the class: Textures (placeholders), Input (clicks, pan, zoom), Effects (floating numbers, rings, bars), Entities (sprites following the world), draw.js
   locales/       cs.json, en.json
-public/default-data.json   class pack (empty by default)
+public/default-data.json   class pack: the class's drawings (built-in monsters and buildings, heroes, soldiers…)
 public/library/            the public library: save files + index.json (§13c)
 scripts/                   library-index.mjs (npm run library), make-library.mjs + library/maker.js (npm run make-library), make-icons.mjs
 public/icons/              app icon (icon.svg → PNGs via npm run icons)
@@ -475,6 +481,7 @@ e2e/                       Playwright browser tests (§15a)
 5f. **Components** ✅ – every game part is one component (pictures + all numbers) edited in the studio, which became the general component editor (§7.1). Buildings are made from **features** (workers, arrows, soldiers, income, hero healing) with a table of 1–5 levels whose fields follow the features; the Town Hall is the `core` building type with the same features; "another look" components add drawings to an existing type. Enemies, weapons/shields/armor and coins carry their numbers next to their drawings; the separate Enemies and Weapons screens are gone and the Rules editor keeps only global rules. Old data and version-1 save files are migrated automatically. Tests cover new building kinds made only from data (market, well, 4-level tower).
 5g. **Lives & backpack** ✅ – every lost life sends the hero away for 10 s and back to the Town Hall; losing all 5 loses the game (the end screen says why). The bot now walks back to heal below 40 % HP and still wins every seed without losing a life; the same bot without healing loses every seed (new test). Small retune: dragon 280 HP / speed 36, rounds 14–15 spawns. **Backpack** rebuilt: three slots (right hand, left hand, armor) with the hero's attack / reach / armor shown live, items dragged onto slots with mouse or finger (or tap item → tap slot), wrong slots refused, worn items dragged back to take them off.
 5h. **Summoners, catapult, themes, terrain** ✅ – enemies can **call minions** (any enemies, several kinds mixed; how many, how often, at most alive, more on death; minions never summon): new built-ins **necromancer** → skeletons, **spider queen** → spiderlings (more when she dies), plus skeleton and spiderling. New building feature **lobs** and built-in **catapult** (rounds 6 / 10 / 15): area damage to walking enemies. **Themes** (§7.2) with an editor; maps have a theme. **Terrain textures** in the map editor with preview (§5.1). Waves: spider queen in rounds 8 and 19, necromancers in 12 and 17; necromancer tuned to 90 HP / every 8 s; the bot builds a catapult – all seeds won, waves 40–60 s. Architecture: building features run from a behaviour table, one spawn path for caves and summoners, ground-target projectiles, built-ins seeded by id.
+5w. **Map files with everything inside, the class's monsters** ✅ – ⬇ Download on a map gives one file with the map and everything needed to play it (no GUI icons); importing it uses what is exactly the same, copies what is partly different under a name derived from the map's, and ends with a table to merge the copies (keep both / only mine / only the map's) (§13a). The class's drawings are the class pack: the kids renamed and redrew the built-in monsters (spider rider, shaman, hobgoblin, goblin king) – names, numbers and legends in the game now match them, the goblin pack, skeleton warrior and roc became built-ins (a browser that already had them as the kids' own takes them over instead of getting them twice) and the default waves – the waves of every new map – send them (§16.4–16.5). The library maps were redrawn as map files with the class's drawings inside.
 5v. **Single-file storage, public library, data links** ✅ – the browser keeps everything as one save-file record with coalesced writes, and a save resolves only once it is stored (§13a); the public library with three example maps, its listing and the Library screen; `?data=` links that open the game with a file loaded (§13c); the editors and other screens load when first opened (main bundle 548 → 411 kB); `GameScene` and `MapPainter` split into parts (§13); shared map files carry a title and a thumbnail. Open issues: §17.
 5u. **Architecture review** ✅ – fixed: a soldier's attack played the default soldier's animation instead of its own kind's; enemies could aim at a soldier killed earlier in the same frame; settings were saved inside React state updaters (which React may run twice) – now outside them; the map editor copied the 3.7 MB bitmap into undo for every marker change and even for a click that only selected something – now only painting copies it and a selection makes an undo step only when it moves; dragged markers can't leave the map; older backups and class packs (before data version 4) brought the 20 % higher building HP back on import – files are now upgraded when read; the game loaded every picture, animation frame and sound one after another – now once each and in parallel, and an unreadable picture no longer stops the game from starting. Open structural issues: §17.
 5t. **Decoration editing, full-screen phone map** ✅ – decorations: a searchable panel left of the map, one click = one (fixed double placement), selection frame with handles to resize / stretch, Delete key, polygon fill with density and size variety (§5.1); the game map covers the whole screen on phones (§4a). Also: the nearest frame handle wins; the decoration panel is its own component; a flaky browser test (difficulty, reloading before the setting was stored) fixed.
@@ -671,40 +678,51 @@ Full village (10 spots maxed + Town Hall + all hero upgrades) costs ≈ **2 000 
 
 | Id | Name (cs / en) | Type | HP | Speed | Dmg | Cd | Range | Armor | Coins |
 |---|---|---|---|---|---|---|---|---|---|
-| goblin | Skřet / Goblin | melee | 25 | 45 | 4 | 1.0 | 25 | 0 | 1–2 |
-| wolf | Vlk / Wolf | fast melee | 18 | 80 | 3 | 0.7 | 25 | 0 | 1–2 |
-| archer | Lučištník / Archer | ranged | 20 | 40 | 5 | 1.5 | 150 | 0 | 2 |
-| orc | Zlobr / Orc | tank melee | 90 | 30 | 10 | 1.4 | 30 | 15 % | 3–5 |
-| bat | Netopýr / Bat | flying | 15 | 55 | 3 | 1.0 | 25 | 0 | 1–2 |
-| troll | Troll / Troll | boss melee | 400 | 22 | 25 | 2.0 | 40 | 25 % | 20 |
-| dragon | Drak / Dragon | boss flying, ranged | 300 | 25 | 20 | 2.0 | 120 | 20 % | 20 |
+| goblin | Goblin / Goblin | melee | 25 | 45 | 4 | 1.0 | 25 | 0 % | 1–2 |
+| wolf | Pavoučí jezdec / Spider rider | melee | 18 | 90 | 3 | 0.7 | 25 | 0 % | 1–2 |
+| archer | Šaman / Shaman | ranged | 20 | 40 | 5 | 1.5 | 150 | 0 % | 2 |
+| orc | Hopgoblin / Hobgoblin | melee | 90 | 30 | 10 | 1.4 | 30 | 15 % | 3–5 |
+| bat | Netopýr / Bat | flying, melee | 15 | 55 | 3 | 1.0 | 25 | 0 % | 1–2 |
+| troll | Troll / Troll | boss, melee | 400 | 22 | 25 | 2.0 | 40 | 25 % | 20 |
+| skeleton | Kostlivec / Skeleton | melee | 18 | 42 | 4 | 1.1 | 25 | 0 % | 1 |
+| necromancer | Nekromant / Necromancer | ranged, calls skeleton, skeletonWarrior | 90 | 26 | 7 | 1.8 | 140 | 10 % | 6–8 |
+| spiderling | Pavoučátko / Spiderling | melee | 8 | 70 | 2 | 0.8 | 22 | 0 % | 0–1 |
+| spider | Pavoučice / Spider queen | melee, calls spiderling | 130 | 32 | 9 | 1.2 | 28 | 10 % | 5–7 |
+| dragon | Král goblinů / Goblin king | boss, ranged, calls goblin, orc, archer | 300 | 32 | 20 | 2.0 | 120 | 20 % | 20 |
+| goblinPack | Smečka goblinů / Goblin pack | melee | 25 | 45 | 4 | 1.0 | 25 | 0 % | 1–2 |
+| skeletonWarrior | Kostlivý bojovník / Skeleton warrior | melee | 18 | 42 | 4 | 1.1 | 25 | 0 % | 1 |
+| rukh | Rukh / Roc | flying, melee | 150 | 90 | 10 | 1.0 | 25 | 15 % | 3–6 |
+
+The names, numbers, pictures (class pack, §2.1) and legends follow the class’s drawings: the wolf is a goblin riding a giant spider, the archer a skull-masked shaman, the orc a hobgoblin in chain mail, the dragon the goblin king who walks the road and calls goblins, hobgoblins and shamans. The goblin pack, the skeleton warrior (the necromancer calls him with the skeletons) and the roc were drawn by the class and are built-in since 5w.
 
 ### 16.5 Wave plan (20 rounds)
 
 `spawn: "all"` = groups are split round-robin over all caves of the map. Interval = seconds between two enemies of a group. Groups start together unless a delay is given.
 
-| R | Groups (count × enemy, interval s) | Enemies | New thing |
-|---|---|---|---|
-| 1 | 6 goblin (2.0) | 6 | |
-| 2 | 8 goblin (1.8) | 8 | |
-| 3 | 8 goblin (1.6) + 4 wolf (2.0, delay 6) | 12 | fast enemy |
-| 4 | 10 goblin (1.5) + 3 archer (3.0) | 13 | ranged enemy |
-| 5 | 6 goblin + 6 wolf (1.4) + 4 archer (2.5) | 16 | |
-| 6 | 12 goblin (1.2) + 2 orc (5.0, delay 8) | 14 | tank |
-| 7 | 8 wolf (1.0) + 6 archer (2.0) + 2 orc (5.0) | 16 | |
-| 8 | 10 goblin (1.2) + 6 bat (1.5, delay 5) | 16 | **flying** |
-| 9 | 8 bat (1.2) + 6 archer (2.0) + 3 orc (4.0) | 17 | |
-| 10 | 10 goblin (1.0) + **troll** (delay 10) | 11 | **boss** |
-| 11 | 14 goblin (0.9) + 8 wolf (1.0) + 4 archer (2.0) | 26 | |
-| 12 | 10 bat (1.0) + 6 archer (1.8) + 4 orc (3.5) | 20 | |
-| 13 | 12 wolf (0.8) + 8 archer (1.6) + 4 orc (3.0) | 24 | |
-| 14 | 10 goblin (0.8) + 14 bat (0.9) + 5 orc (3.0) | 29 | |
-| 15 | 8 bat (1.0) + 8 archer (1.5) + **dragon** (delay 12) | 17 | **flying boss** |
-| 16 | 20 goblin (0.6) + 10 wolf (0.8) + 6 orc (2.5) | 36 | |
-| 17 | 12 bat (0.8) + 10 archer (1.2) + 6 orc (2.5) | 28 | |
-| 18 | 16 wolf (0.6) + 12 archer (1.0) + 8 orc (2.0) + 8 bat (1.0) | 44 | |
-| 19 | 20 bat (0.6) + 10 archer (1.0) + 10 orc (2.0) | 40 | |
-| 20 | 15 goblin (0.6) + 10 bat (0.8) + 8 orc (2.0) + **troll** + **dragon** (delay 15) | 35 | **final** |
+(`config/waves.js` – the plan a map plays until its own waves are made, and the one a new map starts with; checked by `balance.test.js`: waves last 40–60 s on average, the goblin king’s up to 70 s because he walks and keeps calling helpers.)
+
+| R | Groups (count × enemy, interval s, delay s) | Enemies |
+|---|---|---|
+| 1 | 8 goblin (4.8) | 8 |
+| 2 | 10 goblin (4.2) | 10 |
+| 3 | 10 goblin (3.6) + 5 wolf (4.8, +12) | 15 |
+| 4 | 12 goblin (3) + 3 archer (8.4, +9.6) | 15 |
+| 5 | 10 goblin (3.96) + 7 wolf (4.2, +6) + 4 archer (7.2, +9.6) | 21 |
+| 6 | 3 orc (7.2) + 14 goblinPack (2.64, +2.4) | 17 |
+| 7 | 3 orc (7.2) + 10 wolf (2.88, +4.8) + 6 archer (4.8, +2.4) | 19 |
+| 8 | 1 spider (1.2) + 11 goblin (3, +2.4) + 6 bat (3.6, +9.6) | 18 |
+| 9 | 4 orc (6) + 10 bat (3.36) + 7 archer (4.56, +3.6) | 21 |
+| 10 | 1 troll (1.2, +2.4) + 12 goblinPack (2.88) | 13 |
+| 11 | 16 goblin (2.4) + 10 wolf (3.48, +4.8) + 5 archer (6, +9.6) | 31 |
+| 12 | 1 necromancer (1.2) + 4 orc (4.8, +2.4) + 10 bat (2.88, +3.6) + 6 archer (3.84, +2.4) | 21 |
+| 13 | 5 orc (4.8) + 12 wolf (2.64, +4.8) + 9 archer (3.6) | 26 |
+| 14 | 6 orc (4.2) + 12 goblinPack (2.88) + 14 bat (2.28, +3.6) + 1 rukh (1.2, +9.6) | 33 |
+| 15 | 1 dragon (1.2) + 10 bat (2.16) | 11 |
+| 16 | 6 orc (3.6) + 10 goblin (3.12) + 10 goblinPack (3.12, +1.2) + 10 wolf (3.36, +2.4) | 36 |
+| 17 | 2 necromancer (9.6) + 1 spider (1.2, +4.8) + 5 orc (3.6, +2.4) + 10 bat (2.16) + 8 archer (2.64) | 26 |
+| 18 | 7 orc (3.36) + 12 wolf (2.4, +3.6) + 10 archer (3) + 8 bat (3.6, +3.6) + 1 rukh (1.2, +7.2) | 38 |
+| 19 | 1 troll (1.2) + 1 spider (1.2, +4.8) + 8 orc (2.4, +2.4) + 16 bat (1.56) + 8 archer (2.88) | 34 |
+| 20 | 1 dragon (1.2) + 6 orc (3.12) + 12 goblinPack (1.8) + 6 bat (3.12) + 1 rukh (1.2, +7.2) | 26 |
 
 Total ≈ 430 enemies → ≈ 850 coins in drops if all are picked up, + 310 round rewards + 40 start + early bonuses (up to ~190) ≈ **1 400–1 500 coins**.
 

@@ -33,7 +33,7 @@ export default function Library({ onImport, onPlay }) {
     try {
       const r = await onImport(await fetchSaveFile(resolveDataUrl(entry.file)));
       setDone(r
-        ? { file: entry.file, ok: true, maps: r.maps, text: t('import.done_review', r.summary) }
+        ? { file: entry.file, ok: true, maps: r.maps, text: t(r.message ?? 'import.done_review', r.summary) }
         : { file: entry.file, ok: false, text: t('import.cancelled') });
     } catch (e) {
       setDone({ file: entry.file, ok: false, text: t(e.message, { defaultValue: t('import.error_generic') }) });

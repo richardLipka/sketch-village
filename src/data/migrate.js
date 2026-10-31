@@ -11,6 +11,9 @@
 //  arrive in existing browsers too – but one a kid deleted never comes back;
 //  the default themes are added once; built-ins get their default themes;
 //  built-in monsters get their default legends (once, when they have none).
+//  A new built-in that a kid has already made under the same name (the class's
+//  goblin pack, skeleton warrior and roc became built-ins) takes over the kid's
+//  component – pictures, numbers and all – instead of appearing twice.
 //  Always: building levels get the numbers of features added later (e.g. the
 //  soldiers' patrol distance) – a built-in its own default, otherwise the feature's.
 
@@ -37,6 +40,15 @@ const OLD_BUILDING_KINDS = { townhall: 'townhall', house: 'house', tower: 'tower
 const LEGACY_FEATURES = { house: ['workers'], tower: ['shoots'], castle: ['soldiers'] };
 
 const newer = (a, b) => (a?.updatedAt ?? '') > (b?.updatedAt ?? '');
+const lowerNames = (rec) => (typeof rec?.name === 'string' ? [rec.name] : Object.values(rec?.name ?? {})).map((s) => String(s).trim().toLowerCase()).filter(Boolean);
+
+/** Every string equal to `from` inside `v` becomes `to` (ids in waves, minions, decorations…). */
+function renameId(v, from, to) {
+  if (v === from) return to;
+  if (Array.isArray(v)) return v.map((x) => renameId(x, from, to));
+  if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, renameId(x, from, to)]));
+  return v;
+}
 
 export function migrateDb(db) {
   let changed = false;
@@ -62,10 +74,25 @@ export function migrateDb(db) {
   const soldierCount = rulesRec?.build?.soldier?.max;
 
   // 1) built-in components, each once (before old data, which then overrides them)
+  let maps = db.maps;
   const seeded = new Set(settings.builtInsSeeded ?? (settings.componentsSeeded ? V2_BUILT_INS : []));
   for (const c of DEFAULT_COMPONENTS) {
     if (seeded.has(c.id)) continue;
-    if (!byId.has(c.id)) upsert(structuredClone(c));
+    const names = lowerNames(c);
+    const own = !byId.has(c.id) && seeded.size > 0
+      ? assets.find((a) => !a.builtIn && a.category === c.category && lowerNames(a).some((n) => names.includes(n))) : null;
+    if (own) {
+      // the kid's component becomes the built-in (references to it follow)
+      for (const [i, a] of assets.entries()) assets[i] = renameId(a, own.id, c.id);
+      const i = byId.get(own.id);
+      // it gets the built-in's name in both languages, and its legend unless the kid wrote one
+      // (a { cs, en } legend was only copied from another built-in)
+      const legend = typeof assets[i].legend?.story === 'string' ? assets[i].legend : structuredClone(c.legend);
+      assets[i] = { ...assets[i], id: c.id, name: structuredClone(c.name), builtIn: true, ...(legend ? { legend } : {}) };
+      byId.delete(own.id);
+      byId.set(c.id, i);
+      if (maps) maps = maps.map((m) => renameId(m, own.id, c.id));
+    } else if (!byId.has(c.id)) upsert(structuredClone(c));
     seeded.add(c.id);
     changed = true;
   }
@@ -211,6 +238,6 @@ export function migrateDb(db) {
 
   return {
     changed,
-    db: { ...db, settings, assets, rules, themes, enemyTypes: [], buildingTypes: [], weapons: [] },
+    db: { ...db, settings, assets, rules, themes, ...(maps ? { maps } : {}), enemyTypes: [], buildingTypes: [], weapons: [] },
   };
 }

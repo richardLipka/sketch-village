@@ -2,10 +2,15 @@ import { describe, it, expect } from 'vitest';
 import { fetchDefaultData } from './defaultData.js';
 import { roundCaves } from '../logic/waves.js';
 import { clampPoints, HERO_RULES } from '../config/heroStats.js';
-import { itemsOf as itemsFromAssets, coinTypesOf } from '../config/components.js';
+import { itemsOf as itemsFromAssets, coinTypesOf, DEFAULT_COMPONENTS } from '../config/components.js';
+import { parseSaveFile, mergeSaveFile } from './saveFile.js';
+import { comparable, diffRecords } from './mergePlan.js';
+import { migrateDb } from './migrate.js';
 import cs from '../locales/cs.json';
 import en from '../locales/en.json';
-import empty from '../../public/default-data.json';
+import shipped from '../../public/default-data.json';
+
+const empty = { format: 'sketch-village', version: 3, settings: {}, assets: [], maps: [], themes: [], rules: [] };
 
 const reply = (status, body) => async () => ({ ok: status === 200, text: async () => JSON.stringify(body) });
 
@@ -17,9 +22,44 @@ describe('class pack (public/default-data.json)', () => {
 
   it('ignores a missing, empty or broken pack', async () => {
     expect(await fetchDefaultData(reply(404, {}))).toBeNull();
-    expect(await fetchDefaultData(reply(200, empty))).toBeNull(); // the shipped placeholder
+    expect(await fetchDefaultData(reply(200, empty))).toBeNull(); // nothing in it
     expect(await fetchDefaultData(reply(200, { format: 'something-else' }))).toBeNull();
     expect(await fetchDefaultData(async () => { throw new Error('offline'); })).toBeNull();
+  });
+});
+
+describe('the shipped class pack: the class’s drawings', () => {
+  const pack = parseSaveFile(JSON.stringify(shipped));
+  const byId = Object.fromEntries(pack.assets.map((a) => [a.id, a]));
+
+  it('draws every built-in monster and building, with the game’s names and legends', () => {
+    for (const c of DEFAULT_COMPONENTS.filter((x) => ['enemy', 'building'].includes(x.category))) {
+      const a = byId[c.id];
+      expect(a?.images?.some(Boolean), c.id).toBe(true);
+      expect(a.name).toEqual(c.name);
+      if (c.legend) expect(a.legend).toEqual(c.legend);
+      // the kids' numbers are the game's numbers (only the castle sends the drawn soldiers)
+      const diff = diffRecords(comparable({ ...c, images: [], author: '' }), comparable({ ...a, images: [], author: '' }));
+      expect(diff.filter((d) => !d.path.endsWith('soldierKind')), c.id).toEqual([]);
+    }
+    expect(pack.assets.filter((a) => a.category === 'hero').map((a) => a.name)).toEqual(['Lara', 'Robin', 'Goblinobijec', 'Čarodějka']);
+    expect(pack.assets.some((a) => a.category === 'icon')).toBe(false);
+  });
+
+  it('refers only to things it holds or the game has', () => {
+    const known = new Set([...pack.assets.map((a) => a.id), ...DEFAULT_COMPONENTS.map((c) => c.id)]);
+    for (const a of pack.assets) {
+      for (const id of a.stats?.minions ?? []) expect(known.has(id), `${a.id} → ${id}`).toBe(true);
+      for (const l of a.stats?.levels ?? []) if (l.soldierKind) expect(known.has(l.soldierKind)).toBe(true);
+    }
+  });
+
+  it('a fresh browser starts with it: drawn monsters, no duplicates', () => {
+    const fresh = migrateDb(mergeSaveFile({ settings: {}, assets: [], maps: [], themes: [], rules: [] }, pack).db).db;
+    const ids = fresh.assets.map((a) => a.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toEqual(expect.arrayContaining(DEFAULT_COMPONENTS.map((c) => c.id)));
+    expect(fresh.assets.find((a) => a.id === 'rukh').images[0]).toMatch(/^data:image\/webp/);
   });
 });
 
