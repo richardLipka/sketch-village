@@ -1485,6 +1485,81 @@
       "updatedAt": "2026-10-29T00:00:00.000Z"
     },
     {
+      "id": "arrow",
+      "category": "projectile",
+      "name": {
+        "cs": "Šíp",
+        "en": "Arrow"
+      },
+      "author": "",
+      "images": [],
+      "stats": {},
+      "themes": [],
+      "builtIn": true,
+      "createdAt": "2026-10-29T00:00:00.000Z",
+      "updatedAt": "2026-10-29T00:00:00.000Z"
+    },
+    {
+      "id": "magicBolt",
+      "category": "projectile",
+      "name": {
+        "cs": "Kouzelná střela",
+        "en": "Magic bolt"
+      },
+      "author": "",
+      "images": [],
+      "stats": {},
+      "themes": [],
+      "builtIn": true,
+      "createdAt": "2026-10-29T00:00:00.000Z",
+      "updatedAt": "2026-10-29T00:00:00.000Z"
+    },
+    {
+      "id": "catapultStone",
+      "category": "projectile",
+      "name": {
+        "cs": "Kámen z katapultu",
+        "en": "Catapult stone"
+      },
+      "author": "",
+      "images": [],
+      "stats": {},
+      "themes": [],
+      "builtIn": true,
+      "createdAt": "2026-10-29T00:00:00.000Z",
+      "updatedAt": "2026-10-29T00:00:00.000Z"
+    },
+    {
+      "id": "grass",
+      "category": "texture",
+      "name": {
+        "cs": "Tráva",
+        "en": "Grass"
+      },
+      "author": "",
+      "images": [],
+      "stats": {},
+      "themes": [],
+      "builtIn": true,
+      "createdAt": "2026-10-29T00:00:00.000Z",
+      "updatedAt": "2026-10-29T00:00:00.000Z"
+    },
+    {
+      "id": "dirt",
+      "category": "texture",
+      "name": {
+        "cs": "Polní cesta",
+        "en": "Dirt road"
+      },
+      "author": "",
+      "images": [],
+      "stats": {},
+      "themes": [],
+      "builtIn": true,
+      "createdAt": "2026-10-29T00:00:00.000Z",
+      "updatedAt": "2026-10-29T00:00:00.000Z"
+    },
+    {
       "id": "lib-spruce",
       "category": "decoration",
       "name": {
@@ -3670,6 +3745,13 @@
                 "interval": 2.88,
                 "delay": 0,
                 "spawn": "all"
+              },
+              {
+                "enemy": "orc",
+                "count": 2,
+                "interval": 7.2,
+                "delay": 7.2,
+                "spawn": "all"
               }
             ]
           },
@@ -3741,8 +3823,8 @@
               },
               {
                 "enemy": "wolf",
-                "count": 12,
-                "interval": 2.64,
+                "count": 14,
+                "interval": 2.28,
                 "delay": 4.8,
                 "spawn": "all"
               },
@@ -3759,8 +3841,8 @@
             "groups": [
               {
                 "enemy": "orc",
-                "count": 6,
-                "interval": 4.2,
+                "count": 4,
+                "interval": 5.4,
                 "delay": 0,
                 "spawn": "all"
               },
@@ -3773,8 +3855,8 @@
               },
               {
                 "enemy": "bat",
-                "count": 14,
-                "interval": 2.28,
+                "count": 10,
+                "interval": 2.88,
                 "delay": 3.6,
                 "spawn": "all"
               },
@@ -3798,9 +3880,23 @@
               },
               {
                 "enemy": "bat",
-                "count": 10,
-                "interval": 2.16,
+                "count": 12,
+                "interval": 1.8,
                 "delay": 0,
+                "spawn": "all"
+              },
+              {
+                "enemy": "goblinPack",
+                "count": 10,
+                "interval": 2.4,
+                "delay": 2.4,
+                "spawn": "all"
+              },
+              {
+                "enemy": "goblin",
+                "count": 5,
+                "interval": 3.6,
+                "delay": 4.8,
                 "spawn": "all"
               }
             ]
@@ -3855,22 +3951,22 @@
               },
               {
                 "enemy": "orc",
-                "count": 5,
-                "interval": 3.6,
+                "count": 4,
+                "interval": 4.32,
                 "delay": 2.4,
                 "spawn": "all"
               },
               {
                 "enemy": "bat",
-                "count": 10,
-                "interval": 2.16,
+                "count": 7,
+                "interval": 2.88,
                 "delay": 0,
                 "spawn": "all"
               },
               {
                 "enemy": "archer",
-                "count": 8,
-                "interval": 2.64,
+                "count": 6,
+                "interval": 3.36,
                 "delay": 0,
                 "spawn": "all"
               }
@@ -3965,8 +4061,8 @@
               },
               {
                 "enemy": "orc",
-                "count": 6,
-                "interval": 3.12,
+                "count": 10,
+                "interval": 1.92,
                 "delay": 0,
                 "spawn": "all"
               },
@@ -4003,11 +4099,44 @@
   ],
   "themes": [
     {
+      "id": "plains",
+      "icon": "🌾",
+      "name": {
+        "cs": "Pláně",
+        "en": "Plains"
+      },
+      "builtIn": true,
+      "createdAt": "2026-10-30T00:00:00.000Z",
+      "updatedAt": "2026-10-30T00:00:00.000Z"
+    },
+    {
       "id": "goblinForest",
       "icon": "🌲",
       "name": {
         "cs": "Skřetí les",
         "en": "Goblin forest"
+      },
+      "builtIn": true,
+      "createdAt": "2026-10-30T00:00:00.000Z",
+      "updatedAt": "2026-10-30T00:00:00.000Z"
+    },
+    {
+      "id": "graveyard",
+      "icon": "🪦",
+      "name": {
+        "cs": "Hřbitov",
+        "en": "Graveyard"
+      },
+      "builtIn": true,
+      "createdAt": "2026-10-30T00:00:00.000Z",
+      "updatedAt": "2026-10-30T00:00:00.000Z"
+    },
+    {
+      "id": "necromancy",
+      "icon": "💀",
+      "name": {
+        "cs": "Nekromancie",
+        "en": "Necromancy"
       },
       "builtIn": true,
       "createdAt": "2026-10-30T00:00:00.000Z",

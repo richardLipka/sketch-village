@@ -1,6 +1,8 @@
 // "Let the robot try" (SPEC §10a): the balance bot (logic/balanceBot.js) plays a
 // kid's own map with its waves a few times, like a careful player, and the wave
 // editor shows how it went – won or lost, how long each wave took, what broke.
+// "Find the limits" (SPEC §10b, logic/waveLimit.js): for every wave, how much
+// stronger it may get before the robot is consistently defeated.
 // The games run in a Web Worker (mapTest.worker.js) so the editor stays usable.
 
 export const TRIAL_SEEDS = [1, 2, 3];
@@ -47,17 +49,28 @@ export function summarizeTrials(trials, totalRounds) {
   return { games: trials.length, wins, verdict, lostAt, rounds };
 }
 
-/** Run the trials in a worker; onProgress(done, total). Resolves to the summary. */
-export function runMapTest(job, onProgress) {
+/** A job for the worker: { kind, seeds, ...setup }; resolves to what the worker sends back as `result`. */
+function inWorker(message, onProgress) {
   const worker = new Worker(new URL('./mapTest.worker.js', import.meta.url), { type: 'module' });
   const promise = new Promise((resolve, reject) => {
     worker.onmessage = ({ data }) => {
       if (data.type === 'progress') onProgress?.(data.done, data.total);
-      else if (data.type === 'done') { worker.terminate(); resolve(summarizeTrials(data.trials, job.waves.rounds.length)); }
+      else if (data.type === 'done') { worker.terminate(); resolve(data.result); }
       else if (data.type === 'error') { worker.terminate(); reject(new Error(data.message)); }
     };
     worker.onerror = (e) => { worker.terminate(); reject(new Error(e.message)); };
   });
-  worker.postMessage(lean({ ...job, seeds: TRIAL_SEEDS }));
+  worker.postMessage(lean(message));
   return { promise, cancel: () => worker.terminate() };
+}
+
+/** Run the trials in a worker; onProgress(done, total). Resolves to the summary. */
+export function runMapTest(job, onProgress) {
+  const run = inWorker({ ...job, kind: 'trials', seeds: TRIAL_SEEDS }, onProgress);
+  return { ...run, promise: run.promise.then((trials) => summarizeTrials(trials, job.waves.rounds.length)) };
+}
+
+/** Find every wave's limit in a worker (logic/waveLimit.js, its seeds); onProgress(done, total) per wave. */
+export function runWaveLimits(job, onProgress) {
+  return inWorker({ ...job, kind: 'limits' }, onProgress);
 }

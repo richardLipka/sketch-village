@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import SearchBox from '../ui/SearchBox.jsx';
 import { matchesQuery, searchTexts } from '../ui/search.js';
 import AnimPreview from '../assets/AnimPreview.jsx';
+import { monsterDsp, showDsp } from '../logic/dsp.js';
 import { legendText } from '../config/legends.js';
 import { themeName, fitsTheme } from '../config/themes.js';
 
@@ -76,7 +77,7 @@ export default function Chronicle({ enemies, themes = [], seen = null, intro }) 
                 <p className="small" style={{ margin: '4px 0' }}>{story || <span className="muted">{t('chronicle.no_story')}</span>}</p>
                 {hint && <p className="small chronicle-hint">💡 {hint}</p>}
                 <div className="small muted">
-                  ❤️ {e.hp} · 👟 {e.speed} · ⚔️ {e.damage}
+                  <span title={t('waves.dsp_title')}>⚡ {showDsp(monsterDsp(e, enemies).dsp)} DSP</span> · ❤️ {e.hp} · 👟 {e.speed} · ⚔️ {e.damage}
                   {e.armor ? ` · 🛡️ ${Math.round(e.armor * 100)} %` : ''}
                   {e.flying ? ` · 🪽 ${t('enemies.flying')}` : ''}
                   {e.ranged ? ` · 🏹 ${t('enemies.ranged')}` : ''}

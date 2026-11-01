@@ -655,3 +655,27 @@ button.asset-tile[aria-pressed=true] { background: var(--hl-yellow); }
 }
 .crash-card { max-width: 36em; margin: 24px auto; }
 .crash-card code { white-space: pre-wrap; word-break: break-word; }
+
+/* ---- wave strength (maps/WaveStrength.jsx, WaveGenerator.jsx; SPEC §10b) ---- */
+.wave-strength { padding: 10px; margin-bottom: 12px; display: grid; gap: 8px; }
+.wave-scale { gap: 6px; align-items: center; }
+.wave-strength-scroll, .gen-preview { max-height: 22em; overflow: auto; border: 1.5px dashed #d6cdb6; border-radius: 8px; }
+.wave-strength-table { width: 100%; border-collapse: collapse; font-size: 16px; }
+.wave-strength-table th, .wave-strength-table td { padding: 3px 8px; text-align: left; border-bottom: 1px solid #ece4cf; vertical-align: top; }
+.wave-strength-table thead th { position: sticky; top: 0; background: #fffdf7; z-index: 1; font-weight: normal; color: var(--ink-muted); }
+.wave-strength-table .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.wave-strength-table tfoot th, .wave-strength-table tfoot td { border-bottom: none; font-weight: bold; }
+.wave-strength-table tr.limit-too_hard td, .wave-strength-table tr.limit-too_hard th { background: var(--hl-red); }
+.wave-strength-table tr.limit-tight td, .wave-strength-table tr.limit-tight th { background: var(--hl-yellow); }
+.strength-bar-col { width: 28%; min-width: 90px; }
+.strength-bar { position: relative; display: block; height: 12px; margin-top: 4px; border: 1.5px solid var(--ink); border-radius: 3px; background: #fff; }
+.strength-bar > span:first-child { display: block; height: 100%; background: #93c5fd; }
+.strength-limit { position: absolute; top: -4px; bottom: -4px; width: 3px; margin-left: -1.5px; background: var(--danger); }
+.gen-enemies { display: flex; flex-wrap: wrap; gap: 6px; border: none; padding: 0; margin: 0 0 8px; }
+.gen-enemies legend { padding: 0; margin-bottom: 4px; font-weight: bold; }
+.gen-enemies input { position: absolute; opacity: 0; width: 0; height: 0; }
+.gen-enemies label:focus-within { outline: 3px solid #d97706; outline-offset: 2px; }
+.gen-numbers { gap: 12px; margin-bottom: 8px; }
+.dsp-badge { padding: 2px 10px; border: 1.5px solid var(--ink); border-radius: 999px; background: var(--hl-yellow); font-size: 0.95em; }
+.limits-progress { width: 100%; height: 10px; margin-top: 6px; }
+.device-phone .strength-bar-col { display: none; }

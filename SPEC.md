@@ -139,7 +139,7 @@ The icons on the game's controls are components too – studio category **Icons*
 
 ## 4c. Accessibility
 
-Checked by axe-core against **WCAG 2.1 A and AA** on every screen, editor and dialog, on the PC and on a phone held sideways (`e2e/a11y.spec.js`: menu, play setup, the game with its tips, backpack, Town Hall panel, shop, chronicle, help and quit question; the studio lists and the hero, monster, building and weapon editors, the drawing pad, the load dialog; maps, the map editor in every mode, the wave editor; library, chronicle, rules, save & load, the import review) – **no findings**. What it took and what holds now:
+Checked by axe-core against **WCAG 2.1 A and AA** on every screen, editor and dialog, on the PC and on a phone held sideways (`e2e/a11y.spec.js`: menu, play setup, the game with its tips, backpack, Town Hall panel, shop, chronicle, help and quit question; the studio lists and the hero, monster, building and weapon editors, the drawing pad, the load dialog; maps, the map editor in every mode, the wave editor with its strength table and wave generator; library, chronicle, rules, save & load, the import review) – **no findings**. What it took and what holds now:
 
 - **Text contrast** ≥ 4.5 : 1: quiet text uses `--ink-muted` (#3e5599, readable on paper and every highlight), the soft ink stays for shadows and lines; `--danger` is darker; a monster not met yet fades only its picture, a bought shop item only its picture.
 - **Every control has a name**: icon-only buttons (⏸, ⧉, 🗑, the drawing pad's tools, the toolbar…) carry `aria-label`s (their tooltip); a kid-drawn GUI icon or an emoji next to a word is decoration (`aria-hidden`), so attack buttons with drawn icons still say *Sword (1)*; toggles say whether they are on (`aria-pressed`: pause, sound, wobble, tips, paint tools, sizes), the ⋯ menu and the backpack whether they are open (`aria-expanded`); the speed button says the speed; brush / pencil sizes, colours, selects and table cells of the building editor have labels; the HUD's numbers say what they are (coins, workers, Town Hall level and health %, lives *3 / 5*) to screen readers.
@@ -356,6 +356,51 @@ The wave editor has **🤖 Let the robot try**: the balance bot (`logic/balanceB
 - Verdict: **too hard** (never won), **hard** (won sometimes), **about right** (won, with some losses), **maybe too easy** (won every time without losing a building or a life); wins of 3 and the rounds where it lost.
 - Per round: average wave length, buildings and lives lost; flags **short** (< 20 s), **long** (> 90 s), **tough** (≥ 1 building or life lost on average). The same numbers appear next to each round in the editor.
 
+### 10b. Wave strength: DSP, generated waves, the robot's limits
+
+- **DSP – danger strength points** (`logic/dsp.js`): one number per monster saying how hard it is to stop; **a goblin is worth 10**.
+  own DSP = 10 × toughness^0.7 × pace × attack × ranged × area × flying, where toughness = health ÷ (1 − armor) ÷ 25, pace = (speed ÷ 45)^0.1, attack = 0.8 + 0.2 × (damage ÷ cooldown) ÷ 4, ranged = 1 + 0.4 × min(2, range ÷ 150), area = 1 + min(0.6, 0.0035 × splash px), flying = 1.3. **A summoner adds every minion it calls** (their DSP): count × lifetime ÷ every (lifetime = 800 px ÷ speed, 10–45 s, shorter for one with less than 100 health – it is shot before it calls many; at most 1.5 × the most alive at once) + those it lets out when it dies. A wave's DSP = Σ count × DSP × that round's health growth.
+- **The multipliers were measured, not guessed** (`npm run calibrate-dsp`): at the start of rounds 6 and 12 of the built-in game a round of N copies of one monster comes; N grows until the robot is consistently defeated. A monster that breaks it with N ÷ 3 copies is worth 3 goblins. Measured for every built-in monster and seven goblin variants, the constants fitted to all of them – DSP ÷ 10 is within ±11 % of what each is worth (5 % on average; the first guesses were 50 % off):
+
+  | Ability (on a goblin) | Worth (goblins) | Constant |
+  |---|---|---|
+  | shoots from 150 px | 1.40 | ranged +0.4 per 150 px (at most +0.8) |
+  | flies | 1.30 | ×1.3 |
+  | area damage 80 px | 1.26 | +0.35 % per px (at most +60 %) |
+  | twice as fast | 1.11 | speed^0.1 – speed decides little once the defence is full |
+  | 4× health | 2.50 | toughness^0.7 – a tough one still hits only as hard |
+  | 3× damage per second | 1.38 | attack weight 0.2 |
+  | calls 2 goblins every 8 s | 2.97 | every minion called counts fully |
+
+  Monster DSPs: §16.4. Shown in the wave editor (a table and every round's header), the monster editor (⚡ Strength (DSP), itself + minions, changing as the numbers are typed) and the chronicle.
+- **All waves stronger / weaker** (wave editor, *All waves: − weaker by / + stronger by* 10 %, any 1–90 %; `scaleWaves`): every round ×(1 ± p) – its counts scaled to whole monsters, the rest filled by the kind whose whole number fills it most exactly (five goblins rather than a second spider queen), never a kind the round doesn't have; each group keeps the time from its first to its last monster (denser). Tested: every round within 10 % of its aim, 3 % on average.
+- **Generate waves** (🎲 `generateWaves`, `WaveGenerator`): pick the monsters, the number of rounds (1–60), the DSP of wave 1 (the map's current first wave by default) and how much stronger every next one is (16 % by default ≈ the built-in plan: 80 → ~1350). Round r aims at first × (1 + growth)^(r − 1); one monster may be at most 60 % of a round, so strong ones come only once the waves are big enough; every round that can brings a kind not seen yet (weakest first) and mixes up to two known ones that still matter (≥ 1.5 % of the round), one of them a crowd (≤ 6 % each) – a late wave is neither only bosses nor dozens of the weakest. Monsters come out over ~28 s, a lone big one first. A preview table shows the rounds before they replace the map's; the same choice gives the same plan. Tested: every round stronger than the one before, within 15 % of its aim.
+- **Find the limits** (🧪 next to *Let the robot try*, `logic/waveLimit.js`, in the worker): the robot plays the map once per seed (1, 2, 3) and keeps a copy of the game at the start of every round – `World.clone()` copies everything but the map, roads and flow field (nothing changes them) and the random numbers go on identically; the robot's notes are plain data, copied too. From each copy it plays that round again ×1.25, ×1.5, ×2, ×3, ×4, ×6, ×8 (more monsters of the round's own kinds) until it is **consistently defeated – it loses at least 2 of 3 games**, then halves the gap to within 10 %. A round it can't even hold as it is gets weaker (×0.8 … ×0.25) until it holds. Per round: *falls at ×2.4 (612 DSP)*, *holds even ×8*, *falls already (holds ×0.6)* or *the robot didn't get here* (it lost earlier); rows that fall already are red, those with less than ×1.25 of room yellow, a bar shows the wave and the mark where it breaks; the headline names the wave with the least room. About 25 s for 20 waves. For the developer, `npm run wave-limits [--generated] [--rounds 1,5]` prints the same table for the built-in (or a generated) plan on the robot's test map.
+- **The built-in plan** (§16.5) gets stronger every round (tested): the boss rounds 10 and 15 brought only their boss and were among the weakest of their time (the robot held them ×4.4), round 14 was a peak (+36 %) and the finale was weaker than round 19. Now the troll and the goblin king come with a band, rounds 14 and 17 lost a few monsters, the finale is the strongest; easy is still won without losing a building, normal every time, hard 4 of 5 (balance.test.js). The robot's room narrows evenly from ×4.7 to ×1.7:
+
+| R | Monsters | DSP | vs previous | Robot falls at | Status |
+|---|---|---|---|---|---|
+| 1 | 8 goblin | 80 |  | ×4.66 (373) | ok |
+| 2 | 10 goblin | 105 | +31 % | ×4 (420) | ok |
+| 3 | 10 goblin, 5 wolf | 158 | +50 % | ×3.22 (507) | ok |
+| 4 | 12 goblin, 3 archer | 177 | +13 % | ×3.22 (571) | ok |
+| 5 | 10 goblin, 7 wolf, 4 archer | 247 | +39 % | ×2.58 (638) | ok |
+| 6 | 3 orc, 14 goblinPack | 289 | +17 % | ×2.45 (709) | ok |
+| 7 | 3 orc, 10 wolf, 6 archer | 321 | +11 % | ×2.58 (827) | ok |
+| 8 | 1 spider, 11 goblin, 6 bat | 345 | +8 % | ×2.71 (934) | ok |
+| 9 | 4 orc, 10 bat, 7 archer | 406 | +18 % | ×2.71 (1101) | ok |
+| 10 | 1 troll, 12 goblinPack, 2 orc | 426 | +5 % | ×3.46 (1475) | ok |
+| 11 | 16 goblin, 10 wolf, 5 archer | 455 | +7 % | ×3.22 (1466) | ok |
+| 12 | 1 necromancer, 4 orc, 10 bat, 6 archer | 577 | +27 % | ×2.21 (1276) | ok |
+| 13 | 5 orc, 14 wolf, 9 archer | 602 | +4 % | ×2.45 (1476) | ok |
+| 14 | 4 orc, 12 goblinPack, 10 bat, 1 rukh | 662 | +10 % | ×2.33 (1543) | ok |
+| 15 | 1 dragon, 12 bat, 10 goblinPack, 5 goblin | 696 | +5 % | ×2.45 (1705) | ok |
+| 16 | 6 orc, 10 goblin, 10 goblinPack, 10 wolf | 822 | +18 % | ×2.21 (1816) | ok |
+| 17 | 2 necromancer, 1 spider, 4 orc, 7 bat, 6 archer | 958 | +17 % | ×2 (1916) | ok |
+| 18 | 7 orc, 12 wolf, 10 archer, 8 bat, 1 rukh | 1061 | +11 % | ×2 (2121) | ok |
+| 19 | 1 troll, 1 spider, 8 orc, 16 bat, 8 archer | 1296 | +22 % | ×1.73 (2242) | ok |
+| 20 | 1 dragon, 10 orc, 12 goblinPack, 6 bat, 1 rukh | 1371 | +6 % | ×1.73 (2371) | ok |
+
 ## 11. Win / lose
 
 - **Win**: survive all **20 rounds** of the level.
@@ -470,7 +515,7 @@ All data lives only in the browser, which may clear it (low disk space; Safari a
 
 Ready-made save files for everyone, served with the website (`public/library/`):
 
-- **The files**: normal save files (§13a), one per map or pack, pictures inside. The game ships three example maps – *Zelené údolí* (plains, a pond, three roads), *Skřetí les* (goblin forest, two winding roads, a spruce forest), *Strašidelný hřbitov* (graveyard, four roads and a ring, harder) – each with its own pencil-drawn decorations. They are drawn by `scripts/library/maker.js` in a headless browser (`npm run make-library`), checked to be valid, and played by the balance robot on normal (the first two are won every time, the graveyard 2 of 3). Each is a map file (§13a) with the class pack's drawings inside, so a fresh game loads just the map and its decorations.
+- **The files**: normal save files (§13a), one per map or pack, pictures inside. The game ships three example maps – *Zelené údolí* (plains, a pond, three roads), *Skřetí les* (goblin forest, two winding roads, a spruce forest), *Strašidelný hřbitov* (graveyard, four roads and a ring, harder) – each with its own pencil-drawn decorations. They are drawn by `scripts/library/maker.js` in a headless browser (`npm run make-library`), checked to be valid, and played by the balance robot on normal (the first two are won every time, the graveyard 2 of 3). The green valley and the graveyard carry the built-in waves 5 % weaker (DSP, §10b – the built-in plan got stronger in 7), so these results stay as they were. Each is a map file (§13a) with the class pack's drawings inside, so a fresh game loads just the map and its decorations.
 - **The listing** `public/library/index.json` (`{ format: "sketch-village-library", version: 1, files: [{ file, title, description, author, kind, maps, components, size, thumbnail }] }`) is made from the files' `info` by `npm run library` (`scripts/library-index.mjs`); a unit test fails when it is out of date. To add a file: download a map (⬇ Download) or everything, put the file into `public/library/`, run `npm run library`, push.
 - **Library screen** (📚 in the menu, `data/Library.jsx`): the listing with pictures, search by title / description / author, **Load** (imports like any save file – new things added, changed ones reviewed, `data/useImporter.jsx`), then **Play this map** opens the play screen with it picked; **Link** copies a link that opens the game with that file.
 - **Data links** `?data=<file>` (`data/library.js`): a bare name is a library file (`?data=goblin-forest` → `library/goblin-forest.json`), a path is relative to the game, a full `https://` address loads a file from anywhere (CORS permitting). Files from the game's own site load at once; from another site the kid is asked first (the host is shown). After loading, the play screen opens with the file's first map picked, and the parameter is removed from the address so a reload doesn't load it again. A missing file or a web page instead of a file says "couldn't be downloaded".
@@ -486,14 +531,15 @@ src/
   data/          saveFile.js (JSON format), mergePlan.js + ImportReview + useImporter (reviewed import, shared by all ways of loading a file), packageFile.js (one map / component with what it needs) + packageImport.js + ImportDuplicates (importing such a file: same things used, partly different ones copied, then merged), LoadFile (⬆ a file from the computer or an address), safety.js + SafetyCard (backup reminder, persistent storage), migrate.js (v1 → components), store.js (IndexedDB: one save-file record, coalesced writes), defaultData.js (class pack), library.js + Library (public library, ?data= links), DataPanel
   config/        components.js (built-in components + derived lists), features.js, themes.js, legends.js (monster legends), balance, buildings, heroStats, enemies, weapons, waves (defaults) + rules.js (global rules over defaults)
   logic/         pathGrid, pathfinding, mapModel, waves, world (the simulation's core: setup, rounds, events, HUD), balanceBot  ← pure, unit-tested
+  logic/         dsp.js (danger strength points), waveGen.js (generating waves, all waves ±%), waveLimit.js (the robot's limit per wave)
   logic/world/   the rest of the World by topic, mixed into the class: equipment, buildings (+ FEATURE_BEHAVIOUR), soldiers, enemies, combat (damage, projectiles), hero (+ walking on roads), coins, shared
-  maps/          MapList, MapPainter + PainterTools (tool bars, terrain panel) + painterOverlay.js (overlay drawing) + DecorPanel + decorEdit.js (decorations: frame, resize, polygon fill), WaveEditor, MapTestPanel + mapTest.js + mapTest.worker.js (robot test), shareMap.js (a map's package), mapRuntime (canvas helpers, sample map), textures.js (terrain textures)
+  maps/          WaveStrength + WaveGenerator (the strength table, ±%, generating), MapList, MapPainter + PainterTools (tool bars, terrain panel) + painterOverlay.js (overlay drawing) + DecorPanel + decorEdit.js (decorations: frame, resize, polygon fill), WaveEditor, MapTestPanel + mapTest.js + mapTest.worker.js (robot test), shareMap.js (a map's package), mapRuntime (canvas helpers, sample map), textures.js (terrain textures)
   game/          monsterVoices.js (when monster sounds play), viewport.js (the map covers the screen, the paper border), PlaySetup, GameView (React ↔ Phaser), GameScene (setup, animations, events), GameOverlay, BuildPanel, Chronicle, RulesEditor, sound.js, tutorial.js
   game/scene/    the rest of GameScene by topic, mixed into the class: Textures (placeholders), Input (clicks, pan, zoom), Effects (floating numbers, rings, bars), Entities (sprites following the world), draw.js
   locales/       cs.json, en.json
 public/default-data.json   class pack: the class's drawings (built-in monsters and buildings, heroes, soldiers…)
 public/library/            the public library: save files + index.json (§13c)
-scripts/                   library-index.mjs (npm run library), make-library.mjs + library/maker.js (npm run make-library), make-icons.mjs, old-defaults.mjs (npm run old-defaults → config/oldDefaults.js)
+scripts/                   calibrate-dsp.mjs (npm run calibrate-dsp – measures the DSP constants), wave-limits.mjs (npm run wave-limits – the strength table), library-index.mjs (npm run library), make-library.mjs + library/maker.js (npm run make-library), make-icons.mjs, old-defaults.mjs (npm run old-defaults → config/oldDefaults.js)
 public/icons/              app icon (icon.svg → PNGs via npm run icons)
 e2e/                       Playwright browser tests (§15a)
 ```
@@ -513,6 +559,7 @@ e2e/                       Playwright browser tests (§15a)
 5f. **Components** ✅ – every game part is one component (pictures + all numbers) edited in the studio, which became the general component editor (§7.1). Buildings are made from **features** (workers, arrows, soldiers, income, hero healing) with a table of 1–5 levels whose fields follow the features; the Town Hall is the `core` building type with the same features; "another look" components add drawings to an existing type. Enemies, weapons/shields/armor and coins carry their numbers next to their drawings; the separate Enemies and Weapons screens are gone and the Rules editor keeps only global rules. Old data and version-1 save files are migrated automatically. Tests cover new building kinds made only from data (market, well, 4-level tower).
 5g. **Lives & backpack** ✅ – every lost life sends the hero away for 10 s and back to the Town Hall; losing all 5 loses the game (the end screen says why). The bot now walks back to heal below 40 % HP and still wins every seed without losing a life; the same bot without healing loses every seed (new test). Small retune: dragon 280 HP / speed 36, rounds 14–15 spawns. **Backpack** rebuilt: three slots (right hand, left hand, armor) with the hero's attack / reach / armor shown live, items dragged onto slots with mouse or finger (or tap item → tap slot), wrong slots refused, worn items dragged back to take them off.
 5h. **Summoners, catapult, themes, terrain** ✅ – enemies can **call minions** (any enemies, several kinds mixed; how many, how often, at most alive, more on death; minions never summon): new built-ins **necromancer** → skeletons, **spider queen** → spiderlings (more when she dies), plus skeleton and spiderling. New building feature **lobs** and built-in **catapult** (rounds 6 / 10 / 15): area damage to walking enemies. **Themes** (§7.2) with an editor; maps have a theme. **Terrain textures** in the map editor with preview (§5.1). Waves: spider queen in rounds 8 and 19, necromancers in 12 and 17; necromancer tuned to 90 HP / every 8 s; the bot builds a catapult – all seeds won, waves 40–60 s. Architecture: building features run from a behaviour table, one spawn path for caves and summoners, ground-target projectiles, built-ins seeded by id.
+7. **Wave strength (DSP), generated waves, the robot's limits** ✅ – every monster has a DSP (danger strength points, a goblin = 10) whose multipliers – ranged, flying, area damage, speed, toughness, attack, minions – were measured with the robot and fitted to every built-in monster (±11 %); waves can be generated from chosen monsters, stronger every round, and all waves of a map made stronger or weaker by a share; the robot finds for every wave how much stronger it may get before it is consistently defeated, in a table with the waves' DSP (§10b). The built-in plan now gets stronger every round (boss rounds with a band, the finale the strongest). Architecture: the World can be copied (`clone()`, the random generator's state is data), the balance robot is `startGame` / `stepGame` / `playGame` with its notes as plain data.
 6. **Accessibility, phone play, robustness, texts that match** ✅ – WCAG 2.1 AA (axe-core: no findings on any screen, PC and phone) and the whole game playable with the keyboard alone (§4c); the phone plays a round with taps alone (§11); every export has its import, one helper for the notes (§13a); damaged records are repaired and a broken screen shows a card instead of a blank page (§13a). **Texts that match the monsters**: a browser that stored the built-ins before the class renamed them (the spider rider still called *Wolf* in English, the grey wolves' story under the spider rider's picture, the old dragon's English story under the goblin king) gets today's name and legend in every language that still has an earlier default – the kids' own texts stay (`config/oldDefaults.js`, made from the git history by `npm run old-defaults`; a test checks that the hints match the numbers: fliers fly, shooters shoot from afar, armour is armour). Dead exports removed; the library index script shares the game's format constants. Unit tests run on Vitest 5 (the critical / high advisories of the old test runner are gone; the shipped game has no known vulnerable dependency).
 5z. **Load from a file or an address, components with what they need** ✅ – ⬆ Load in Maps, the studio and Save & load: a file from the computer or an address (full or a library name); ⬇ on any studio component downloads it with its minions, projectiles, soldiers and other looks, loaded like a map file (copies of what differs, then the merge table) (§13a). Architecture: map and component files share `data/packageFile.js` (reference closure, file envelope, names, kinds) and one importer (`data/packageImport.js`, renamed from `mapImport.js`); the map's file now also carries the worlds of the components inside.
 5y. **The game's own pictures in the studio** ✅ – the default arrow, magic bolt, catapult stone and the 8 built-in surfaces are built-in components shown with the game's picture, which kids draw over or replace (the game and map editor use it); they can't be deleted by any path (§3.2 6a). The simple placeholder shapes stay as they are.
@@ -549,6 +596,7 @@ e2e/                       Playwright browser tests (§15a)
 - layout: on every menu screen, in the component editor, the backpack and the shop the head stays while the content scrolls, and the page never scrolls (PC and phone); the backpack stays open for two clicks into the game and closes on the third;
 - difficulty: the choice is remembered across a reload;
 - accessibility (`a11y.spec.js`): axe-core finds no WCAG 2.1 A / AA problem on any screen, editor or dialog listed in §4c (PC and phone); the keyboard alone opens a component from its tile, the dialog is named, keeps the focus inside and gives it back; the backpack equips and takes off an item with Enter;
+- wave strength (`waves.spec.js`): the built-in plan shows 20 rounds, each stronger; +10 % makes all waves 10 % stronger; a plan of 3 rounds generated from goblins and spider riders only, each stronger; the robot finds each wave's limit; saved with the map; a monster's DSP shows in its editor and changes with its numbers;
 - playing (`play.spec.js`): a phone wins round 1 with taps alone, a PC builds and calls the wave with the keyboard alone;
 - the robot test in the wave editor finishes with a verdict and times for all 20 rounds;
 - sharing a map downloads a file with one map and only the components it uses;
@@ -719,22 +767,22 @@ Full village (10 spots maxed + Town Hall + all hero upgrades) costs ≈ **2 000 
 
 ### 16.4 Enemies
 
-| Id | Name (cs / en) | Type | HP | Speed | Dmg | Cd | Range | Armor | Coins |
-|---|---|---|---|---|---|---|---|---|---|
-| goblin | Goblin / Goblin | melee | 25 | 45 | 4 | 1.0 | 25 | 0 % | 1–2 |
-| wolf | Pavoučí jezdec / Spider rider | melee | 18 | 90 | 3 | 0.7 | 25 | 0 % | 1–2 |
-| archer | Šaman / Shaman | ranged | 20 | 40 | 5 | 1.5 | 150 | 0 % | 2 |
-| orc | Hopgoblin / Hobgoblin | melee | 90 | 30 | 10 | 1.4 | 30 | 15 % | 3–5 |
-| bat | Netopýr / Bat | flying, melee | 15 | 55 | 3 | 1.0 | 25 | 0 % | 1–2 |
-| troll | Troll / Troll | boss, melee | 400 | 22 | 25 | 2.0 | 40 | 25 % | 20 |
-| skeleton | Kostlivec / Skeleton | melee | 18 | 42 | 4 | 1.1 | 25 | 0 % | 1 |
-| necromancer | Nekromant / Necromancer | ranged, calls skeleton, skeletonWarrior | 90 | 26 | 7 | 1.8 | 140 | 10 % | 6–8 |
-| spiderling | Pavoučátko / Spiderling | melee | 8 | 70 | 2 | 0.8 | 22 | 0 % | 0–1 |
-| spider | Pavoučice / Spider queen | melee, calls spiderling | 130 | 32 | 9 | 1.2 | 28 | 10 % | 5–7 |
-| dragon | Král goblinů / Goblin king | boss, ranged, calls goblin, orc, archer | 300 | 32 | 20 | 2.0 | 120 | 20 % | 20 |
-| goblinPack | Smečka goblinů / Goblin pack | melee | 25 | 45 | 4 | 1.0 | 25 | 0 % | 1–2 |
-| skeletonWarrior | Kostlivý bojovník / Skeleton warrior | melee | 18 | 42 | 4 | 1.1 | 25 | 0 % | 1 |
-| rukh | Rukh / Roc | flying, melee | 150 | 90 | 10 | 1.0 | 25 | 15 % | 3–6 |
+| Id | Name (cs / en) | Type | HP | Speed | Dmg | Cd | Range | Armor | Coins | DSP |
+|---|---|---|---|---|---|---|---|---|---|---|
+| goblin | Goblin / Goblin | melee | 25 | 45 | 4 | 1.0 | 25 | 0 % | 1–2 | 10 |
+| wolf | Pavoučí jezdec / Spider rider | melee | 18 | 90 | 3 | 0.7 | 25 | 0 % | 1–2 | 9 |
+| archer | Šaman / Shaman | ranged | 20 | 40 | 5 | 1.5 | 150 | 0 % | 2 | 11 |
+| orc | Hopgoblin / Hobgoblin | melee | 90 | 30 | 10 | 1.4 | 30 | 15 % | 3–5 | 31 |
+| bat | Netopýr / Bat | flying, melee | 15 | 55 | 3 | 1.0 | 25 | 0 % | 1–2 | 9 |
+| troll | Troll / Troll | boss, melee | 400 | 22 | 25 | 2.0 | 40 | 25 % | 20 | 113 |
+| skeleton | Kostlivec / Skeleton | melee | 18 | 42 | 4 | 1.1 | 25 | 0 % | 1 | 8 |
+| necromancer | Nekromant / Necromancer | ranged, calls skeleton, skeletonWarrior | 90 | 26 | 7 | 1.8 | 140 | 10 % | 6–8 | 94 |
+| spiderling | Pavoučátko / Spiderling | melee | 8 | 70 | 2 | 0.8 | 22 | 0 % | 0–1 | 4 |
+| spider | Pavoučice / Spider queen | melee, calls spiderling | 130 | 32 | 9 | 1.2 | 28 | 10 % | 5–7 | 92 |
+| dragon | Král goblinů / Goblin king | boss, ranged, calls goblin, orc, archer | 300 | 32 | 20 | 2.0 | 120 | 20 % | 20 | 154 |
+| goblinPack | Smečka goblinů / Goblin pack | melee | 25 | 45 | 4 | 1.0 | 25 | 0 % | 1–2 | 10 |
+| skeletonWarrior | Kostlivý bojovník / Skeleton warrior | melee | 18 | 42 | 4 | 1.1 | 25 | 0 % | 1 | 8 |
+| rukh | Rukh / Roc | flying, melee | 150 | 90 | 10 | 1.0 | 25 | 15 % | 3–6 | 71 |
 
 The names, numbers, pictures (class pack, §2.1) and legends follow the class’s drawings: the wolf is a goblin riding a giant spider, the archer a skull-masked shaman, the orc a hobgoblin in chain mail, the dragon the goblin king who walks the road and calls goblins, hobgoblins and shamans. The goblin pack, the skeleton warrior (the necromancer calls him with the skeletons) and the roc were drawn by the class and are built-in since 5w.
 
@@ -742,32 +790,32 @@ The names, numbers, pictures (class pack, §2.1) and legends follow the class’
 
 `spawn: "all"` = groups are split round-robin over all caves of the map. Interval = seconds between two enemies of a group. Groups start together unless a delay is given.
 
-(`config/waves.js` – the plan a map plays until its own waves are made, and the one a new map starts with; checked by `balance.test.js`: waves last 40–60 s on average, the goblin king’s up to 70 s because he walks and keeps calling helpers.)
+(`config/waves.js` – the plan a map plays until its own waves are made, and the one a new map starts with; checked by `balance.test.js`: waves last 40–60 s on average, the goblin king’s up to 70 s because he walks and keeps calling helpers; by `dsp.test.js`: every round at least 3 % stronger (DSP, §10b) than the one before.)
 
-| R | Groups (count × enemy, interval s, delay s) | Enemies |
-|---|---|---|
-| 1 | 8 goblin (4.8) | 8 |
-| 2 | 10 goblin (4.2) | 10 |
-| 3 | 10 goblin (3.6) + 5 wolf (4.8, +12) | 15 |
-| 4 | 12 goblin (3) + 3 archer (8.4, +9.6) | 15 |
-| 5 | 10 goblin (3.96) + 7 wolf (4.2, +6) + 4 archer (7.2, +9.6) | 21 |
-| 6 | 3 orc (7.2) + 14 goblinPack (2.64, +2.4) | 17 |
-| 7 | 3 orc (7.2) + 10 wolf (2.88, +4.8) + 6 archer (4.8, +2.4) | 19 |
-| 8 | 1 spider (1.2) + 11 goblin (3, +2.4) + 6 bat (3.6, +9.6) | 18 |
-| 9 | 4 orc (6) + 10 bat (3.36) + 7 archer (4.56, +3.6) | 21 |
-| 10 | 1 troll (1.2, +2.4) + 12 goblinPack (2.88) | 13 |
-| 11 | 16 goblin (2.4) + 10 wolf (3.48, +4.8) + 5 archer (6, +9.6) | 31 |
-| 12 | 1 necromancer (1.2) + 4 orc (4.8, +2.4) + 10 bat (2.88, +3.6) + 6 archer (3.84, +2.4) | 21 |
-| 13 | 5 orc (4.8) + 12 wolf (2.64, +4.8) + 9 archer (3.6) | 26 |
-| 14 | 6 orc (4.2) + 12 goblinPack (2.88) + 14 bat (2.28, +3.6) + 1 rukh (1.2, +9.6) | 33 |
-| 15 | 1 dragon (1.2) + 10 bat (2.16) | 11 |
-| 16 | 6 orc (3.6) + 10 goblin (3.12) + 10 goblinPack (3.12, +1.2) + 10 wolf (3.36, +2.4) | 36 |
-| 17 | 2 necromancer (9.6) + 1 spider (1.2, +4.8) + 5 orc (3.6, +2.4) + 10 bat (2.16) + 8 archer (2.64) | 26 |
-| 18 | 7 orc (3.36) + 12 wolf (2.4, +3.6) + 10 archer (3) + 8 bat (3.6, +3.6) + 1 rukh (1.2, +7.2) | 38 |
-| 19 | 1 troll (1.2) + 1 spider (1.2, +4.8) + 8 orc (2.4, +2.4) + 16 bat (1.56) + 8 archer (2.88) | 34 |
-| 20 | 1 dragon (1.2) + 6 orc (3.12) + 12 goblinPack (1.8) + 6 bat (3.12) + 1 rukh (1.2, +7.2) | 26 |
+| R | Groups (count × enemy, interval s, delay s) | Enemies | DSP | vs previous |
+|---|---|---|---|---|
+| 1 | 8 goblin (4.8) | 8 | 80 |  |
+| 2 | 10 goblin (4.2) | 10 | 105 | +31 % |
+| 3 | 10 goblin (3.6) + 5 wolf (4.8, +12) | 15 | 158 | +50 % |
+| 4 | 12 goblin (3) + 3 archer (8.4, +9.6) | 15 | 177 | +13 % |
+| 5 | 10 goblin (3.96) + 7 wolf (4.2, +6) + 4 archer (7.2, +9.6) | 21 | 247 | +39 % |
+| 6 | 3 orc (7.2) + 14 goblinPack (2.64, +2.4) | 17 | 289 | +17 % |
+| 7 | 3 orc (7.2) + 10 wolf (2.88, +4.8) + 6 archer (4.8, +2.4) | 19 | 321 | +11 % |
+| 8 | 1 spider (1.2) + 11 goblin (3, +2.4) + 6 bat (3.6, +9.6) | 18 | 345 | +8 % |
+| 9 | 4 orc (6) + 10 bat (3.36) + 7 archer (4.56, +3.6) | 21 | 406 | +18 % |
+| 10 | 1 troll (1.2, +2.4) + 12 goblinPack (2.88) + 2 orc (7.2, +7.2) | 15 | 426 | +5 % |
+| 11 | 16 goblin (2.4) + 10 wolf (3.48, +4.8) + 5 archer (6, +9.6) | 31 | 455 | +7 % |
+| 12 | 1 necromancer (1.2) + 4 orc (4.8, +2.4) + 10 bat (2.88, +3.6) + 6 archer (3.84, +2.4) | 21 | 577 | +27 % |
+| 13 | 5 orc (4.8) + 14 wolf (2.28, +4.8) + 9 archer (3.6) | 28 | 602 | +4 % |
+| 14 | 4 orc (5.4) + 12 goblinPack (2.88) + 10 bat (2.88, +3.6) + 1 rukh (1.2, +9.6) | 27 | 662 | +10 % |
+| 15 | 1 dragon (1.2) + 12 bat (1.8) + 10 goblinPack (2.4, +2.4) + 5 goblin (3.6, +4.8) | 28 | 696 | +5 % |
+| 16 | 6 orc (3.6) + 10 goblin (3.12) + 10 goblinPack (3.12, +1.2) + 10 wolf (3.36, +2.4) | 36 | 822 | +18 % |
+| 17 | 2 necromancer (9.6) + 1 spider (1.2, +4.8) + 4 orc (4.32, +2.4) + 7 bat (2.88) + 6 archer (3.36) | 20 | 958 | +17 % |
+| 18 | 7 orc (3.36) + 12 wolf (2.4, +3.6) + 10 archer (3) + 8 bat (3.6, +3.6) + 1 rukh (1.2, +7.2) | 38 | 1061 | +11 % |
+| 19 | 1 troll (1.2) + 1 spider (1.2, +4.8) + 8 orc (2.4, +2.4) + 16 bat (1.56) + 8 archer (2.88) | 34 | 1296 | +22 % |
+| 20 | 1 dragon (1.2) + 10 orc (1.92) + 12 goblinPack (1.8) + 6 bat (3.12) + 1 rukh (1.2, +7.2) | 30 | 1371 | +6 % |
 
-Total ≈ 430 enemies → ≈ 850 coins in drops if all are picked up, + 310 round rewards + 40 start + early bonuses (up to ~190) ≈ **1 400–1 500 coins**.
+Total ≈ 450 enemies → ≈ 850 coins in drops if all are picked up, + 310 round rewards + 40 start + early bonuses (up to ~190) ≈ **1 400–1 500 coins**.
 
 ### 16.6 Sanity checks (to verify in first playtest)
 - Round 1 must be winnable by the hero alone (6 goblins × 25 HP vs ~27 melee DPS → yes).

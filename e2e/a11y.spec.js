@@ -113,6 +113,10 @@ test('menus, the studio and the editors pass WCAG 2.1 AA checks', async ({ page,
   await page.locator('.asset-tile').first().getByRole('button', { name: /Vlny/ }).click();
   await page.getByRole('button', { name: /Kolo 1$/ }).first().click();
   await check(page, 'wave editor', found);
+  await page.getByTestId('waves-generate').click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await check(page, 'wave generator', found);
+  await page.keyboard.press('Escape');
   await cancel(page);
   await back(page);
 

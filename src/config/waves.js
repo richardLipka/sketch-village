@@ -10,6 +10,8 @@ import { BALANCE } from './balance.js';
 // The class's monsters (config/enemies.js) all have their turn: goblin packs
 // from round 6, the necromancer's skeleton warriors, the roc from round 14. The spider riders are
 // faster than the old wolves, so fewer of them come late.
+// Every round is stronger than the one before (DSP, logic/dsp.js – checked by
+// waveGen.test.js): the boss rounds 10 and 15 bring a band, the finale is the strongest.
 const PLAN = [
   [['goblin', 8, 4.0]],
   [['goblin', 10, 3.5]],
@@ -20,17 +22,17 @@ const PLAN = [
   [['orc', 3, 6.0], ['wolf', 10, 2.4, 4], ['archer', 6, 4.0, 2]],
   [['spider', 1, 1, 0], ['goblin', 11, 2.5, 2], ['bat', 6, 3.0, 8]], // 8: a spider queen and her young
   [['orc', 4, 5.0], ['bat', 10, 2.8], ['archer', 7, 3.8, 3]],
-  [['troll', 1, 1, 2], ['goblinPack', 12, 2.4]],
+  [['troll', 1, 1, 2], ['goblinPack', 12, 2.4], ['orc', 2, 6.0, 6]],
   [['goblin', 16, 2.0], ['wolf', 10, 2.9, 4], ['archer', 5, 5.0, 8]],
   [['necromancer', 1, 1, 0], ['orc', 4, 4.0, 2], ['bat', 10, 2.4, 3], ['archer', 6, 3.2, 2]], // 12: the first necromancer (skeletons and skeleton warriors)
-  [['orc', 5, 4.0], ['wolf', 12, 2.2, 4], ['archer', 9, 3.0]],
-  [['orc', 6, 3.5], ['goblinPack', 12, 2.4], ['bat', 14, 1.9, 3], ['rukh', 1, 1, 8]], // 14: the first roc
-  [['dragon', 1, 1, 0], ['bat', 10, 1.8]], // 15: the goblin king (he calls his own goblins, hobgoblins and shamans)
+  [['orc', 5, 4.0], ['wolf', 14, 1.9, 4], ['archer', 9, 3.0]],
+  [['orc', 4, 4.5], ['goblinPack', 12, 2.4], ['bat', 10, 2.4, 3], ['rukh', 1, 1, 8]], // 14: the first roc
+  [['dragon', 1, 1, 0], ['bat', 12, 1.5], ['goblinPack', 10, 2.0, 2], ['goblin', 5, 3.0, 4]], // 15: the goblin king (he calls his own goblins, hobgoblins and shamans) and his band
   [['orc', 6, 3.0], ['goblin', 10, 2.6], ['goblinPack', 10, 2.6, 1], ['wolf', 10, 2.8, 2]],
-  [['necromancer', 2, 8, 0], ['spider', 1, 1, 4], ['orc', 5, 3.0, 2], ['bat', 10, 1.8], ['archer', 8, 2.2]], // 17
+  [['necromancer', 2, 8, 0], ['spider', 1, 1, 4], ['orc', 4, 3.6, 2], ['bat', 7, 2.4], ['archer', 6, 2.8]], // 17
   [['orc', 7, 2.8], ['wolf', 12, 2.0, 3], ['archer', 10, 2.5], ['bat', 8, 3.0, 3], ['rukh', 1, 1, 6]],
   [['troll', 1, 1, 0], ['spider', 1, 1, 4], ['orc', 8, 2.0, 2], ['bat', 16, 1.3], ['archer', 8, 2.4]], // 19: the troll and a spider queen
-  [['dragon', 1, 1, 0], ['orc', 6, 2.6], ['goblinPack', 12, 1.5], ['bat', 6, 2.6], ['rukh', 1, 1, 6]], // 20: the goblin king leads
+  [['dragon', 1, 1, 0], ['orc', 10, 1.6], ['goblinPack', 12, 1.5], ['bat', 6, 2.6], ['rukh', 1, 1, 6]], // 20: the goblin king leads
 ];
 
 // stretches every spawn timeline; tuned with the bot so waves last 40–60 s now

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import NumField from './NumField.jsx';
 import ProjectilePick from './ProjectilePick.jsx';
 import { DEFAULT_ENEMY_STATS } from '../config/components.js';
+import { monsterDsp, showDsp } from '../logic/dsp.js';
 
 // Properties of an enemy component, next to its picture: its numbers, what it
 // is (flies, shoots, boss), its size, and – for summoners like a necromancer or
@@ -35,10 +36,18 @@ export default function EnemyStatsEditor({ id, stats: raw, enemies = [], project
   const summons = stats.summons ?? minions.length > 0;
   const others = enemies.filter((e) => e.id !== id);
   const toggleMinion = (mid) => set({ minions: minions.includes(mid) ? minions.filter((x) => x !== mid) : [...minions, mid] });
+  // how dangerous these numbers make it (logic/dsp.js) – changes as the kid types
+  const dsp = monsterDsp({ ...stats, id }, enemies);
 
   return (
     <div className="sketch-card" style={{ padding: 10 }}>
-      <h3 style={{ margin: '0 0 6px' }}>{t('weapons.numbers')}</h3>
+      <div className="row" style={{ marginBottom: 6 }}>
+        <h3 style={{ margin: 0 }}>{t('weapons.numbers')}</h3>
+        <span className="dsp-badge" role="status" title={t('waves.dsp_title')} data-testid="enemy-dsp">
+          ⚡ {t('enemies.dsp')}: <b>{showDsp(dsp.dsp)}</b>
+          {dsp.minions > 0 && <span className="small"> ({t('enemies.dsp_parts', { own: showDsp(dsp.own), minions: showDsp(dsp.minions) })})</span>}
+        </span>
+      </div>
       <div className="row" style={{ gap: 14 }}>
         {FIELDS.map(([f, min, max, step]) => (
           <NumField key={f} label={t(`enemies.f_${f}`)} value={stats[f]} min={min} max={max} step={step} onChange={(v) => set({ [f]: v })} />

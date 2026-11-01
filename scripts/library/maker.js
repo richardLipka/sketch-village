@@ -15,6 +15,9 @@ import { fillPolygon, seededRng } from '/src/maps/decorEdit.js';
 import { DEFAULT_THEMES, fitsTheme } from '/src/config/themes.js';
 import { DEFAULT_BUILDING_TYPES } from '/src/config/buildings.js';
 import { playGame } from '/src/logic/balanceBot.js';
+import { scaleWaves } from '/src/logic/waveGen.js';
+import { defaultWaves, wavesOf } from '/src/config/waves.js';
+import { enemyTypesOf } from '/src/config/components.js';
 import { parseSaveFile, mergeSaveFile } from '/src/data/saveFile.js';
 import { migrateDb } from '/src/data/migrate.js';
 
@@ -188,6 +191,7 @@ function spotsAlong(map, grid, roads, want, rng) {
 const MAPS = [
   {
     file: 'green-valley', name: 'Zelené údolí', theme: 'plains', seed: 11,
+    strength: 0.95, // the gentle first map: the built-in waves 5 % weaker (DSP)
     title: { cs: 'Zelené údolí', en: 'Green valley' },
     description: { cs: 'Tři cesty loukou k vesnici, rybník a lesík. Dobrá první mapa.', en: 'Three roads through the meadow to the village, a pond and a little wood. A good first map.' },
     textures: { grass: 'meadow', path: 'dirt', pond: 'water' },
@@ -224,6 +228,7 @@ const MAPS = [
   },
   {
     file: 'spooky-graveyard', name: 'Strašidelný hřbitov', theme: 'graveyard', seed: 37,
+    strength: 0.95, // four roads at once: the built-in waves 5 % weaker (DSP) – harder, still winnable
     title: { cs: 'Strašidelný hřbitov', en: 'Spooky graveyard' },
     description: { cs: 'Čtyři cesty ze všech rohů a okruh kolem vesnice. Náhrobky, suché stromy a dýně. Těžší mapa.', en: 'Four roads from every corner and a ring around the village. Gravestones, dead trees and pumpkins. A harder map.' },
     textures: { grass: 'dirt', path: 'cobble' },
@@ -290,9 +295,12 @@ async function makeMap(def, decorById, home) {
   const check = validateMap(m, grid);
   m.valid = check.ok;
 
+  // a map may get the built-in waves stronger or weaker by DSP (logic/waveGen.js) – written into the map
+  if (def.strength && def.strength !== 1) m.waves = scaleWaves(defaultWaves(), def.strength, enemyTypesOf(home.assets));
+
   // the robot plays it three times on normal (only reported – the maps are made to be fair, not hard)
   const types = DEFAULT_BUILDING_TYPES.filter((ty) => ty.core || fitsTheme(ty, m.theme));
-  const results = [1, 2, 3].map((seed) => playGame({ map: { ...m, background: null }, grid, buildingTypes: types, seed })).map((g) => `${g.result}@${g.round}`);
+  const results = [1, 2, 3].map((seed) => playGame({ map: { ...m, background: null }, grid, buildingTypes: types, seed, waves: wavesOf(m) })).map((g) => `${g.result}@${g.round}`);
 
   const used = new Set(m.decorations.map((d) => d.asset));
   const decor = [...used].map((id) => decorById[id]);

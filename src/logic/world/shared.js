@@ -7,13 +7,15 @@ export const CATAPULT_MIN_RANGE = 50; // px: a stone can't land right next to th
 
 export const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
+/** Seeded random numbers 0..1; `rng.state` is the whole state (a copied World goes on with the same numbers). */
 export function mulberry32(seed) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
+  const rng = () => {
+    rng.state = (rng.state + 0x6d2b79f5) >>> 0;
+    let t = rng.state;
     t = Math.imul(t ^ (t >>> 15), t | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+  rng.state = seed >>> 0;
+  return rng;
 }

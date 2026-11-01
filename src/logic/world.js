@@ -145,6 +145,18 @@ export class World {
 
   get totalRounds() { return this.waves.rounds.length; }
 
+  /**
+   * An independent copy that plays on exactly as this one would (the same random
+   * numbers) – the wave limit test (logic/waveLimit.js) tries a round many times
+   * from the same start. The map, grid and flow field are shared: nothing changes them.
+   */
+  clone() {
+    const { map, grid, flow, rng, ...state } = this;
+    const copy = Object.assign(Object.create(World.prototype), structuredClone(state), { map, grid, flow, rng: mulberry32(0) });
+    copy.rng.state = rng.state;
+    return copy;
+  }
+
   // ---------------- progression (config/unlocks.js) ----------------
 
   /** Round number (1-based) from which `key` can be bought; 1 when not scheduled. */

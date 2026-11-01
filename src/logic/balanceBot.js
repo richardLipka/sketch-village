@@ -77,11 +77,17 @@ export function planFor(map, buildingTypes) {
   });
 }
 
-/** Play one game; returns per-round stats and the result. */
-// careful = goes back to the Town Hall to heal when hurt; a careless bot runs out of lives
-// map / grid / waves / enemyTypes default to the test map with the built-in plan
-export function playGame({
-  rules = DEFAULT_RULES, buildingTypes = DEFAULT_BUILDING_TYPES, seed = 1, careful = true, onTick,
+export const DT = 1 / 30; // s of game time per step
+
+/**
+ * A new game: the World and the bot's notes. The notes are plain data, so a
+ * game can be copied at any moment (`w.clone()` + `structuredClone(bot)`) and
+ * played on from there – the wave limit test does (logic/waveLimit.js).
+ * careful = goes back to the Town Hall to heal when hurt; a careless bot runs out of lives.
+ * map / grid / waves / enemyTypes default to the test map with the built-in plan.
+ */
+export function startGame({
+  rules = DEFAULT_RULES, buildingTypes = DEFAULT_BUILDING_TYPES, seed = 1, careful = true,
   map: ownMap, grid: ownGrid, waves, enemyTypes = DEFAULT_ENEMY_TYPES, weapons, coinTypes, heroPoints, difficulty,
   plan = ownMap ? planFor(ownMap, buildingTypes) : PLAN,
 } = {}) {
@@ -91,103 +97,119 @@ export function playGame({
     ...(weapons ? { weapons } : {}), ...(coinTypes ? { coinTypes } : {}), ...(heroPoints ? { heroPoints } : {}),
   });
   w.setMode('ranged');
-  const home = { x: w.townHall.x, y: w.townHall.y + 50 };
-  const stats = [];
-  let cur = { destroyed: 0, minTownHall: w.townHall.hp, livesLost: 0 };
-  let think = 0, rebuilds = [], healing = false;
-  const done = plan.map(() => false);
-  // the first plan step that isn't done and isn't locked / waiting (it may still cost too much)
-  const nextStep = () => {
-    for (const [i, s] of plan.entries()) {
-      if (done[i]) continue;
-      const c = costOf(w, s);
-      if (c === null) { done[i] = true; continue; }
-      if (c !== Infinity) return i;
-    }
-    return -1;
+  const bot = {
+    plan, careful, done: plan.map(() => false), rebuilds: [], healing: false, think: 0, t: 0,
+    home: { x: w.townHall.x, y: w.townHall.y + 50 },
+    stats: [], cur: { destroyed: 0, minTownHall: w.townHall.hp, livesLost: 0 },
   };
+  return { w, bot };
+}
 
-  const target = (s) => (s[0] === 'th' || s[0] === 'hero' ? w.townHall : w.spots.find((p) => p.id === s[1]));
-  const doStep = (s) => {
-    if (s[0] === 'build') return w.build(s[1], s[2]);
-    if (s[0] === 'up') return w.upgrade(s[1]);
-    if (s[0] === 'th') return w.upgradeTownHall();
-    return w.upgradeHero(s[1]);
-  };
-  const near = (s) => (s[0] === 'th' || s[0] === 'hero' ? w.heroNear(w.townHall, w.townHall.radius) : w.heroNear(target(s)));
-
-  const dt = 1 / 30;
-  const limit = 200 * w.totalRounds; // game seconds – a stuck game ends as 'timeout'
-  for (let t = 0; t < limit && w.phase !== 'won' && w.phase !== 'lost'; t += dt) {
-    w.update(dt);
-    onTick?.(w);
-    for (const e of w.drainEvents()) {
-      if (e.type === 'buildingDestroyed') { cur.destroyed++; rebuilds.push(['build', e.spotId, e.building]); }
-      if (e.type === 'heroLostLife') cur.livesLost++;
-      if (e.type === 'coinPicked') cur.picked = (cur.picked ?? 0) + 1;
-      if (e.type === 'coinExpired') cur.expired = (cur.expired ?? 0) + 1;
-      if (e.type === 'waveStart') cur.waveStart = w.time;
-      if (e.type === 'unlocked') cur.unlocked = e.keys;
-      if (e.type === 'roundEnd') {
-        stats.push({ round: e.round, ...cur, defeated: e.stats.defeated, waveLength: w.time - cur.waveStart, coins: w.coins, buildings: w.buildings.filter((b) => b.state !== 'ruin').length });
-        cur = { destroyed: 0, minTownHall: w.townHall.hp, livesLost: 0, picked: 0, expired: 0 };
-      }
+/** One step: the world moves on, the bot notes what happened and decides. Returns the world's events. */
+export function stepGame(w, bot, dt = DT, onTick) {
+  w.update(dt);
+  bot.t += dt;
+  onTick?.(w);
+  const events = w.drainEvents();
+  let cur = bot.cur;
+  for (const e of events) {
+    if (e.type === 'buildingDestroyed') { cur.destroyed++; bot.rebuilds.push(['build', e.spotId, e.building]); }
+    if (e.type === 'heroLostLife') cur.livesLost++;
+    if (e.type === 'coinPicked') cur.picked = (cur.picked ?? 0) + 1;
+    if (e.type === 'coinExpired') cur.expired = (cur.expired ?? 0) + 1;
+    if (e.type === 'waveStart') cur.waveStart = w.time;
+    if (e.type === 'unlocked') cur.unlocked = e.keys;
+    if (e.type === 'roundEnd') {
+      bot.stats.push({ round: e.round, ...cur, defeated: e.stats.defeated, waveLength: w.time - cur.waveStart, coins: w.coins, buildings: w.buildings.filter((b) => b.state !== 'ruin').length });
+      cur = bot.cur = { destroyed: 0, minTownHall: w.townHall.hp, livesLost: 0, picked: 0, expired: 0 };
     }
-    cur.minTownHall = Math.min(cur.minTownHall, w.townHall.hp);
-
-    think -= dt;
-    if (think > 0 || w.hero.dead) continue;
-    think = 0.5;
-    const h = w.hero;
-    // 0) every lost life counts: when hurt, walk back to the Town Hall and heal up
-    if (careful && h.hp < h.maxHp * 0.4) healing = true;
-    if (healing) {
-      if (h.hp >= h.maxHp * 0.8) healing = false;
-      else {
-        if (dist(h, home) > 30 && !h.path.length) w.moveHeroTo(home.x, home.y);
-        continue;
-      }
-    }
-    const danger = w.enemies.some((e) => dist(e, h) < 160);
-    // 1) rebuild ruins first, then follow the plan
-    const idx = rebuilds.length ? -1 : nextStep();
-    const s = rebuilds[0] ?? plan[idx];
-    if (s) {
-      const cost = costOf(w, s);
-      const finish = () => { if (idx < 0) rebuilds.shift(); else done[idx] = true; };
-      if (cost !== null && cost !== Infinity && w.coins >= cost && (!danger || w.phase === 'prep')) {
-        if (near(s)) {
-          const r = doStep(s);
-          if (r.ok || ['max', 'occupied'].includes(r.reason)) finish();
-        } else if (!h.path.length) {
-          const p = target(s);
-          w.moveHeroTo(p.x, p.y);
-        }
-        continue;
-      }
-      if (cost === null) finish();
-    }
-    // 2) go after an enemy that attacks a building or soldiers away from the
-    //    Town Hall (a kid clicks it), flying ones only with the bow
-    if (!danger && !h.target) {
-      const busy = w.enemies.filter((e) => e.attacking && e.victim?.kind !== 'hero' && dist(e, w.townHall) > 160);
-      if (busy.length) {
-        const e = busy.reduce((a, b) => (dist(b, h) < dist(a, h) ? b : a));
-        w.attack(e.id);
-        continue;
-      }
-    }
-    // 3) pick up coins and weapon chests when it is safe
-    const loot = [...w.chests, ...w.coinsOnGround];
-    if (!danger && loot.length && !h.path.length) {
-      const c = loot.reduce((a, b) => (dist(b, h) < dist(a, h) ? b : a));
-      w.moveHeroTo(c.x, c.y);
-      continue;
-    }
-    // 4) otherwise guard the Town Hall
-    if (!danger && !w.coinsOnGround.length && !h.path.length && dist(h, home) > 20) w.moveHeroTo(home.x, home.y);
   }
-  return { result: w.phase, round: w.round, stats, coins: w.coins, planDone: done.filter(Boolean).length, world: w, rebuilds };
+  cur.minTownHall = Math.min(cur.minTownHall, w.townHall.hp);
+  decide(w, bot, dt);
+  return events;
+}
+
+/** Play one game; returns per-round stats and the result. */
+export function playGame({ onTick, ...setup } = {}) {
+  const { w, bot } = startGame(setup);
+  const limit = 200 * w.totalRounds; // game seconds – a stuck game ends as 'timeout'
+  while (bot.t < limit && w.phase !== 'won' && w.phase !== 'lost') stepGame(w, bot, DT, onTick);
+  return { result: w.phase, round: w.round, stats: bot.stats, coins: w.coins, planDone: bot.done.filter(Boolean).length, world: w, rebuilds: bot.rebuilds };
+}
+
+// the first plan step that isn't done and isn't locked / waiting (it may still cost too much)
+function nextStep(w, bot) {
+  for (const [i, s] of bot.plan.entries()) {
+    if (bot.done[i]) continue;
+    const c = costOf(w, s);
+    if (c === null) { bot.done[i] = true; continue; }
+    if (c !== Infinity) return i;
+  }
+  return -1;
+}
+
+const targetOf = (w, s) => (s[0] === 'th' || s[0] === 'hero' ? w.townHall : w.spots.find((p) => p.id === s[1]));
+function doStep(w, s) {
+  if (s[0] === 'build') return w.build(s[1], s[2]);
+  if (s[0] === 'up') return w.upgrade(s[1]);
+  if (s[0] === 'th') return w.upgradeTownHall();
+  return w.upgradeHero(s[1]);
+}
+const nearStep = (w, s) => (s[0] === 'th' || s[0] === 'hero' ? w.heroNear(w.townHall, w.townHall.radius) : w.heroNear(targetOf(w, s)));
+
+// What the bot does every half second: heal, rebuild, follow the plan, hunt, loot, guard.
+function decide(w, bot, dt) {
+  bot.think -= dt;
+  if (bot.think > 0 || w.hero.dead) return;
+  bot.think = 0.5;
+  const h = w.hero, home = bot.home;
+  // 0) every lost life counts: when hurt, walk back to the Town Hall and heal up
+  if (bot.careful && h.hp < h.maxHp * 0.4) bot.healing = true;
+  if (bot.healing) {
+    if (h.hp >= h.maxHp * 0.8) bot.healing = false;
+    else {
+      if (dist(h, home) > 30 && !h.path.length) w.moveHeroTo(home.x, home.y);
+      return;
+    }
+  }
+  const danger = w.enemies.some((e) => dist(e, h) < 160);
+  // 1) rebuild ruins first, then follow the plan
+  const idx = bot.rebuilds.length ? -1 : nextStep(w, bot);
+  const s = bot.rebuilds[0] ?? bot.plan[idx];
+  if (s) {
+    const cost = costOf(w, s);
+    const finish = () => { if (idx < 0) bot.rebuilds.shift(); else bot.done[idx] = true; };
+    if (cost !== null && cost !== Infinity && w.coins >= cost && (!danger || w.phase === 'prep')) {
+      if (nearStep(w, s)) {
+        const r = doStep(w, s);
+        if (r.ok || ['max', 'occupied'].includes(r.reason)) finish();
+      } else if (!h.path.length) {
+        const p = targetOf(w, s);
+        w.moveHeroTo(p.x, p.y);
+      }
+      return;
+    }
+    if (cost === null) finish();
+  }
+  // 2) go after an enemy that attacks a building or soldiers away from the
+  //    Town Hall (a kid clicks it), flying ones only with the bow
+  if (!danger && !h.target) {
+    const busy = w.enemies.filter((e) => e.attacking && e.victim?.kind !== 'hero' && dist(e, w.townHall) > 160);
+    if (busy.length) {
+      const e = busy.reduce((a, b) => (dist(b, h) < dist(a, h) ? b : a));
+      w.attack(e.id);
+      return;
+    }
+  }
+  // 3) pick up coins and weapon chests when it is safe
+  const loot = [...w.chests, ...w.coinsOnGround];
+  if (!danger && loot.length && !h.path.length) {
+    const c = loot.reduce((a, b) => (dist(b, h) < dist(a, h) ? b : a));
+    w.moveHeroTo(c.x, c.y);
+    return;
+  }
+  // 4) otherwise guard the Town Hall
+  if (!danger && !w.coinsOnGround.length && !h.path.length && dist(h, home) > 20) w.moveHeroTo(home.x, home.y);
 }
 
 // Coins the step needs now; Infinity = not possible yet (locked, busy, needs a

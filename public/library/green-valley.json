@@ -1485,6 +1485,96 @@
       "updatedAt": "2026-10-29T00:00:00.000Z"
     },
     {
+      "id": "arrow",
+      "category": "projectile",
+      "name": {
+        "cs": "Šíp",
+        "en": "Arrow"
+      },
+      "author": "",
+      "images": [],
+      "stats": {},
+      "themes": [],
+      "builtIn": true,
+      "createdAt": "2026-10-29T00:00:00.000Z",
+      "updatedAt": "2026-10-29T00:00:00.000Z"
+    },
+    {
+      "id": "magicBolt",
+      "category": "projectile",
+      "name": {
+        "cs": "Kouzelná střela",
+        "en": "Magic bolt"
+      },
+      "author": "",
+      "images": [],
+      "stats": {},
+      "themes": [],
+      "builtIn": true,
+      "createdAt": "2026-10-29T00:00:00.000Z",
+      "updatedAt": "2026-10-29T00:00:00.000Z"
+    },
+    {
+      "id": "catapultStone",
+      "category": "projectile",
+      "name": {
+        "cs": "Kámen z katapultu",
+        "en": "Catapult stone"
+      },
+      "author": "",
+      "images": [],
+      "stats": {},
+      "themes": [],
+      "builtIn": true,
+      "createdAt": "2026-10-29T00:00:00.000Z",
+      "updatedAt": "2026-10-29T00:00:00.000Z"
+    },
+    {
+      "id": "meadow",
+      "category": "texture",
+      "name": {
+        "cs": "Kvetoucí louka",
+        "en": "Flower meadow"
+      },
+      "author": "",
+      "images": [],
+      "stats": {},
+      "themes": [],
+      "builtIn": true,
+      "createdAt": "2026-10-29T00:00:00.000Z",
+      "updatedAt": "2026-10-29T00:00:00.000Z"
+    },
+    {
+      "id": "dirt",
+      "category": "texture",
+      "name": {
+        "cs": "Polní cesta",
+        "en": "Dirt road"
+      },
+      "author": "",
+      "images": [],
+      "stats": {},
+      "themes": [],
+      "builtIn": true,
+      "createdAt": "2026-10-29T00:00:00.000Z",
+      "updatedAt": "2026-10-29T00:00:00.000Z"
+    },
+    {
+      "id": "water",
+      "category": "texture",
+      "name": {
+        "cs": "Voda",
+        "en": "Water"
+      },
+      "author": "",
+      "images": [],
+      "stats": {},
+      "themes": [],
+      "builtIn": true,
+      "createdAt": "2026-10-29T00:00:00.000Z",
+      "updatedAt": "2026-10-29T00:00:00.000Z"
+    },
+    {
       "id": "lib-flowers",
       "category": "decoration",
       "name": {
@@ -2595,8 +2685,8 @@
               },
               {
                 "enemy": "wolf",
-                "count": 5,
-                "interval": 4.8,
+                "count": 4,
+                "interval": 6.4,
                 "delay": 12,
                 "spawn": "all"
               }
@@ -2606,8 +2696,8 @@
             "groups": [
               {
                 "enemy": "goblin",
-                "count": 12,
-                "interval": 3,
+                "count": 11,
+                "interval": 3.3,
                 "delay": 0,
                 "spawn": "all"
               },
@@ -2624,8 +2714,8 @@
             "groups": [
               {
                 "enemy": "goblin",
-                "count": 10,
-                "interval": 3.96,
+                "count": 9,
+                "interval": 4.46,
                 "delay": 0,
                 "spawn": "all"
               },
@@ -2656,8 +2746,8 @@
               },
               {
                 "enemy": "goblinPack",
-                "count": 14,
-                "interval": 2.64,
+                "count": 13,
+                "interval": 2.86,
                 "delay": 2.4,
                 "spawn": "all"
               }
@@ -2681,8 +2771,8 @@
               },
               {
                 "enemy": "archer",
-                "count": 6,
-                "interval": 4.8,
+                "count": 5,
+                "interval": 6,
                 "delay": 2.4,
                 "spawn": "all"
               }
@@ -2699,8 +2789,8 @@
               },
               {
                 "enemy": "goblin",
-                "count": 11,
-                "interval": 3,
+                "count": 10,
+                "interval": 3.33,
                 "delay": 2.4,
                 "spawn": "all"
               },
@@ -2731,8 +2821,8 @@
               },
               {
                 "enemy": "archer",
-                "count": 7,
-                "interval": 4.56,
+                "count": 6,
+                "interval": 5.47,
                 "delay": 3.6,
                 "spawn": "all"
               }
@@ -2749,9 +2839,16 @@
               },
               {
                 "enemy": "goblinPack",
-                "count": 12,
-                "interval": 2.88,
+                "count": 11,
+                "interval": 3.17,
                 "delay": 0,
+                "spawn": "all"
+              },
+              {
+                "enemy": "orc",
+                "count": 2,
+                "interval": 7.2,
+                "delay": 7.2,
                 "spawn": "all"
               }
             ]
@@ -2760,15 +2857,15 @@
             "groups": [
               {
                 "enemy": "goblin",
-                "count": 16,
-                "interval": 2.4,
+                "count": 15,
+                "interval": 2.57,
                 "delay": 0,
                 "spawn": "all"
               },
               {
                 "enemy": "wolf",
-                "count": 10,
-                "interval": 3.48,
+                "count": 9,
+                "interval": 3.92,
                 "delay": 4.8,
                 "spawn": "all"
               },
@@ -2799,8 +2896,8 @@
               },
               {
                 "enemy": "bat",
-                "count": 10,
-                "interval": 2.88,
+                "count": 8,
+                "interval": 3.7,
                 "delay": 3.6,
                 "spawn": "all"
               },
@@ -2824,15 +2921,15 @@
               },
               {
                 "enemy": "wolf",
-                "count": 12,
-                "interval": 2.64,
+                "count": 13,
+                "interval": 2.47,
                 "delay": 4.8,
                 "spawn": "all"
               },
               {
                 "enemy": "archer",
-                "count": 9,
-                "interval": 3.6,
+                "count": 8,
+                "interval": 4.11,
                 "delay": 0,
                 "spawn": "all"
               }
@@ -2842,22 +2939,22 @@
             "groups": [
               {
                 "enemy": "orc",
-                "count": 6,
-                "interval": 4.2,
+                "count": 4,
+                "interval": 5.4,
                 "delay": 0,
                 "spawn": "all"
               },
               {
                 "enemy": "goblinPack",
-                "count": 12,
-                "interval": 2.88,
+                "count": 10,
+                "interval": 3.52,
                 "delay": 0,
                 "spawn": "all"
               },
               {
                 "enemy": "bat",
-                "count": 14,
-                "interval": 2.28,
+                "count": 10,
+                "interval": 2.88,
                 "delay": 3.6,
                 "spawn": "all"
               },
@@ -2881,9 +2978,23 @@
               },
               {
                 "enemy": "bat",
-                "count": 10,
-                "interval": 2.16,
+                "count": 11,
+                "interval": 1.98,
                 "delay": 0,
+                "spawn": "all"
+              },
+              {
+                "enemy": "goblinPack",
+                "count": 9,
+                "interval": 2.7,
+                "delay": 2.4,
+                "spawn": "all"
+              },
+              {
+                "enemy": "goblin",
+                "count": 5,
+                "interval": 3.6,
+                "delay": 4.8,
                 "spawn": "all"
               }
             ]
@@ -2913,8 +3024,8 @@
               },
               {
                 "enemy": "wolf",
-                "count": 10,
-                "interval": 3.36,
+                "count": 7,
+                "interval": 5.04,
                 "delay": 2.4,
                 "spawn": "all"
               }
@@ -2938,22 +3049,22 @@
               },
               {
                 "enemy": "orc",
-                "count": 5,
-                "interval": 3.6,
+                "count": 4,
+                "interval": 4.32,
                 "delay": 2.4,
                 "spawn": "all"
               },
               {
                 "enemy": "bat",
-                "count": 10,
-                "interval": 2.16,
+                "count": 4,
+                "interval": 5.76,
                 "delay": 0,
                 "spawn": "all"
               },
               {
                 "enemy": "archer",
-                "count": 8,
-                "interval": 2.64,
+                "count": 6,
+                "interval": 3.36,
                 "delay": 0,
                 "spawn": "all"
               }
@@ -2970,8 +3081,8 @@
               },
               {
                 "enemy": "wolf",
-                "count": 12,
-                "interval": 2.4,
+                "count": 11,
+                "interval": 2.64,
                 "delay": 3.6,
                 "spawn": "all"
               },
@@ -2984,8 +3095,8 @@
               },
               {
                 "enemy": "bat",
-                "count": 8,
-                "interval": 3.6,
+                "count": 6,
+                "interval": 5.04,
                 "delay": 3.6,
                 "spawn": "all"
               },
@@ -3023,8 +3134,8 @@
               },
               {
                 "enemy": "bat",
-                "count": 16,
-                "interval": 1.56,
+                "count": 12,
+                "interval": 2.13,
                 "delay": 0,
                 "spawn": "all"
               },
@@ -3048,22 +3159,22 @@
               },
               {
                 "enemy": "orc",
-                "count": 6,
-                "interval": 3.12,
+                "count": 10,
+                "interval": 1.92,
                 "delay": 0,
                 "spawn": "all"
               },
               {
                 "enemy": "goblinPack",
-                "count": 12,
-                "interval": 1.8,
+                "count": 11,
+                "interval": 1.98,
                 "delay": 0,
                 "spawn": "all"
               },
               {
                 "enemy": "bat",
-                "count": 6,
-                "interval": 3.12,
+                "count": 3,
+                "interval": 7.8,
                 "delay": 0,
                 "spawn": "all"
               },
@@ -3091,6 +3202,39 @@
       "name": {
         "cs": "Pláně",
         "en": "Plains"
+      },
+      "builtIn": true,
+      "createdAt": "2026-10-30T00:00:00.000Z",
+      "updatedAt": "2026-10-30T00:00:00.000Z"
+    },
+    {
+      "id": "goblinForest",
+      "icon": "🌲",
+      "name": {
+        "cs": "Skřetí les",
+        "en": "Goblin forest"
+      },
+      "builtIn": true,
+      "createdAt": "2026-10-30T00:00:00.000Z",
+      "updatedAt": "2026-10-30T00:00:00.000Z"
+    },
+    {
+      "id": "graveyard",
+      "icon": "🪦",
+      "name": {
+        "cs": "Hřbitov",
+        "en": "Graveyard"
+      },
+      "builtIn": true,
+      "createdAt": "2026-10-30T00:00:00.000Z",
+      "updatedAt": "2026-10-30T00:00:00.000Z"
+    },
+    {
+      "id": "necromancy",
+      "icon": "💀",
+      "name": {
+        "cs": "Nekromancie",
+        "en": "Necromancy"
       },
       "builtIn": true,
       "createdAt": "2026-10-30T00:00:00.000Z",
