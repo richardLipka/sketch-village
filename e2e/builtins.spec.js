@@ -43,11 +43,11 @@ test('arrows: the game’s pictures are in the studio, can be drawn over, never 
   await expect(modal.getByTitle('Vrátit obrázek hry')).toBeVisible(); // ✕ brings the game's one back
   await modal.getByRole('button', { name: /Uložit/ }).click();
 
+  await expect(arrowTile.locator('img')).not.toHaveAttribute('src', gamePicture);
   const drawn = await arrowTile.locator('img').getAttribute('src');
-  expect(drawn).not.toBe(gamePicture);
-  const stored = (await readDb(page)).assets.find((a) => a.id === 'arrow');
-  expect(stored.images[0]).toBe(drawn);
-  expect(stored.builtIn).toBe(true);
+  // stored (the write finishes a moment after the screen shows it)
+  await expect.poll(async () => (await readDb(page)).assets.find((a) => a.id === 'arrow')?.images?.[0]).toBe(drawn);
+  expect((await readDb(page)).assets.find((a) => a.id === 'arrow').builtIn).toBe(true);
 
   // a game with the drawn arrow runs
   await page.getByRole('button', { name: /←/ }).click();
@@ -78,8 +78,8 @@ test('surfaces: a photo replaces the game’s water – in the studio and the ma
   await page.getByRole('button', { name: /Oříznout/ }).click();
   await expect(modal.getByTitle('Vrátit obrázek hry')).toBeVisible();
   await modal.getByRole('button', { name: /Uložit/ }).click();
+  await expect.poll(async () => (await readDb(page)).assets.find((a) => a.id === 'water')?.images?.[0] ?? '').toMatch(/^data:image\//);
   const water = (await readDb(page)).assets.find((a) => a.id === 'water');
-  expect(water.images[0]).toMatch(/^data:image\//);
 
   // the map editor's surface list shows our water
   await page.getByRole('button', { name: /←/ }).click();
