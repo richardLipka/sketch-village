@@ -165,7 +165,9 @@ test('the keyboard alone: open a component, the dialog keeps focus, equip from t
   // the backpack: I opens it, an item and a slot are buttons – Enter on an item, Enter on its slot
   await page.getByRole('button', { name: /← Zpět/ }).click();
   await startGame(page);
+  await expect(page.locator('.hud-num').first()).toBeVisible(); // the controls (and their keys) are there
   await page.keyboard.press('i');
+  await expect(page.locator('.backpack')).toBeVisible();
   const item = page.locator('.eq-item').first();
   await expect(item).toBeVisible();
   const itemName = (await item.locator('.eq-name').textContent()).trim();

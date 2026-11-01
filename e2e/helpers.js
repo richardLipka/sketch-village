@@ -17,10 +17,12 @@ export async function openMenu(page) {
   await expect(page.getByRole('button', { name: /Hrát/ })).toBeVisible();
 }
 
+/** Start a game and wait until it runs: the map is drawn and the controls (with their keys) are there. */
 export async function startGame(page) {
   await page.getByRole('button', { name: /Hrát/ }).click();
   await page.getByRole('button', { name: /Začít/ }).click();
   await expect(page.locator('.game-screen canvas')).toBeVisible();
+  await expect(page.locator('.hud-num').first()).toBeVisible({ timeout: 30_000 }); // a slow machine needs a moment
 }
 
 // The browser keeps everything as one save file in IndexedDB (src/data/store.js).
