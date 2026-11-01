@@ -72,6 +72,10 @@ export class Enemies {
 
   updateEnemy(e, dt) {
     const type = this.types[e.type];
+    // slowed by the hero's shout, frozen by its ice (world/abilities.js): it walks and attacks slower
+    const pace = this.paceOf(e);
+    dt *= pace;
+    if (pace === 0) { e.attacking = false; return; }
     e.cooldown = Math.max(0, e.cooldown - dt);
     this.summon(e, type, dt);
     const target = this.enemyTarget(e, type);

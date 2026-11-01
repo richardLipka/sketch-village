@@ -17,6 +17,8 @@
 //              and body armor; two-handed weapons take both hands; changing
 //              weapons takes 2 s; items from chests or the Town Hall shop
 //   town hall: shoots arrows like a weak tower (stronger with each level)
+//   ability:   the hero's special one (config/abilities.js) – used with a button,
+//              then a cooldown; upgraded in the Town Hall shop
 //   coins:     drop on roads, must be picked up, vanish after 30 s
 //   buildings: built/upgraded on the spots when the hero is near; what they do
 //              comes from their features (FEATURE_BEHAVIOUR in world/buildings.js): workers
@@ -44,6 +46,7 @@ import { Enemies } from './world/enemies.js';
 import { Combat } from './world/combat.js';
 import { Hero } from './world/hero.js';
 import { Coins } from './world/coins.js';
+import { Abilities } from './world/abilities.js';
 
 export { mulberry32 };
 
@@ -61,8 +64,9 @@ export class World {
    * @param {object} [o.rules]        editable rules (config/rules.js)
    * @param {object} [o.balance]      overrides rules.balance
    * @param {number} [o.seed]
+   * @param {object} [o.ability]    the hero's ability { id, power, radius, duration, cooldown } (config/abilities.js)
    */
-  constructor({ map, grid, enemyTypes, waves, heroPoints = DEFAULT_HERO_POINTS, buildingTypes = DEFAULT_BUILDING_TYPES, rules = DEFAULT_RULES, balance = rules.balance, weapons = DEFAULT_WEAPONS, coinTypes = [{ value: 1, key: 'coin' }], seed = Date.now(), difficulty }) {
+  constructor({ map, grid, enemyTypes, waves, heroPoints = DEFAULT_HERO_POINTS, buildingTypes = DEFAULT_BUILDING_TYPES, rules = DEFAULT_RULES, balance = rules.balance, weapons = DEFAULT_WEAPONS, coinTypes = [{ value: 1, key: 'coin' }], seed = Date.now(), difficulty, ability = null }) {
     // coin denominations ({ value, key = texture }), biggest first; drops are split into them
     this.coinTypes = [...coinTypes].filter((c) => c.value > 0).sort((a, b) => b.value - a.value);
     if (!this.coinTypes.length) this.coinTypes = [{ value: 1, key: 'coin' }];
@@ -127,6 +131,9 @@ export class World {
     if (first) this.equipped.right = first.id;
     this.recalcHero();
     this.hero.hp = this.hero.maxHp = this.heroStats.hp;
+    this.ability = ability;
+    this.abilityLevel = 0; // bought in the Town Hall shop
+    this.abilityLeft = 0; // s of cooldown left
 
     this.enemies = [];
     this.buildings = []; // one per used spot (incl. ruins)
@@ -155,6 +162,30 @@ export class World {
     const copy = Object.assign(Object.create(World.prototype), structuredClone(state), { map, grid, flow, rng: mulberry32(0) });
     copy.rng.state = rng.state;
     return copy;
+  }
+
+  /**
+   * Everything needed to go on with this game later (a saved game, SPEC §11b) as
+   * plain data: the map, roads and flow field are left out (made again from the
+   * map), and so are the pictures and sounds the types carry.
+   */
+  saveState() {
+    const { map, grid, flow, rng, events, ...state } = this;
+    const light = (types) => Object.fromEntries(Object.entries(types).map(([id, t]) => {
+      const { image, images, anims, sounds, legend, ...rest } = t;
+      return [id, rest];
+    }));
+    return structuredClone({ ...state, types: light(state.types), weaponTypes: light(state.weaponTypes), rngState: rng.state });
+  }
+
+  /** The game saved by `saveState`, going on: a World made from the same map (`args`) with that state. */
+  static restore(args, saved) {
+    const w = new World(args);
+    const { rngState, ...state } = structuredClone(saved);
+    Object.assign(w, state);
+    w.rng.state = rngState;
+    w.events = [];
+    return w;
   }
 
   // ---------------- progression (config/unlocks.js) ----------------
@@ -253,6 +284,7 @@ export class World {
     }
 
     this.updateHero(dt);
+    this.updateAbility(dt);
     this.updateTownHall(dt);
     for (const b of this.buildings) this.updateBuilding(b, dt);
     for (const s of this.soldiers) this.updateSoldier(s, dt);
@@ -322,6 +354,7 @@ export class World {
         attack: Math.round(this.heroStats[h.mode]?.damage ?? 0),
         reach: Math.round(this.heroStats[h.mode]?.range ?? 0),
         armor: Math.round(this.heroStats.armor * 100),
+        ability: this.abilityInfo(),
       },
       inventory: [...this.inventory],
       equipped: { ...this.equipped },
@@ -337,7 +370,7 @@ export class World {
 
 // The World's methods live in parts by topic (src/logic/world/*.js); they are
 // mixed into the class here, getters included, so callers see one World.
-for (const part of [Equipment, Buildings, Soldiers, Enemies, Combat, Hero, Coins]) {
+for (const part of [Equipment, Buildings, Soldiers, Enemies, Combat, Hero, Coins, Abilities]) {
   for (const [key, d] of Object.entries(Object.getOwnPropertyDescriptors(part.prototype))) {
     if (key === 'constructor') continue;
     if (Object.prototype.hasOwnProperty.call(World.prototype, key)) throw new Error(`World.${key} is defined twice`);

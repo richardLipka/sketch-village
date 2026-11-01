@@ -9,11 +9,13 @@ import SafetyCard from './SafetyCard.jsx';
 import LoadFile from './LoadFile.jsx';
 import { importNote } from './useImporter.jsx';
 import Toast from '../ui/Toast.jsx';
+import ResetDefaults from './ResetDefaults.jsx';
 
 // Export everything to one JSON file (components with their pictures and
 // animations, maps, themes, rules, settings incl. the language), import a file
 // from the computer or an address (LoadFile → data/useImporter.jsx: changed
-// elements are reviewed), the class pack, purge (SPEC §13a).
+// elements are reviewed), the class pack, back to the game's own components
+// (SPEC §13d), purge (SPEC §13a).
 export default function DataPanel({ db, onReplaceDb, onBackup, onImport }) {
   const { t } = useTranslation();
   const [message, setMessage] = useState(null);
@@ -74,6 +76,12 @@ export default function DataPanel({ db, onReplaceDb, onBackup, onImport }) {
           <summary>{t('data.pack_teacher')}</summary>
           <p className="muted">{t('data.pack_howto')}</p>
         </details>
+      </div>
+
+      <div className="sketch-card" style={{ marginBottom: 20 }}>
+        <h2>{t('reset.title')}</h2>
+        <p className="small muted">{t('reset.card_hint')}</p>
+        <ResetDefaults db={db} onReplaceDb={onReplaceDb} onDone={(text) => setMessage({ ok: true, text })} />
       </div>
 
       <div className="sketch-card">

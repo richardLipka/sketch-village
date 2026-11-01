@@ -1,4 +1,5 @@
 import React, { memo, useEffect, useRef, useState } from 'react';
+import { ABILITIES } from '../config/abilities.js';
 import { useTranslation } from 'react-i18next';
 import { roundSummary } from '../logic/waves.js';
 import { unlockLabel } from '../config/unlocks.js';
@@ -84,11 +85,22 @@ export const WaveInfo = memo(function WaveInfo({ phase, round, totalRounds, prep
 });
 
 // Attack types: each button takes a weapon of that class into the hand (2 s).
-export const AttackBar = memo(function AttackBar({ mode, hasMelee, hasRanged, hasMagic, switching, onMode }) {
+export const AttackBar = memo(function AttackBar({ mode, hasMelee, hasRanged, hasMagic, switching, onMode, ability, abilityLeft = 0, abilityCooldown = 1, heroDead, onAbility }) {
   const { t } = useTranslation();
   const has = { melee: hasMelee, ranged: hasRanged, magic: hasMagic };
+  // the hero's special ability (E): a ring fills while it waits its cooldown
+  const abilityName = ability ? `${t(`ability.${ability}`)} (E)` : '';
+  const waiting = abilityLeft > 0;
   return (
     <div className="ov ov-br attack-bar">
+      {ability && (
+        <button className={`btn attack ability-btn ${waiting ? 'waiting' : 'ready'}`} disabled={heroDead} onClick={onAbility} data-testid="ability"
+          title={waiting ? `${abilityName} · ${t('ability.wait', { s: abilityLeft })}` : abilityName} aria-label={waiting ? `${abilityName} · ${t('ability.wait', { s: abilityLeft })}` : abilityName}
+          style={{ '--cd': `${Math.round((abilityLeft / Math.max(1, abilityCooldown)) * 360)}deg` }}>
+          <span aria-hidden="true">{ABILITIES[ability]?.icon}</span>
+          {waiting && <span className="ability-left" aria-hidden="true">{abilityLeft}</span>}
+        </button>
+      )}
       {WEAPON_CLASSES.map((k, i) => (
         <button key={k} className={`btn attack ${mode === k ? 'active' : ''}`} disabled={!has[k]} onClick={() => onMode(k)} aria-pressed={mode === k}
           title={has[k] ? `${t(`weapons.class_${k}`)} (${i + 1})` : t(`weapons.need_${k}`)} aria-label={has[k] ? `${t(`weapons.class_${k}`)} (${i + 1})` : t(`weapons.need_${k}`)}>
@@ -286,7 +298,10 @@ export function itemLine(w, t) {
 
 // On a phone (compact) only pause, speed and the chronicle stay on screen, in a
 // column under the left thumb; the rest is behind ⋯.
-export const Toolbar = memo(function Toolbar({ compact, paused, speed, wobble, muted, tipsOn, onExit, onPause, onSpeed, onZoom, onWobble, onMute, onTips, onChronicle, onHelp }) {
+/** Game speeds the ⏩ button goes through – 3× for experienced players. */
+export const SPEEDS = [1, 2, 3];
+
+export const Toolbar = memo(function Toolbar({ compact, paused, speed, wobble, muted, music, tipsOn, onExit, onPause, onSpeed, onZoom, onWobble, onMute, onMusic, onTips, onChronicle, onHelp }) {
   const { t } = useTranslation();
   const [more, setMore] = useState(false);
   const speedName = `${t('game.speed')}: ${speed}×`;
@@ -294,7 +309,7 @@ export const Toolbar = memo(function Toolbar({ compact, paused, speed, wobble, m
     return (
       <div className="ov toolbar toolbar-compact">
         <button className={`btn icon ${paused ? 'active' : ''}`} onClick={onPause} title={t('game.pause')} aria-label={t('game.pause')} aria-pressed={paused}>{paused ? '▶' : '⏸'}</button>
-        <button className={`btn icon ${speed === 2 ? 'active' : ''}`} onClick={onSpeed} title={speedName} aria-label={speedName}>{speed}×</button>
+        <button className={`btn icon ${speed > 1 ? 'active' : ''}`} onClick={onSpeed} data-testid="speed" title={speedName} aria-label={speedName}>{speed}×</button>
         <button className="btn icon" onClick={onChronicle} title={t('game.chronicle')} aria-label={t('game.chronicle')}><UiIcon name="chronicle" /></button>
         <button className={`btn icon ${more ? 'active' : ''}`} onClick={() => setMore(!more)} title={t('game.more')} aria-label={t('game.more')} aria-expanded={more}>⋯</button>
         {more && (
@@ -302,6 +317,7 @@ export const Toolbar = memo(function Toolbar({ compact, paused, speed, wobble, m
             <button className="btn icon" onClick={onExit} title={t('game.exit')} aria-label={t('game.exit')}>✕</button>
             <button className={`btn icon ${tipsOn ? 'active' : ''}`} onClick={onTips} title={t(tipsOn ? 'tips.skip' : 'tips.restart')} aria-label={t('tips.toggle')} aria-pressed={tipsOn}>💡</button>
             <button className="btn icon" onClick={onMute} title={t(muted ? 'game.sound_on' : 'game.sound_off')} aria-label={t('game.sound')} aria-pressed={!muted}>{muted ? '🔇' : '🔊'}</button>
+            <button className={`btn icon ${music ? 'active' : ''}`} onClick={onMusic} title={t('game.music')} aria-label={t('game.music')} aria-pressed={!!music}>🎵</button>
             <button className={`btn icon ${wobble ? 'active' : ''}`} onClick={onWobble} title={t('game.wobble')} aria-label={t('game.wobble')} aria-pressed={wobble}>〰️</button>
             <button className="btn icon" onClick={onHelp} title={t('game.help')} aria-label={t('game.help')}>?</button>
             <FullscreenButton />
@@ -314,12 +330,13 @@ export const Toolbar = memo(function Toolbar({ compact, paused, speed, wobble, m
     <div className="ov ov-bc toolbar sketch-card">
       <button className="btn icon" onClick={onExit} title={t('game.exit')} aria-label={t('game.exit')}>✕</button>
       <button className={`btn icon ${paused ? 'active' : ''}`} onClick={onPause} title={t('game.pause')} aria-label={t('game.pause')} aria-pressed={paused}>{paused ? '▶' : '⏸'}</button>
-      <button className={`btn icon ${speed === 2 ? 'active' : ''}`} onClick={onSpeed} title={speedName} aria-label={speedName}>{speed}×</button>
+      <button className={`btn icon ${speed > 1 ? 'active' : ''}`} onClick={onSpeed} data-testid="speed" title={speedName} aria-label={speedName}>{speed}×</button>
       <button className="btn icon narrow-hide" onClick={() => onZoom(1 / 1.25)} title={t('game.zoom_out')} aria-label={t('game.zoom_out')}>−</button>
       <button className="btn icon narrow-hide" onClick={() => onZoom(1.25)} title={t('game.zoom_in')} aria-label={t('game.zoom_in')}>+</button>
       <button className="btn icon" onClick={onChronicle} title={t('game.chronicle')} aria-label={t('game.chronicle')}><UiIcon name="chronicle" /></button>
       <button className={`btn icon ${tipsOn ? 'active' : ''}`} onClick={onTips} title={t(tipsOn ? 'tips.skip' : 'tips.restart')} aria-label={t('tips.toggle')} aria-pressed={tipsOn}>💡</button>
       <button className="btn icon" onClick={onMute} title={t(muted ? 'game.sound_on' : 'game.sound_off')} aria-label={t('game.sound')} aria-pressed={!muted}>{muted ? '🔇' : '🔊'}</button>
+      <button className={`btn icon ${music ? 'active' : ''}`} onClick={onMusic} title={t('game.music')} aria-label={t('game.music')} aria-pressed={!!music} data-testid="music">🎵</button>
       <button className={`btn icon ${wobble ? 'active' : ''}`} onClick={onWobble} title={t('game.wobble')} aria-label={t('game.wobble')} aria-pressed={wobble}>〰️</button>
       <button className="btn icon narrow-hide" onClick={onHelp} title={t('game.help')} aria-label={t('game.help')}>?</button>
       <FullscreenButton />

@@ -1,4 +1,4 @@
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useEffect, useState, Suspense, lazy } from 'react';
 import { useTranslation } from 'react-i18next';
 import SearchBox from '../ui/SearchBox.jsx';
 import { matchesQuery, searchTexts } from '../ui/search.js';
@@ -7,11 +7,14 @@ import PickStrip from '../ui/PickStrip.jsx';
 import { enterFullscreen } from '../ui/FullscreenButton.jsx';
 import { compName } from '../config/components.js';
 import { DIFFICULTIES, DIFFICULTY_IDS, DEFAULT_DIFFICULTY } from '../config/difficulty.js';
+import { loadSavedGame, clearSavedGame } from '../data/store.js';
 
 // Phaser is big – load it only when a game starts.
 const GameView = lazy(() => import('./GameView.jsx'));
 
 // Pick a level (map), a hero and how hard it should be, then play (fullscreen).
+// A game left with "Save and leave" (or kept after a round) can be continued
+// from the card at the top (SPEC §11b).
 // Maps and heroes are each one row that slides sideways (ui/PickStrip.jsx), so
 // however many there are, all of them can be reached.
 export default function PlaySetup({ maps, assets, enemyTypes, buildings, rules, weapons, themes = [], settings, onSettings, initialMapId = null }) {
@@ -23,21 +26,31 @@ export default function PlaySetup({ maps, assets, enemyTypes, buildings, rules, 
   const [heroId, setHeroId] = useState(heroes[0]?.id ?? null);
   const [playing, setPlaying] = useState(false);
   const [query, setQuery] = useState(''); // filters maps and heroes
+  // the game kept to continue (its own record, not in the save file)
+  const [saved, setSaved] = useState(null);
+  const [resume, setResume] = useState(null);
+  const [forget, setForget] = useState(false);
+  useEffect(() => { if (!playing) loadSavedGame().then(setSaved); }, [playing]);
+  const savedMap = saved && playable.find((m) => m.id === saved.mapId);
+  const savedHero = saved && heroes.find((h) => h.id === saved.heroId);
 
   const map = playable.find((m) => m.id === mapId);
   const hero = heroes.find((h) => h.id === heroId) ?? null;
   const difficulty = DIFFICULTIES[settings?.difficulty] ? settings.difficulty : DEFAULT_DIFFICULTY;
 
-  if (playing && map) {
+  if (playing && (resume ? savedMap : map)) {
+    const r = resume;
     return (
       <Suspense fallback={<p>{t('app.loading')}</p>}>
         <GameView
-          map={map} hero={hero} assets={assets} enemyTypes={enemyTypes} buildings={buildings} rules={rules} weapons={weapons} themes={themes} difficulty={difficulty}
-          settings={settings} onSettings={onSettings} onExit={() => setPlaying(false)}
+          map={r ? savedMap : map} hero={r ? savedHero ?? null : hero} assets={assets} enemyTypes={enemyTypes} buildings={buildings} rules={rules} weapons={weapons} themes={themes}
+          difficulty={r ? (DIFFICULTIES[r.difficulty] ? r.difficulty : DEFAULT_DIFFICULTY) : difficulty} resume={r}
+          settings={settings} onSettings={onSettings} onExit={() => { setPlaying(false); setResume(null); }}
         />
       </Suspense>
     );
   }
+  const goOn = () => { enterFullscreen(); setResume(saved); setPlaying(true); };
 
   return (
     <Screen title={t('play.title')} head={
@@ -47,6 +60,27 @@ export default function PlaySetup({ maps, assets, enemyTypes, buildings, rules, 
         {map && <span className="muted">{map.name}{hero ? ` · ${compName(hero, i18n.language)}` : ''}</span>}
       </div>
     }>
+
+      {saved && (
+        <div className="sketch-card saved-game" data-testid="saved-game">
+          <b>💾 {t('play.saved_title')}</b>
+          <span>{t('play.saved_line', { map: savedMap?.name ?? saved.mapName ?? '?', n: saved.round, total: saved.totalRounds })}
+            {savedHero ? ` · ${compName(savedHero, i18n.language)}` : ''} · {DIFFICULTIES[saved.difficulty]?.icon} {t(`difficulty.${DIFFICULTIES[saved.difficulty] ? saved.difficulty : DEFAULT_DIFFICULTY}`)}</span>
+          {savedMap ? (
+            <button className="btn primary" onClick={goOn} data-testid="continue">▶ {t('play.continue')}</button>
+          ) : <span className="small error-text">{t('play.saved_map_gone')}</span>}
+          {!forget ? (
+            <button className="btn" onClick={() => setForget(true)}>🗑 {t('play.saved_forget')}</button>
+          ) : (
+            <span className="row" style={{ gap: 6 }}>
+              <b className="small">{t('play.saved_forget_sure')}</b>
+              <button className="btn danger" onClick={() => { clearSavedGame().then(() => { setSaved(null); setForget(false); }); }}>✓ {t('play.saved_forget_yes')}</button>
+              <button className="btn" onClick={() => setForget(false)} aria-label={t('common.cancel')} title={t('common.cancel')}>✕</button>
+            </span>
+          )}
+          <span className="small muted">{t('play.saved_note')}</span>
+        </div>
+      )}
 
       <h2>{t('play.pick_map')}</h2>
       {playable.length === 0 && <p className="muted">{t('play.no_maps')}</p>}

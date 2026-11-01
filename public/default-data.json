@@ -911,7 +911,14 @@
         "speed": 3
       },
       "createdAt": "2026-10-30T18:08:50.069Z",
-      "updatedAt": "2026-10-30T18:10:26.497Z"
+      "updatedAt": "2026-11-01T00:00:00.000Z",
+      "ability": {
+        "id": "arrowRain",
+        "power": 40,
+        "radius": 130,
+        "duration": 0,
+        "cooldown": 25
+      }
     },
     {
       "id": "6070b6b8-92c3-415e-baa1-83c32343e3b5",
@@ -931,7 +938,14 @@
         "speed": 1
       },
       "createdAt": "2026-10-30T18:11:36.752Z",
-      "updatedAt": "2026-10-30T18:13:13.688Z"
+      "updatedAt": "2026-11-01T00:00:00.000Z",
+      "ability": {
+        "id": "shout",
+        "power": 0.5,
+        "radius": 160,
+        "duration": 5,
+        "cooldown": 25
+      }
     },
     {
       "id": "02c4b546-eefa-4215-97a0-30a10fcc2bc3",
@@ -951,7 +965,14 @@
         "speed": 1
       },
       "createdAt": "2026-10-30T18:14:48.172Z",
-      "updatedAt": "2026-10-30T18:16:09.092Z"
+      "updatedAt": "2026-11-01T00:00:00.000Z",
+      "ability": {
+        "id": "strike",
+        "power": 120,
+        "radius": 70,
+        "duration": 0,
+        "cooldown": 20
+      }
     },
     {
       "id": "7ecb7b14-edd8-4cff-b8e1-513978bf70b2",
@@ -1150,7 +1171,14 @@
         "speed": 2
       },
       "createdAt": "2026-10-30T19:36:36.761Z",
-      "updatedAt": "2026-10-30T19:37:47.090Z"
+      "updatedAt": "2026-11-01T00:00:00.000Z",
+      "ability": {
+        "id": "freeze",
+        "power": 1,
+        "radius": 120,
+        "duration": 3,
+        "cooldown": 35
+      }
     },
     {
       "id": "rukh",

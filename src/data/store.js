@@ -102,3 +102,18 @@ export async function purgeAll() {
   current = { ...emptyDb(), settings: current?.settings ?? {} };
   await backend.del(DB_KEY);
 }
+
+// ---------------- a game to continue (SPEC §11b) ----------------
+// One unfinished game, under its own key: it is not part of the save file, so
+// "Download everything" never contains it and loading a file doesn't touch it.
+
+export const GAME_KEY = 'sv:game';
+
+/** The saved game { mapId, heroId, difficulty, round, totalRounds, savedAt, state } or null. */
+export async function loadSavedGame() {
+  try { return (await backend.get(GAME_KEY)) ?? null; } catch { return null; }
+}
+
+export function storeSavedGame(game) { return backend.set(GAME_KEY, game); }
+
+export function clearSavedGame() { return backend.del(GAME_KEY); }

@@ -261,10 +261,27 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 .ov-br { right: 8px; bottom: 8px; display: flex; gap: 0.3em; }
 .ov-br-eq { right: 8px; bottom: calc(16px + max(56px, calc(2.9 * var(--u)))); display: flex; flex-direction: column; align-items: flex-end; gap: 0.3em; }
 /* width: max-content – placed at 50 %, it would otherwise wrap at half the screen and cover the tips above it */
-.ov-bc { bottom: 8px; left: 50%; transform: translateX(-50%); width: max-content; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.2em; padding: 0.2em 0.4em; max-width: calc(100% - 2 * (max(56px, calc(2.9 * var(--u))) * 3 + 40px)); }
+.ov-bc { bottom: 8px; left: 50%; transform: translateX(-50%); width: max-content; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.2em; padding: 0.2em 0.4em; max-width: calc(100% - 2 * (max(56px, calc(2.9 * var(--u))) * 4 + 48px)); /* room for the attack buttons + the ability */ }
 .hearts { color: #dc2626; font-size: 1.2em; letter-spacing: 1px; }
 .game-screen .btn.attack { position: relative; width: max(56px, calc(2.9 * var(--u))); height: max(56px, calc(2.9 * var(--u))); padding: 0; font-size: 1.4em; overflow: hidden; justify-content: center; }
 .btn.attack .switching { position: absolute; left: 0; bottom: 0; height: 6px; background: var(--danger); }
+/* the hero's special ability: ready = glowing; waiting = a shadow turning away as the cooldown runs out */
+.btn.attack.ability-btn { margin-right: 6px; }
+.saved-game { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 14px; margin: 8px 0 4px; }
+.saved-game .small.muted { flex-basis: 100%; }
+.ability-pick { display: flex; flex-wrap: wrap; gap: 6px; }
+.reset-line { padding: 3px 0; }
+.reset-pic { width: 28px; height: 28px; object-fit: contain; display: inline-block; flex: none; }
+/* the chronicle's collection: met monsters in colour, the others a grey shadow */
+.collection-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 10px; }
+.collection-head .collection-bar { width: min(240px, 60vw); height: 12px; }
+.collection-head .collection-bar > span { background: #16a34a; }
+.collection-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.collection-tile { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px; text-align: center; }
+.collection-tile.unmet .collection-pic { filter: grayscale(1) brightness(0.25); opacity: 0.45; }
+.btn.attack.ability-btn.ready { box-shadow: 0 0 0 3px var(--accent, #ca8a04); }
+.btn.attack.ability-btn.waiting::after { content: ''; position: absolute; inset: 0; background: conic-gradient(rgba(30, 41, 59, 0.45) var(--cd), transparent 0); pointer-events: none; }
+.btn.attack .ability-left { position: absolute; right: 3px; bottom: 1px; font-size: 0.55em; font-weight: bold; z-index: 1; }
 .eq-row { gap: 0.3em; }
 .game-screen .btn.eq-slot { width: max(48px, calc(2.4 * var(--u))); height: max(48px, calc(2.4 * var(--u))); padding: 0; display: grid; place-items: center; font-size: 1.1em; background: #fffdf7; }
 .backpack { width: min(24em, calc(100vw - 32px)); max-height: 62vh; overflow: hidden; display: flex; flex-direction: column; padding: 0.4em 0.6em; user-select: none; }

@@ -2,6 +2,7 @@
 // simulation – self-repair, building progress, and the features (FEATURE_BEHAVIOUR).
 // Methods of World (../world.js mixes them in); `this` is the World.
 
+import { abilityAt } from '../../config/abilities.js';
 import { hasFeature } from '../../config/features.js';
 import { HERO_STATS } from '../../config/heroStats.js';
 import { worldToCell } from '../pathGrid.js';
@@ -141,6 +142,12 @@ export class Buildings {
         cost: this.heroCosts[this.heroUpgrades[stat]] ?? null, reason: this.heroUpgradeCheck(stat),
         round: this.unlockRound(`hero:${stat}:${this.heroUpgrades[stat] + 1}`),
       })),
+      // the hero's special ability (world/abilities.js): one more level per Town Hall level
+      ability: this.ability ? {
+        ...this.abilityInfo(), next: this.abilityLevel < this.heroCosts.length ? abilityAt(this.ability, this.abilityLevel + 1) : null,
+        cost: this.heroCosts[this.abilityLevel] ?? null, reason: this.abilityUpgradeCheck(),
+        round: this.unlockRound(`hero:ability:${this.abilityLevel + 1}`),
+      } : null,
     };
   }
 
@@ -225,7 +232,7 @@ export class Buildings {
     const th = this.townHall;
     this.regen(th, dt);
     // the Town Hall's features work like a building's (arrows, healing the hero…)
-    if (th.hp > 0) this.useFeatures(th, this.coreType, this.thLevels[th.level - 1], dt);
+    if (th.hp > 0) this.useFeatures(th, this.coreType, this.thLevels[th.level - 1], dt * this.rallyOf(th));
     if (th.upgrade) {
       th.upgrade.progress += dt * this.buildSpeed;
       if (th.upgrade.progress >= th.upgrade.time) {
@@ -255,7 +262,8 @@ export class Buildings {
     }
     this.regen(b, dt);
     if (b.level === 0) return; // nothing works before level 1 is finished
-    this.useFeatures(b, t, t.levels[b.level - 1], dt);
+    // the hero's rally (world/abilities.js) makes it work faster for a while
+    this.useFeatures(b, t, t.levels[b.level - 1], dt * this.rallyOf(b));
   }
 
   /** What a ready building (or the Town Hall) does every frame, by its features. */

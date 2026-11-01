@@ -195,7 +195,7 @@ export default function App() {
 
       {screen === 'chronicle' && (
         <Screen title={`📖 ${t('chronicle.title')}`} fill>
-          <Chronicle enemies={enemyTypes} themes={db.themes} intro={t('chronicle.intro')} />
+          <Chronicle enemies={enemyTypes} themes={db.themes} intro={t('chronicle.intro')} met={db.settings.metMonsters} />
         </Screen>
       )}
 

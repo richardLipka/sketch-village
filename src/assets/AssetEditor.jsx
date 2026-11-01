@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import Modal from '../ui/Modal.jsx';
 import ImageSlot from './ImageSlot.jsx';
 import HeroStatsEditor from './HeroStatsEditor.jsx';
+import HeroAbilityEditor from './HeroAbilityEditor.jsx';
 import ItemStatsEditor from './ItemStatsEditor.jsx';
 import EnemyStatsEditor from './EnemyStatsEditor.jsx';
 import BuildingStatsEditor from './BuildingStatsEditor.jsx';
@@ -174,6 +175,7 @@ export default function AssetEditor({ asset, isNew, heroRules, assets = [], buil
       {cat.stats && (
         <div style={{ marginTop: 12 }}>
           {cat.stats === 'hero' && <HeroStatsEditor points={draft.stats} rules={heroRules} onChange={(stats) => set({ stats })} />}
+          {cat.stats === 'hero' && <HeroAbilityEditor hero={draft} onChange={(ability) => set({ ability })} />}
           {cat.stats === 'item' && <ItemStatsEditor category={asset.category} stats={draft.stats} onChange={(stats) => set({ stats })} />}
           {cat.stats === 'enemy' && <EnemyStatsEditor id={draft.id} stats={draft.stats} enemies={enemyTypes} projectiles={projectilesOf(assets, lang)} onChange={(stats) => set({ stats })} />}
           {cat.stats === 'building' && (

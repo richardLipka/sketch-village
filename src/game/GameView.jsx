@@ -13,7 +13,7 @@ import Modal from '../ui/Modal.jsx';
 import { useDevice } from '../ui/device.js';
 import AnimPreview from '../assets/AnimPreview.jsx';
 import { legendText } from '../config/legends.js';
-import { Resources, Lives, WaveInfo, AttackBar, Equipment, Toolbar, Coach, RoundSummary, gameKey } from './GameOverlay.jsx';
+import { Resources, Lives, WaveInfo, AttackBar, Equipment, Toolbar, SPEEDS, Coach, RoundSummary, gameKey } from './GameOverlay.jsx';
 import { difficultyOf } from '../config/difficulty.js';
 import { DEFAULT_HERO_POINTS } from '../config/heroStats.js';
 import { DEFAULT_RULES } from '../config/rules.js';
@@ -22,7 +22,9 @@ import { unlockLabel } from '../config/unlocks.js';
 import { DEFAULT_WEAPONS, isWeapon } from '../config/weapons.js';
 import { coinTypesOf, GAME_LOOKS } from '../config/components.js';
 import { World } from '../logic/world.js';
-import { play, setMuted, soundFor, loadClip, playClip } from './sound.js';
+import { abilityOf } from '../config/abilities.js';
+import { storeSavedGame, clearSavedGame } from '../data/store.js';
+import { play, setMuted, soundFor, loadClip, playClip, startMusic, stopMusic } from './sound.js';
 import { VoiceDirector } from './monsterVoices.js';
 import { gameSize } from './viewport.js';
 import { SOUND_KINDS } from '../assets/audioClip.js';
@@ -43,7 +45,7 @@ const voiceKey = (v) => `voice:${v.type}:${v.kind}`;
 // - the scene sends a HUD snapshot only when a visible value changed;
 // - overlay pieces are memoized with primitive props and stable callbacks;
 // - the build panel refreshes itself (SelectionPanel), not the whole screen.
-export default function GameView({ map, hero, assets, enemyTypes, buildings, weapons = DEFAULT_WEAPONS, rules = DEFAULT_RULES, themes = [], difficulty, settings = {}, onSettings, onExit }) {
+export default function GameView({ map, hero, assets, enemyTypes, buildings, weapons = DEFAULT_WEAPONS, rules = DEFAULT_RULES, themes = [], difficulty, settings = {}, onSettings, onExit, resume = null }) {
   const { t, i18n } = useTranslation();
   const hostRef = useRef(null);
   const gameRef = useRef(null);
@@ -67,8 +69,16 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
   const monsters = useMemo(() => monstersOfWaves(wavesOf(map, rules.balance), enemyTypes), [map, rules, enemyTypes]);
   const wobble = !!settings.wobble;
   const muted = !!settings.muted;
+  const musicOn = !!settings.music;
   const tip = settings.tutorialStep ?? 0;
   useEffect(() => setMuted(muted), [muted]);
+  // the quiet music (🎵) plays while the game screen is open, not when the sound is off
+  useEffect(() => {
+    if (musicOn && !muted) startMusic(); else stopMusic();
+    return () => stopMusic();
+  }, [musicOn, muted]);
+  // a saved game (SPEC §11b) goes on once; "Play again" afterwards starts afresh
+  const resumeRef = useRef(resume);
 
   // latest values for callbacks that the running scene / stable handlers call
   const live = useRef({});
@@ -76,7 +86,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
   // a themed map offers only the buildings of its theme (and those without one); the Town Hall always
   const types = useMemo(() => buildings.types.filter((ty) => ty.core || fitsTheme(ty, map.theme)), [buildings, map.theme]);
   const typeName = useCallback((id) => buildings.types.find((ty) => ty.id === id)?.name?.[lang] ?? id, [buildings, lang]);
-  live.current = { t, lang, typeName, tip, onSettings, weapons, onExit, wobble: !!settings.wobble, muted: !!settings.muted, device };
+  live.current = { t, lang, typeName, tip, onSettings, weapons, onExit, wobble: !!settings.wobble, muted: !!settings.muted, music: musicOn, device, settings };
 
   // messages arriving together (round end + new unlocks) are joined, not replaced
   const say = useCallback((text) => {
@@ -105,6 +115,9 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
     if (e.type === 'spawn' && !seen.current.has(e.enemy)) {
       seen.current.add(e.enemy);
       setNewMonster({ id: e.enemy, at: Date.now() });
+      // the chronicle's collection: every monster ever met (settings.metMonsters, SPEC §9a)
+      const met = live.current.settings?.metMonsters ?? [];
+      if (!met.includes(e.enemy)) save?.({ metMonsters: [...met, e.enemy] });
     }
   }, []);
 
@@ -120,10 +133,22 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
     return () => clearTimeout(id);
   }, [newMonster]);
 
+  // the game kept to continue later (SPEC §11b): its own record, not part of the save file
+  const game = useRef({});
+  game.current = { mapId: map.id, mapName: map.name, heroId: hero?.id ?? null, difficulty: difficulty ?? 'normal' };
+  const saveGame = useCallback(() => {
+    const w = worldRef.current;
+    if (!w || w.phase === 'won' || w.phase === 'lost') return Promise.resolve(false);
+    return storeSavedGame({ ...game.current, round: Math.min(w.round + 1, w.totalRounds), totalRounds: w.totalRounds, savedAt: Date.now(), state: w.saveState() })
+      .then(() => true, () => false);
+  }, []);
+
   // World events shown as a message
   const onEvent = useCallback((e) => {
     const { t: tr, weapons: items, lang, typeName } = live.current;
-    if (e.type === 'roundEnd') { setSummary({ ...e, unlocked: [], at: Date.now() }); return; }
+    // after every round the game is kept, so it can go on even after the window was closed
+    if (e.type === 'roundEnd') { setSummary({ ...e, unlocked: [], at: Date.now() }); saveGame(); return; }
+    if (e.type === 'won' || e.type === 'lost') clearSavedGame().catch(() => {});
     if (e.type === 'unlocked') { setSummary((s) => (s ? { ...s, unlocked: e.keys } : s)); return; }
     if (e.type === 'waveStart') setSummary(null);
     const name = () => typeName(e.building);
@@ -141,10 +166,12 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
       chestOpened: () => (e.weapon ? tr('weapons.msg_found', { name: item(e.weapon) }) : tr('weapons.msg_chest_coins', { coins: e.coins })),
       weaponBought: () => tr('weapons.msg_bought', { name: item(e.weapon) }),
       heroUpgraded: () => tr('build.msg_hero_upgraded', { stat: tr(`hero.stat_${e.stat}`), n: e.level }),
+      abilityUpgraded: () => tr('ability.msg_upgraded', { name: tr(`ability.${e.id}`), n: e.level }),
+      ability: () => tr(`ability.${e.id}`),
     }[e.type];
     const text = msg?.();
     if (text) say(text);
-  }, [say]);
+  }, [say, saveGame]);
 
   useEffect(() => {
     let alive = true;
@@ -241,11 +268,19 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
       if (!alive) return;
       voices.current = director;
 
-      const world = new World({
+      const args = {
         map, grid, enemyTypes, buildingTypes: types, rules, weapons, coinTypes,
         waves: wavesOf(map, rules.balance),
-        heroPoints: hero?.stats ?? DEFAULT_HERO_POINTS, difficulty,
-      });
+        heroPoints: hero?.stats ?? DEFAULT_HERO_POINTS, difficulty, ability: abilityOf(hero),
+      };
+      // a saved game goes on where it was left (a broken one starts afresh)
+      const saved = resumeRef.current?.state;
+      resumeRef.current = null;
+      let world = null;
+      if (saved) { try { world = World.restore(args, saved); } catch { world = null; } }
+      // the monsters already out there were met before the save: no "new monster" note for them
+      if (world) for (const e of world.enemies) seen.current.add(e.type);
+      world ??= new World(args);
       worldRef.current = world;
 
       // the map covers the whole screen (phones always); the rest is reached by dragging (viewport.js)
@@ -325,7 +360,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
     setHud(w.hud());
   }, [say, anyEvent]);
   const ready = useCallback(() => { worldRef.current?.callReady(); setPanelVersion((v) => v + 1); }, []);
-  const changeSpeed = useCallback(() => setSpeed((s) => { const n = s === 1 ? 2 : 1; const sc = scene(); if (sc) sc.speed = n; return n; }), []);
+  const changeSpeed = useCallback(() => setSpeed((s) => { const n = SPEEDS[(SPEEDS.indexOf(s) + 1) % SPEEDS.length]; const sc = scene(); if (sc) sc.speed = n; return n; }), []);
   const togglePause = useCallback(() => setPaused((p) => { const sc = scene(); if (sc) sc.paused = !p; return !p; }), []);
   const zoom = useCallback((f) => scene()?.zoomBy(f), []);
   // the chronicle pauses the game while it is open (and resumes only if it paused it)
@@ -344,6 +379,17 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
     setChronicle(false);
   }, []);
   const toggleWobble = useCallback(() => live.current.onSettings?.({ wobble: !live.current.wobble }), []);
+  const toggleMusic = useCallback(() => live.current.onSettings?.({ music: !live.current.music }), []);
+  // the hero's special ability (E): used now, or why not
+  const fireAbility = useCallback(() => {
+    const w = worldRef.current;
+    if (!w) return;
+    const r = w.useAbility();
+    if (!r.ok && r.reason !== 'none') say(live.current.t(`ability.reason_${r.reason}`));
+    setHud(w.hud());
+  }, [say]);
+  // a build option pointed at: its range shows around the spot
+  const previewRange = useCallback((range) => { const sc = scene(); if (sc) sc.previewRange = range; }, []);
   const toggleMute = useCallback(() => {
     const m = !!live.current.muted;
     live.current.onSettings?.({ muted: !m });
@@ -367,6 +413,19 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
     sc.paused = true;
     setQuitting(true);
   }, []);
+  // "Save and leave": the game waits on the start screen (Continue)
+  const saveAndExit = useCallback(async () => {
+    const ok = await saveGame();
+    if (ok) live.current.onExit?.();
+    else say(live.current.t('game.save_failed'));
+  }, [saveGame, say]);
+  const exitLosing = useCallback(() => { clearSavedGame().catch(() => {}); live.current.onExit?.(); }, []);
+  // closing the window or switching away: the game is kept (it goes on from here next time)
+  useEffect(() => {
+    const away = () => { if (document.visibilityState === 'hidden') saveGame(); };
+    document.addEventListener('visibilitychange', away);
+    return () => document.removeEventListener('visibilitychange', away);
+  }, [saveGame]);
   const keepPlaying = useCallback(() => {
     const sc = scene();
     if (sc && pausedByQuit.current) sc.paused = false;
@@ -390,6 +449,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
   const onUpgradeTownHall = useCallback(() => act((w) => w.upgradeTownHall()), [act]);
   const onUpgradeHero = useCallback((stat) => act((w) => w.upgradeHero(stat)), [act]);
   const onBuyWeapon = useCallback((id) => act((w) => w.buyWeapon(id)), [act]);
+  const onUpgradeAbility = useCallback(() => act((w) => w.upgradeAbility()), [act]);
   // backpack: drop an item on a slot / drag a worn one back into the bag
   const equipAct = useCallback((fn) => {
     const w = worldRef.current;
@@ -422,10 +482,11 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
       else if (WALK[key] && sc && !sc.paused) { e.preventDefault(); sc.walkBy(...WALK[key]); }
       else if (key === 'b' && sc) { e.preventDefault(); sc.selectNext(e.shiftKey ? -1 : 1); setPanelFocus((n) => n + 1); }
       else if (key === 'f' && sc && !sc.paused) sc.attackNearest();
+      else if (key === 'e' && sc && !sc.paused) fireAbility();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [setMode, ready, togglePause]);
+  }, [setMode, ready, togglePause, fireAbility]);
 
   // which attack types the backpack allows
   const inventoryKey = hud ? hud.inventory.join(',') : '';
@@ -454,16 +515,17 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
             <Equipment inventoryKey={inventoryKey} right={hud.equipped.right} left={hud.equipped.left} armor={hud.equipped.armor}
               attack={hud.hero.attack} reach={hud.hero.reach} armorPct={hud.hero.armor}
               items={weapons} assets={assets} onEquipTo={onEquipTo} onUnequip={onUnequip} />
-            <AttackBar mode={hud.hero.mode} hasMelee={has.melee} hasRanged={has.ranged} hasMagic={has.magic} switching={hud.hero.switching} onMode={setMode} />
+            <AttackBar mode={hud.hero.mode} hasMelee={has.melee} hasRanged={has.ranged} hasMagic={has.magic} switching={hud.hero.switching} onMode={setMode}
+              ability={hud.hero.ability?.id} abilityLeft={hud.hero.ability?.left} abilityCooldown={hud.hero.ability?.cooldown} heroDead={hud.hero.dead} onAbility={fireAbility} />
           </>
         )}
-        <Toolbar compact={device === 'phone'} paused={paused} speed={speed} wobble={wobble} muted={muted} tipsOn={tip < TUTORIAL_DONE}
-          onExit={askExit} onPause={togglePause} onSpeed={changeSpeed} onZoom={zoom} onWobble={toggleWobble} onMute={toggleMute} onTips={toggleTips} onChronicle={openChronicle} onHelp={help} />
+        <Toolbar compact={device === 'phone'} paused={paused} speed={speed} wobble={wobble} muted={muted} music={musicOn} tipsOn={tip < TUTORIAL_DONE}
+          onExit={askExit} onPause={togglePause} onSpeed={changeSpeed} onZoom={zoom} onWobble={toggleWobble} onMute={toggleMute} onMusic={toggleMusic} onTips={toggleTips} onChronicle={openChronicle} onHelp={help} />
         {playing && newMonster && <MonsterNote enemy={enemyTypes.find((e) => e.id === newMonster.id)} key={newMonster.at} onMore={openChronicle} onClose={() => setNewMonster(null)} />}
         {chronicle && (
           <Modal onClose={closeChronicle} wide fill
             header={<div className="row"><h2>📖 {t('chronicle.map_title')}</h2><span className="spacer" /><button className="btn" onClick={closeChronicle} aria-label={t('common.close')} title={t('common.close')}>✕</button></div>}>
-            <Chronicle enemies={monsters} themes={themes} seen={seen.current} />
+            <Chronicle enemies={monsters} themes={themes} seen={seen.current} met={settings.metMonsters} allEnemies={enemyTypes} />
           </Modal>
         )}
         <div className="sr-live" role="status" aria-live="polite">{message?.text}</div>
@@ -478,7 +540,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
             worldRef={worldRef} selection={selection} version={panelVersion} focusKey={panelFocus}
             types={types} weapons={weapons} assets={assets}
             onClose={closePanel} onBuild={onBuild} onUpgrade={onUpgrade} onSell={onSell}
-            onUpgradeTownHall={onUpgradeTownHall} onUpgradeHero={onUpgradeHero} onBuyWeapon={onBuyWeapon}
+            onUpgradeTownHall={onUpgradeTownHall} onUpgradeHero={onUpgradeHero} onUpgradeAbility={onUpgradeAbility} onBuyWeapon={onBuyWeapon} onPreviewRange={previewRange}
           />
         )}
         {quitting && playing && (
@@ -488,7 +550,8 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
               <p>{t('game.quit_text', { n: hud.round, total: hud.totalRounds })}</p>
               <div className="row" style={{ justifyContent: 'center' }}>
                 <button className="btn primary" onClick={keepPlaying} autoFocus>▶ {t('game.quit_no')}</button>
-                <button className="btn danger" onClick={exit} data-testid="quit-yes">✕ {t('game.quit_yes')}</button>
+                <button className="btn" onClick={saveAndExit} data-testid="quit-save">💾 {t('game.quit_save')}</button>
+                <button className="btn danger" onClick={exitLosing} data-testid="quit-yes">✕ {t('game.quit_yes')}</button>
               </div>
             </div>
           </Modal>
@@ -501,7 +564,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
               <p>{t('game.reached', { n: hud.round, total: hud.totalRounds })}</p>
               <p className="small">{difficultyOf(difficulty).icon} {t('difficulty.label')}: {t(`difficulty.${difficulty ?? 'normal'}`)}</p>
               <div className="row" style={{ justifyContent: 'center' }}>
-                <button className="btn primary" onClick={() => { setPaused(false); setSpeed(1); setRestart((n) => n + 1); }}>↺ {t('game.again')}</button>
+                <button className="btn primary" onClick={() => { setPaused(false); setSpeed(1); resumeRef.current = null; setRestart((n) => n + 1); }}>↺ {t('game.again')}</button>
                 <button className="btn" onClick={exit}>{t('game.exit')}</button>
               </div>
             </div>

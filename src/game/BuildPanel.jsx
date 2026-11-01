@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import WeaponIcon from './WeaponIcon.jsx';
 import { itemLine } from './GameOverlay.jsx';
 import { FEATURES } from '../config/features.js';
+import { ABILITIES } from '../config/abilities.js';
 
 // Panel for the selected building spot or the Town Hall (SPEC §7). The Town
 // Hall's shop (hero upgrades + items) opens as an overlay over the map with
@@ -30,9 +31,18 @@ export function featureLine(type, s, t) {
 
 const STAT_ICON = { melee: '⚔️', ranged: '🏹', armor: '🛡️', speed: '👟', magic: '✨' };
 
+/** An ability's numbers in a short line: "power 150 · ⭕ 70 · ⏱ 18 s". */
+export function abilityLine(a, t) {
+  const d = ABILITIES[a.id];
+  return (d?.uses ?? []).map((k) => t(`ability.short_${k}`, { v: k === 'power' && d.share ? Math.round(a.power * 100) : a[k] })).join(' · ');
+}
+
+/** How far a building level shoots (arrows or stones), or null – shown as a circle while its option is pointed at. */
+export const rangeOf = (s) => s?.range ?? s?.lobRange ?? null;
+
 const iconOf = (type) => (type?.core ? '🏛️' : FEATURES[type?.features?.[0]]?.icon ?? '🏗️');
 
-export default function BuildPanel({ info, types = [], weapons = [], assets = [], focusKey = 0, onClose, onBuild, onUpgrade, onSell, onUpgradeTownHall, onUpgradeHero, onBuyWeapon }) {
+export default function BuildPanel({ info, types = [], weapons = [], assets = [], focusKey = 0, onClose, onBuild, onUpgrade, onSell, onUpgradeTownHall, onUpgradeHero, onUpgradeAbility, onBuyWeapon, onPreviewRange }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const why = (reason, round) => (reason ? t(`build.reason_${reason}`, { n: round }) : null);
@@ -40,14 +50,21 @@ export default function BuildPanel({ info, types = [], weapons = [], assets = []
   const [shop, setShop] = useState(false);
   const spotKey = info.kind === 'spot' ? info.id : 'th';
   useEffect(() => { setConfirmSell(false); setShop(false); }, [spotKey]);
+  // the range circle of an option pointed at goes away with the panel
+  useEffect(() => () => onPreviewRange?.(null), [spotKey, onPreviewRange]);
   const box = useRef(null);
   useEffect(() => { if (focusKey) box.current?.focus({ preventScroll: true }); }, [focusKey, spotKey]);
   const typeOf = (id) => types.find((ty) => ty.id === id);
   const nameOf = (id) => typeOf(id)?.name?.[lang] ?? id;
   const statLine = (id, s) => featureLine(typeOf(id), s, t);
 
-  const action = ({ key, label, cost, reason, round, onClick, sub }) => (
-    <div className="build-option" key={key}>
+  // pointed at or focused, an option that shoots shows its range on the map
+  const preview = (range) => (range ? {
+    onMouseEnter: () => onPreviewRange?.(range), onMouseLeave: () => onPreviewRange?.(null),
+    onFocus: () => onPreviewRange?.(range), onBlur: () => onPreviewRange?.(null),
+  } : {});
+  const action = ({ key, label, cost, reason, round, onClick, sub, range }) => (
+    <div className="build-option" key={key} {...preview(range)}>
       <button className="btn primary" disabled={!!reason} onClick={onClick}>
         {reason === 'locked' && '🔒 '}{label} <span className="small">· {cost} 🪙</span>
       </button>
@@ -71,6 +88,21 @@ export default function BuildPanel({ info, types = [], weapons = [], assets = []
         {!info.near && <p className="small muted" style={{ margin: '2px 0' }}>🚶 {t('shop.go_to_hall')}</p>}
         <h4>🦸 {t('build.hero_upgrades')}</h4>
         <div className="eq-bag shop-grid">
+          {info.ability && (() => {
+            const u = info.ability;
+            return (
+              <div className="eq-item shop-tile" data-testid="shop-ability">
+                <span className="shop-icon">{ABILITIES[u.id]?.icon}</span>
+                <span className="small eq-name">{t(`ability.${u.id}`)}</span>
+                <span className="small">{'●'.repeat(u.level)}{'○'.repeat(u.maxLevel - u.level)}</span>
+                {u.next && <span className="small muted">{abilityLine(u.next, t)}</span>}
+                {u.cost !== null ? (
+                  <button className="btn" disabled={!!u.reason} onClick={onUpgradeAbility}>{u.reason === 'locked' ? '🔒 ' : ''}+1 · {u.cost} 🪙</button>
+                ) : <span className="small muted">{t('build.max_level')}</span>}
+                {u.reason && u.reason !== 'max' && <span className={`small ${u.reason === 'locked' ? 'muted' : 'error-text'}`}>{why(u.reason, u.round)}</span>}
+              </div>
+            );
+          })()}
           {info.heroUpgrades.map((u) => (
             <div key={u.stat} className="eq-item shop-tile">
               <span className="shop-icon">{STAT_ICON[u.stat]}</span>
@@ -134,11 +166,11 @@ export default function BuildPanel({ info, types = [], weapons = [], assets = []
         {b && b.state === 'ruin' && <p className="small error-text">{t('build.ruin')}</p>}
         {info.options.map((o) => action({
           key: o.type, label: `${iconOf(typeOf(o.type))} ${o.rebuild ? t('build.rebuild') : nameOf(o.type)}`,
-          cost: o.cost, reason: o.reason, round: o.round, sub: statLine(o.type, o.stats), onClick: () => onBuild(o.type),
+          cost: o.cost, reason: o.reason, round: o.round, sub: statLine(o.type, o.stats), onClick: () => onBuild(o.type), range: rangeOf(o.stats),
         }))}
         {info.upgrade && action({
           key: 'up', label: `⬆ ${t('build.upgrade_to', { n: info.upgrade.toLevel })}`, cost: info.upgrade.cost, reason: info.upgrade.reason,
-          round: info.upgrade.round, sub: statLine(b.type, info.upgrade.stats), onClick: onUpgrade,
+          round: info.upgrade.round, sub: statLine(b.type, info.upgrade.stats), onClick: onUpgrade, range: rangeOf(info.upgrade.stats),
         })}
         {b && !info.upgrade && b.state !== 'ruin' && b.level === b.maxLevel && <p className="small muted">{t('build.max_level')}</p>}
         {info.sell && (

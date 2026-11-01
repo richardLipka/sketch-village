@@ -1,6 +1,7 @@
 // Tiny synthesized sound effects (WebAudio, no sound files): short, soft,
 // cartoonish. Game events are mapped to sounds in `soundFor`; frequent ones
 // (hits) are throttled so a big fight doesn't turn into noise.
+// Plus optional quiet background music (made up as it plays, `startMusic`).
 // Plus the kids' recorded monster sounds (clips): decoded once, the trimmed
 // part played at an even loudness; game/monsterVoices.js decides when.
 
@@ -26,7 +27,7 @@ function audio() {
   return ctx;
 }
 
-export function setMuted(m) { muted = m; }
+export function setMuted(m) { muted = m; if (m) stopMusic(); }
 
 // one tone: frequency slide f0 → f1 over `dur` s, with a quick fade out
 function tone(c, { type = 'sine', f0, f1 = f0, dur = 0.12, vol = 0.5, delay = 0 }) {
@@ -105,6 +106,8 @@ export function soundFor(e) {
     case 'cantHit': return 'nope';
     case 'splash': return e.owner === 'stone' ? 'thud' : null;
     case 'summon': return 'summon';
+    case 'ability': return e.id === 'heal' ? 'chest' : e.id === 'shout' || e.id === 'rally' ? 'wave' : e.id === 'reinforcements' ? 'built' : 'magic';
+    case 'abilityUpgraded': return 'built';
     default: return null;
   }
 }
@@ -163,3 +166,78 @@ export function playClip(key, volume = 1, force = false) {
     return false;
   }
 }
+
+// ---------------- quiet background music ----------------
+// A soft tune made up as it plays: a slow pentatonic melody over a low note
+// per bar, every bar a little different (the same bars every time – `musicBar`).
+// Far below the sound effects; off unless the player turns it on (🎵).
+
+const PENTA = [0, 2, 4, 7, 9]; // C major pentatonic: no note sounds wrong next to another
+const CHORDS = [0, 9, 5, 7]; // C, a, F, G – the low note of each bar
+const BEAT = 0.75; // s
+const MUSIC_VOLUME = 0.05;
+const midi = (n) => 440 * Math.pow(2, (n - 69) / 12);
+
+/** The notes of bar `i` (4 beats): [{ beat, note (MIDI), len }]. Pure – unit-tested. */
+export function musicBar(i) {
+  const root = 48 + CHORDS[i % CHORDS.length];
+  const notes = [{ beat: 0, note: root, len: 4 }];
+  let h = (i * 2654435761) >>> 0;
+  const next = () => { h = (h * 1103515245 + 12345) >>> 0; return h / 2 ** 32; };
+  for (let beat = 0; beat < 4; beat++) {
+    if (next() < 0.3) continue; // a rest now and then
+    const step = PENTA[Math.floor(next() * PENTA.length)] + (next() < 0.3 ? 12 : 0);
+    notes.push({ beat, note: 72 + step, len: next() < 0.5 ? 1 : 2 });
+  }
+  return notes;
+}
+
+let music = null; // { gain, timer, bar, at }
+
+function musicNote(c, out, { note, at, len }) {
+  const o = c.createOscillator();
+  const g = c.createGain();
+  o.type = note < 60 ? 'sine' : 'triangle';
+  o.frequency.value = midi(note);
+  const end = at + len * BEAT;
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(note < 60 ? 0.6 : 0.45, at + 0.08);
+  g.gain.exponentialRampToValueAtTime(0.0001, end);
+  o.connect(g).connect(out);
+  o.start(at);
+  o.stop(end + 0.05);
+}
+
+export function startMusic() {
+  if (music || muted) return;
+  const c = audio();
+  if (!c) return;
+  const gain = c.createGain();
+  gain.gain.value = MUSIC_VOLUME;
+  gain.connect(c.destination);
+  music = { gain, bar: 0, at: c.currentTime + 0.2 };
+  // bars are scheduled a little ahead, so a busy frame doesn't make the tune stumble
+  const schedule = () => {
+    if (!music) return;
+    while (music.at < c.currentTime + 2) {
+      for (const n of musicBar(music.bar)) musicNote(c, gain, { note: n.note, at: music.at + n.beat * BEAT, len: n.len });
+      music.bar++;
+      music.at += 4 * BEAT;
+    }
+  };
+  try { schedule(); } catch { stopMusic(); return; }
+  music.timer = setInterval(() => { try { schedule(); } catch { stopMusic(); } }, 500);
+}
+
+export function stopMusic() {
+  if (!music) return;
+  clearInterval(music.timer);
+  const { gain } = music;
+  music = null;
+  try {
+    gain.gain.setTargetAtTime(0, ctx.currentTime, 0.3);
+    setTimeout(() => gain.disconnect(), 1500);
+  } catch { /* already gone */ }
+}
+
+export const musicPlaying = () => !!music;

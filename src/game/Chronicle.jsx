@@ -12,6 +12,15 @@ import { themeName, fitsTheme } from '../config/themes.js';
 // shape when nobody has drawn it yet – its legend, a hint for the player and what it can do. Opened
 // from the main menu (all monsters, by theme) and in the game (the monsters of
 // that map; the ones not met yet are marked).
+// The collection (🏅): every monster ever met in any game (settings.metMonsters)
+// – "you've met 9 of 14" – a gentle progress without scores.
+
+/** How many of `enemies` have been met: { met, total, ids } (ids = the met ones that still exist). */
+export function collectionOf(enemies, met = []) {
+  const known = new Set(met ?? []);
+  const ids = enemies.filter((e) => known.has(e.id)).map((e) => e.id);
+  return { met: ids.length, total: enemies.length, ids: new Set(ids) };
+}
 
 export function monstersOfWaves(waves, enemyTypes) {
   const ids = new Set();
@@ -39,17 +48,56 @@ export function EnemyShape({ enemy, size = PIC }) {
   );
 }
 
-export default function Chronicle({ enemies, themes = [], seen = null, intro }) {
+export default function Chronicle({ enemies, themes = [], seen = null, intro, met = [], allEnemies = enemies }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
+  const [tab, setTab] = useState('monsters');
   const [theme, setTheme] = useState(null);
   const [query, setQuery] = useState('');
   const name = (e) => e.name?.[lang] ?? e.id;
   const nameOf = (id) => { const e = enemies.find((x) => x.id === id); return e ? name(e) : null; };
   const shown = enemies.filter((e) => fitsTheme(e, theme) && matchesQuery(query, ...searchTexts(e)));
 
+  const tabs = (
+    <div className="row chronicle-tabs" role="tablist" style={{ gap: 6, marginBottom: 8 }}>
+      <button role="tab" aria-selected={tab === 'monsters'} className={`btn chip ${tab === 'monsters' ? 'active' : ''}`} onClick={() => setTab('monsters')}>📖 {t('chronicle.tab_monsters')}</button>
+      <button role="tab" aria-selected={tab === 'collection'} className={`btn chip ${tab === 'collection' ? 'active' : ''}`} onClick={() => setTab('collection')} data-testid="collection-tab">🏅 {t('chronicle.tab_collection')}</button>
+    </div>
+  );
+
+  if (tab === 'collection') {
+    // met in any game, and those met in this one (seen) right away
+    const all = collectionOf(allEnemies, [...(met ?? []), ...(seen ?? [])]);
+    return (
+      <div className="chronicle">
+        {tabs}
+        <div className="collection-head" role="status">
+          <b data-testid="collection-count">{t('chronicle.collection_count', { n: all.met, total: all.total })}</b>
+          <span className="hud-bar collection-bar" aria-hidden="true"><span style={{ width: `${all.total ? Math.round((all.met / all.total) * 100) : 0}%` }} /></span>
+          <span className="small muted">{all.met === all.total && all.total ? t('chronicle.collection_all') : t('chronicle.collection_hint')}</span>
+        </div>
+        <div className="collection-grid" tabIndex={0} role="region" aria-label={t('chronicle.tab_collection')}>
+          {allEnemies.map((e) => {
+            const known = all.ids.has(e.id);
+            return (
+              <div key={e.id} className={`sketch-card collection-tile ${known ? 'met' : 'unmet'}`} title={known ? name(e) : t('chronicle.not_met')}>
+                <div className="collection-pic">
+                  {e.anims?.walk?.frames?.length || e.image
+                    ? <AnimPreview anim={known ? e.anims?.walk : null} still={e.image || e.anims?.walk?.frames?.[0]} size={72} />
+                    : <EnemyShape enemy={e} size={72} />}
+                </div>
+                <span className="small">{known ? name(e) : '❔'}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="chronicle">
+      {tabs}
       {intro && <p className="muted small">{intro}</p>}
       <SearchBox value={query} onChange={setQuery} count={shown.length} />
       {themes.length > 0 && enemies.length > 4 && (

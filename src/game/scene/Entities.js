@@ -165,7 +165,7 @@ export class Entities {
     const sel = this.selection;
     const p = sel && (sel.kind === 'townhall' ? th : w.spots.find((s) => s.id === sel.id));
     const b = sel?.kind === 'spot' && w.buildingOn(sel.id);
-    const selSig = p ? `${sel.kind}|${sel.id}|${th.level}|${b ? `${b.type}${b.level}` : ''}` : '';
+    const selSig = p ? `${sel.kind}|${sel.id}|${th.level}|${b ? `${b.type}${b.level}` : ''}|${this.previewRange ?? ''}` : '';
     if (this.selectRing.sig !== selSig) {
       this.selectRing.sig = selSig;
       const g = this.selectRing.clear();
@@ -176,6 +176,9 @@ export class Entities {
         const type = sel.kind === 'townhall' ? w.coreType : b && w.buildingTypes[b.type];
         const stats = sel.kind === 'townhall' ? w.thLevels[th.level - 1] : b && b.level > 0 && type.levels[b.level - 1];
         if (hasFeature(type, 'shoots') && stats?.range) g.lineStyle(2, 0xdc2626, 0.5).strokeCircle(p.x, p.y, stats.range);
+        if (hasFeature(type, 'lobs') && stats?.lobRange) g.lineStyle(2, 0x78716c, 0.5).strokeCircle(p.x, p.y, stats.lobRange);
+        // the range of a build option or upgrade pointed at in the panel (BuildPanel)
+        if (this.previewRange) g.fillStyle(0x2563eb, 0.08).fillCircle(p.x, p.y, this.previewRange).lineStyle(2.5, 0x2563eb, 0.7).strokeCircle(p.x, p.y, this.previewRange);
       }
     }
   }
