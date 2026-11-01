@@ -141,6 +141,7 @@ test('menus, the studio and the editors pass WCAG 2.1 AA checks', async ({ page,
 
 test('the keyboard alone: open a component, the dialog keeps focus, equip from the backpack', async ({ page, isMobile }) => {
   test.skip(isMobile, 'keyboards are checked on the PC');
+  test.setTimeout(150_000);
   await openMenu(page);
   await page.getByRole('button', { name: /Ateliér/ }).click();
   await page.getByRole('button', { name: /Nepřátelé/ }).click();
@@ -175,9 +176,10 @@ test('the keyboard alone: open a component, the dialog keeps focus, equip from t
   await slot.focus();
   await page.keyboard.press('Enter');
   await expect(slot).toContainText(itemName);
-  // and off again once the 2 s weapon change (game time – slower on a slow machine) is over:
-  // Enter on the worn item, then "Take off into the backpack"
-  await expect(page.locator('.btn.attack .switching')).toHaveCount(0, { timeout: 20_000 });
+  // and off again once the 2 s weapon change is over – game time: a busy CI machine draws few
+  // frames and the game never jumps more than 0.05 s a frame, so it may take long there.
+  // Then Enter on the worn item and "Take off into the backpack"
+  await expect(page.locator('.btn.attack .switching')).toHaveCount(0, { timeout: 90_000 });
   await slot.focus();
   await page.keyboard.press('Enter');
   await page.getByRole('button', { name: /Sundat do batohu/ }).click();
