@@ -124,3 +124,26 @@ test('back to the game’s own components: a fresh game has nothing to do; an ex
   expect(after.assets.find((a) => a.id === 'goblin').stats.hp).toBe(goblin.stats.hp);
   expect(errors).toEqual([]);
 });
+
+test('moving things show which way they go: on the pictures, the frames and the drawing pad', async ({ page }) => {
+  const errors = watchErrors(page);
+  await openMenu(page);
+  await page.getByRole('button', { name: /Ateliér/ }).click();
+  await page.getByRole('button', { name: /Nepřátelé/ }).click();
+  await page.locator('.asset-tile .tile-open').first().click();
+  const modal = page.locator('.modal');
+  await expect(modal.getByTestId('move-hint')).toContainText('jak jde doprava');
+  await expect(modal.getByRole('img', { name: 'Jde tímto směrem ➜' }).first()).toBeVisible();
+  await modal.getByRole('button', { name: /^(Nakreslit|Upravit kreslením)$/ }).first().click();
+  await expect(page.locator('.pad-stack .move-arrow')).toBeVisible();
+  await expect(page.locator('.move-hint').last()).toContainText('jak jde doprava');
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+
+  // a decoration stands still: no arrow
+  await page.getByRole('button', { name: /Ozdoby/ }).click();
+  await page.locator('.asset-tile .tile-open').first().click();
+  await expect(page.locator('.modal').getByTestId('move-arrow')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+

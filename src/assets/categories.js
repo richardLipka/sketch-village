@@ -12,20 +12,21 @@
 // legend   – has a legend (story + hint for the player) for the chronicle
 // sounds   – can have its own recorded sounds (walking growl, attack, death; assets/SoundEditor)
 // fixed    – a fixed set of built-ins (GUI icons): they are drawn, not added or deleted
+// moves    – it moves in the game, drawn going right ➜ (assets/MoveArrow): 'walks' (mirrored going left) or 'flies' (turned to where it flies)
 
 export const CATEGORIES = {
   // hero: default drawing + optional drawings holding a melee / ranged / magic weapon
-  hero:       { size: 128, removeBg: true, levels: 4, slots: ['default', 'melee', 'ranged', 'magic'], stats: 'hero', anims: ['walk', 'attack'] },
-  enemy:      { size: 128, removeBg: true, levels: 1, stats: 'enemy', themed: true, anims: ['walk', 'attack'], legend: true, sounds: true },
+  hero:       { size: 128, removeBg: true, levels: 4, slots: ['default', 'melee', 'ranged', 'magic'], stats: 'hero', anims: ['walk', 'attack'], moves: 'walks' },
+  enemy:      { size: 128, removeBg: true, levels: 1, stats: 'enemy', themed: true, anims: ['walk', 'attack'], legend: true, sounds: true, moves: 'walks' },
   // buildings: a type (features + levels, one picture per level) or another look of a type
   building:   { size: 128, removeBg: true, levels: 3, stats: 'building', themed: true, anims: ['attack', 'reload'] },
-  soldier:    { size: 96,  removeBg: true, levels: 1, anims: ['walk', 'attack'] },
+  soldier:    { size: 96,  removeBg: true, levels: 1, anims: ['walk', 'attack'], moves: 'walks' },
   weapon:     { size: 96,  removeBg: true, levels: 1, stats: 'item' },
   shield:     { size: 96,  removeBg: true, levels: 1, stats: 'item' },
   armor:      { size: 96,  removeBg: true, levels: 1, stats: 'item' },
   coin:       { size: 64,  removeBg: true, levels: 1, stats: 'coin' },
   chest:      { size: 64,  removeBg: true, levels: 1 },
-  projectile: { size: 64,  removeBg: true, levels: 1 },
+  projectile: { size: 64,  removeBg: true, levels: 1, moves: 'flies' },
   cave:       { size: 128, removeBg: true, levels: 1 },
   decoration: { size: 128, removeBg: true, levels: 1 },
   // a surface (grass, stones…) that covers a colour of the map in the game; tiled, so no paper removal

@@ -171,6 +171,7 @@ export default function AssetEditor({ asset, isNew, heroRules, assets = [], buil
         })}
       </div>
       <p className="small muted">{t(cat.slots ? 'editor.slots_hint' : images.length > 1 ? 'editor.levels_hint' : 'component.picture_hint')}</p>
+      {cat.moves && <p className="small move-hint" data-testid="move-hint">➜ {t(`move.${cat.moves}_hint`)}</p>}
 
       {cat.stats && (
         <div style={{ marginTop: 12 }}>
@@ -201,7 +202,7 @@ export default function AssetEditor({ asset, isNew, heroRules, assets = [], buil
 
       {cat.anims && (
         <div style={{ marginTop: 12 }}>
-          <AnimationEditor kinds={cat.anims} anims={draft.anims ?? {}} size={cat.size} removeBg={cat.removeBg} onChange={(anims) => set({ anims })} />
+          <AnimationEditor kinds={cat.anims} anims={draft.anims ?? {}} size={cat.size} removeBg={cat.removeBg} moves={cat.moves} onChange={(anims) => set({ anims })} />
         </div>
       )}
 

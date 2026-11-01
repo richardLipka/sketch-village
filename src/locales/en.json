@@ -79,6 +79,12 @@
     "flip": "Mirror",
     "clear": "Clear all"
   },
+  "move": {
+    "walks": "Goes this way ➜",
+    "flies": "Flies this way ➜",
+    "walks_hint": "Draw it going to the right – when it goes left, the game turns it around.",
+    "flies_hint": "Draw it flying to the right – the game turns it to where it flies."
+  },
   "slot": {
     "pick": "Pick this frame",
     "game_picture": "the game's picture",

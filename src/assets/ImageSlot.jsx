@@ -6,6 +6,7 @@ import BackgroundRemover from './BackgroundRemover.jsx';
 import SketchPad from './SketchPad.jsx';
 import PasteButton from './PasteButton.jsx';
 import { normalizeAssetImage } from './imageEncoding.js';
+import MoveArrow from './MoveArrow.jsx';
 
 // One drawing of an asset, with the full pipeline:
 //   [photo | upload | paste] → crop → remove paper → (optional touch-up)   or   [draw]
@@ -14,7 +15,8 @@ import { normalizeAssetImage } from './imageEncoding.js';
 // the selected frame shows its buttons), `adder` (the "+ frame" panel) and
 // `children` for the frame's own buttons. `standard` = the game's own picture
 // (a permanent built-in, assets/defaultLooks.js): shown until replaced, the
-// drawing pad starts from it, ✕ goes back to it.
+// drawing pad starts from it, ✕ goes back to it. A moving thing (category
+// `moves`) shows the way it goes ➜ on the picture and on the drawing pad.
 export default function ImageSlot({ label, image, fallback, standard = null, placeholder, category, onChange, underlay = null, compact = false, selected = false, adder = false, onSelect, removeTitle, children }) {
   const { t } = useTranslation();
   const fileRef = useRef(null);
@@ -48,6 +50,7 @@ export default function ImageSlot({ label, image, fallback, standard = null, pla
       <div className="pic checker" style={!image && fallback ? { opacity: 0.45 } : undefined} onClick={onSelect}
         {...(onSelect ? { role: 'button', tabIndex: 0, 'aria-pressed': selected, 'aria-label': label ?? t('slot.pick'), onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(); } } } : {})}>
         {shown ? <img src={shown} alt="" /> : <span className="muted" style={{ fontSize: 40 }}>{placeholder ?? '?'}</span>}
+        <MoveArrow moves={category.moves} />
       </div>
       {!image && !fallback && standard && <div className="small muted" data-testid="game-picture">{t('slot.game_picture')}</div>}
       <div className="row" style={{ justifyContent: 'center', gap: 4 }}>
@@ -79,6 +82,7 @@ export default function ImageSlot({ label, image, fallback, standard = null, pla
           size={category.size}
           initialImage={image || fallback || standard}
           underlay={underlay}
+          moves={category.moves}
           onCancel={() => setStage(null)}
           onSave={(img) => { onChange(img); setStage(null); }}
         />

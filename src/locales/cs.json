@@ -79,6 +79,12 @@
     "flip": "Otočit zrcadlově",
     "clear": "Smazat vše"
   },
+  "move": {
+    "walks": "Jde tímto směrem ➜",
+    "flies": "Letí tímto směrem ➜",
+    "walks_hint": "Kresli postavu, jak jde doprava – když jde doleva, hra ji otočí.",
+    "flies_hint": "Kresli střelu, jak letí doprava – hra ji natočí tam, kam letí."
+  },
   "slot": {
     "pick": "Vybrat tento snímek",
     "game_picture": "obrázek hry",

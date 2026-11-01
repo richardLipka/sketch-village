@@ -21,7 +21,7 @@ import {
 
 const VIEW = 224; // px of the alignment view
 
-export default function AnimationEditor({ kinds, anims = {}, size = 128, removeBg = true, onChange }) {
+export default function AnimationEditor({ kinds, anims = {}, size = 128, removeBg = true, moves = null, onChange }) {
   const { t } = useTranslation();
   const [kind, setKind] = useState(kinds[0]);
   const [raw, setRaw] = useState(null); // the strip just opened (can be cut again with another frame count)
@@ -78,7 +78,7 @@ export default function AnimationEditor({ kinds, anims = {}, size = 128, removeB
     setAnim(next);
     setSel(Math.max(0, Math.min(select, (next?.frames.length ?? 1) - 1)));
   };
-  const cat = { size, removeBg };
+  const cat = { size, removeBg, moves };
   const frames = anim?.frames ?? [];
   const full = frames.length >= MAX_FRAMES;
   const offsetOf = (i) => anim.offsets?.[i] ?? [0, 0];

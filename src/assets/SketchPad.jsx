@@ -5,6 +5,7 @@ import { loadImage, makeCanvas, encodeCanvas } from './imageEncoding.js';
 import { floodErase } from './bgRemoval.js';
 import { floodFill, hexToRgba } from './pixelOps.js';
 import PasteButton, { usePasteAnywhere } from './PasteButton.jsx';
+import MoveArrow from './MoveArrow.jsx';
 import AssetCropper from './AssetCropper.jsx';
 
 // Draw a new asset or touch up a photographed one (pencil, eraser, fill,
@@ -17,7 +18,7 @@ const COLORS = ['#1f2937', '#1e3a8a', '#2563eb', '#16a34a', '#65a30d', '#ca8a04'
 const SIZES = [2, 5, 10, 18];
 const UNDO_LIMIT = 25;
 
-export default function SketchPad({ size, initialImage, underlay = null, onSave, onCancel }) {
+export default function SketchPad({ size, initialImage, underlay = null, moves = null, onSave, onCancel }) {
   const { t } = useTranslation();
   const W = Math.max(size * 2, 256);
   const canvasRef = useRef(null);
@@ -196,6 +197,7 @@ export default function SketchPad({ size, initialImage, underlay = null, onSave,
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
           />
+          <MoveArrow moves={moves} big />
         </div>
         <div className="tools">
           <div className="row" style={{ gap: 6 }}>
@@ -206,6 +208,7 @@ export default function SketchPad({ size, initialImage, underlay = null, onSave,
             ))}
           </div>
           <div className="small muted">{t(`sketch.tool_${tool}`)}</div>
+          {moves && <p className="small move-hint">➜ {t(`move.${moves}_hint`)}</p>}
           {underlay && (
             <label className="small" style={{ display: 'block' }}>
               <input type="checkbox" checked={showUnder} onChange={(e) => setShowUnder(e.target.checked)} /> {t('anim.show_previous')}
