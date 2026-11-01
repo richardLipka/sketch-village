@@ -13,17 +13,24 @@ import UiIcon from '../ui/UiIcon.jsx';
 // Every piece is memoized and gets only primitive props (or stable callbacks /
 // lists), so a HUD change re-renders just the pieces that show it.
 
+// a health bar; screen readers hear the percentage
 function Bar({ frac, color, width }) {
-  return <span className="hud-bar" style={width ? { width } : undefined}><span style={{ width: `${Math.round(frac * 100)}%`, background: color }} /></span>;
+  const pct = Math.round(Math.max(0, Math.min(1, frac || 0)) * 100);
+  return (
+    <>
+      <span className="hud-bar" style={width ? { width } : undefined} aria-hidden="true"><span style={{ width: `${pct}%`, background: color }} /></span>
+      <span className="sr-only">{pct} %</span>
+    </>
+  );
 }
 
 export const Resources = memo(function Resources({ coins, workers, thHp, thMax, thLevel }) {
   const { t } = useTranslation();
   return (
     <div className="ov ov-tl sketch-card">
-      <span className="hud-num" title={t('game.coins')}><UiIcon name="coin" /> {coins}</span>
-      <span className="hud-num" title={t('build.workers_hint')}><UiIcon name="worker" /> {workers}</span>
-      <span className="hud-num" title={t('game.town_hall')}><UiIcon name="townhall" />{thLevel} <Bar frac={thHp / thMax} color="#2563eb" /></span>
+      <span className="hud-num" title={t('game.coins')}><UiIcon name="coin" /><span className="sr-only">{t('game.coins')}:</span> {coins}</span>
+      <span className="hud-num" title={t('build.workers_hint')}><UiIcon name="worker" /><span className="sr-only">{t('game.workers')}:</span> {workers}</span>
+      <span className="hud-num" title={t('game.town_hall')}><UiIcon name="townhall" /><span className="sr-only">{t('game.town_hall')} {t('game.level')}</span>{thLevel} <Bar frac={thHp / thMax} color="#2563eb" /></span>
     </div>
   );
 });
@@ -34,7 +41,8 @@ export const Lives = memo(function Lives({ lives, maxLives, hp, maxHp, dead, res
     <div className="ov ov-tc sketch-card" title={t('game.lives')}>
       {dead ? <b>⏳ {t('game.respawn_in', { s: respawnIn })}</b> : (
         <>
-          <span className="hearts">
+          <span className="sr-only">{t('game.lives')}: {lives} / {maxLives}</span>
+          <span className="hearts" aria-hidden="true">
             {Array.from({ length: lives }, (_, i) => <UiIcon key={`h${i}`} name="heart" />)}
             {Array.from({ length: Math.max(0, maxLives - lives) }, (_, i) => <UiIcon key={`e${i}`} name="heartEmpty" />)}
           </span>
@@ -82,8 +90,8 @@ export const AttackBar = memo(function AttackBar({ mode, hasMelee, hasRanged, ha
   return (
     <div className="ov ov-br attack-bar">
       {WEAPON_CLASSES.map((k, i) => (
-        <button key={k} className={`btn attack ${mode === k ? 'active' : ''}`} disabled={!has[k]} onClick={() => onMode(k)}
-          title={has[k] ? `${t(`weapons.class_${k}`)} (${i + 1})` : t(`weapons.need_${k}`)}>
+        <button key={k} className={`btn attack ${mode === k ? 'active' : ''}`} disabled={!has[k]} onClick={() => onMode(k)} aria-pressed={mode === k}
+          title={has[k] ? `${t(`weapons.class_${k}`)} (${i + 1})` : t(`weapons.need_${k}`)} aria-label={has[k] ? `${t(`weapons.class_${k}`)} (${i + 1})` : t(`weapons.need_${k}`)}>
           <UiIcon name={k} />
           {mode === k && switching > 0 && <span className="switching" style={{ width: `${(switching / 2) * 100}%` }} />}
         </button>
@@ -184,15 +192,19 @@ export const Equipment = memo(function Equipment({ inventoryKey, right, left, ar
     window.addEventListener('pointercancel', end);
   };
   const tapBag = () => { if (picked && picked.from !== 'bag') drop(picked.id, picked.from, 'bag'); };
+  // Enter / space on an item or a slot is a tap (the keyboard's way, same as a finger)
+  const keyTap = (fn) => (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); fn(); } };
 
   const slotBox = ([key, icon, label]) => {
     const id = key === 'left' && twoHanded ? null : worn[key];
     const w = byId(id);
     const cls = ['eq-big', target === key && 'drop-ok', target && target !== key && 'drop-no', picked?.from === key && 'picked'].filter(Boolean).join(' ');
     return (
-      <div key={key} className={cls} data-drop={key} title={t(label)}
+      <div key={key} className={cls} data-drop={key} title={t(label)} role="button" tabIndex={0} aria-pressed={picked?.from === key}
+        aria-label={`${t(label)}: ${w ? name(w) : '—'}`}
         onPointerDown={(e) => (w ? startDrag(e, id, key) : undefined)}
-        onClick={() => (!w ? tap(null, key) : undefined)}>
+        onClick={() => (!w ? tap(null, key) : undefined)}
+        onKeyDown={keyTap(() => tap(w ? id : null, key))}>
         <span className="small muted eq-label">{t(label)}</span>
         {w ? <WeaponIcon weapon={w} assets={assets} size="2.4em" />
           : key === 'left' && twoHanded ? <span className="eq-empty">↔</span> : <span className="eq-empty muted">{icon}</span>}
@@ -202,7 +214,7 @@ export const Equipment = memo(function Equipment({ inventoryKey, right, left, ar
   };
 
   const stripSlot = (key, id, icon, label) => (
-    <button key={key} className="btn eq-slot" onClick={() => setOpen(!open)} title={label}>
+    <button key={key} className="btn eq-slot" onClick={() => setOpen(!open)} title={label} aria-label={label}>
       {id ? <WeaponIcon weapon={byId(id)} assets={assets} size="1.5em" /> : <span className="muted">{icon}</span>}
     </button>
   );
@@ -213,7 +225,7 @@ export const Equipment = memo(function Equipment({ inventoryKey, right, left, ar
         <div className="backpack sketch-card" onPointerDown={(e) => e.stopPropagation()}>
           <div className="row" style={{ justifyContent: 'space-between' }}>
             <b><UiIcon name="backpack" /> {t('weapons.inventory')}</b>
-            <button className="btn icon" onClick={() => { setOpen(false); setPicked(null); }} title={t('common.done')}>✕</button>
+            <button className="btn icon" onClick={() => { setOpen(false); setPicked(null); }} title={t('common.done')} aria-label={t('common.done')}>✕</button>
           </div>
           <div className="backpack-body">
           <div className="eq-left">
@@ -225,9 +237,13 @@ export const Equipment = memo(function Equipment({ inventoryKey, right, left, ar
           <div className={`eq-bag ${moving && moving.from !== 'bag' ? 'drop-ok' : ''}`} data-drop="bag" onClick={tapBag}>
             {!owned.length && <p className="small muted">{t('weapons.empty')}</p>}
             {owned.length > 0 && !inBag.length && <p className="small muted">{t('weapons.bag_empty')}</p>}
+            {picked && picked.from !== 'bag' && (
+              <button type="button" className="btn eq-take-off" onClick={(e) => { e.stopPropagation(); tapBag(); }}>⤵ {t('weapons.take_off')}</button>
+            )}
             {inBag.map((w) => (
               <div key={w.id} className={`eq-item ${picked?.id === w.id ? 'picked' : ''}`} onPointerDown={(e) => startDrag(e, w.id, 'bag')}
-                onClick={(e) => e.stopPropagation()} title={itemLine(w, t)}>
+                onClick={(e) => e.stopPropagation()} title={itemLine(w, t)} role="button" tabIndex={0} aria-pressed={picked?.id === w.id}
+                onKeyDown={keyTap(() => tap(w.id, 'bag'))}>
                 <WeaponIcon weapon={w} assets={assets} size="2em" />
                 <span className="small eq-name">{name(w)}</span>
                 <span className="small muted">{itemLine(w, t)}</span>
@@ -247,7 +263,7 @@ export const Equipment = memo(function Equipment({ inventoryKey, right, left, ar
         {stripSlot('right', right, '✋', t('weapons.right_hand'))}
         {twoHanded ? <span className="btn eq-slot muted" title={t('weapons.two_hands')}>↔</span> : stripSlot('left', left, SLOT_ICON.shield, t('weapons.left_hand'))}
         {stripSlot('armor', armor, SLOT_ICON.armor, t('weapons.slot_armor'))}
-        <button className={`btn eq-slot ${open ? 'active' : ''}`} onClick={() => { setOpen(!open); setPicked(null); }} title={`${t('weapons.inventory')} (I)`}>
+        <button className={`btn eq-slot ${open ? 'active' : ''}`} onClick={() => { setOpen(!open); setPicked(null); }} title={`${t('weapons.inventory')} (I)`} aria-label={`${t('weapons.inventory')} ${inBag.length} (I)`} aria-expanded={open}>
           <UiIcon name="backpack" /><span className="small">{inBag.length}</span>
         </button>
       </div>
@@ -270,22 +286,24 @@ export function itemLine(w, t) {
 
 // On a phone (compact) only pause, speed and the chronicle stay on screen, in a
 // column under the left thumb; the rest is behind ⋯.
-export const Toolbar = memo(function Toolbar({ compact, paused, speed, wobble, muted, tipsOn, onExit, onPause, onSpeed, onZoom, onWobble, onMute, onTips, onChronicle }) {
+export const Toolbar = memo(function Toolbar({ compact, paused, speed, wobble, muted, tipsOn, onExit, onPause, onSpeed, onZoom, onWobble, onMute, onTips, onChronicle, onHelp }) {
   const { t } = useTranslation();
   const [more, setMore] = useState(false);
+  const speedName = `${t('game.speed')}: ${speed}×`;
   if (compact) {
     return (
       <div className="ov toolbar toolbar-compact">
-        <button className={`btn icon ${paused ? 'active' : ''}`} onClick={onPause} title={t('game.pause')}>{paused ? '▶' : '⏸'}</button>
-        <button className={`btn icon ${speed === 2 ? 'active' : ''}`} onClick={onSpeed} title={t('game.speed')}>{speed}×</button>
-        <button className="btn icon" onClick={onChronicle} title={t('game.chronicle')}><UiIcon name="chronicle" /></button>
-        <button className={`btn icon ${more ? 'active' : ''}`} onClick={() => setMore(!more)} title={t('game.more')}>⋯</button>
+        <button className={`btn icon ${paused ? 'active' : ''}`} onClick={onPause} title={t('game.pause')} aria-label={t('game.pause')} aria-pressed={paused}>{paused ? '▶' : '⏸'}</button>
+        <button className={`btn icon ${speed === 2 ? 'active' : ''}`} onClick={onSpeed} title={speedName} aria-label={speedName}>{speed}×</button>
+        <button className="btn icon" onClick={onChronicle} title={t('game.chronicle')} aria-label={t('game.chronicle')}><UiIcon name="chronicle" /></button>
+        <button className={`btn icon ${more ? 'active' : ''}`} onClick={() => setMore(!more)} title={t('game.more')} aria-label={t('game.more')} aria-expanded={more}>⋯</button>
         {more && (
           <div className="toolbar-more sketch-card" onClick={() => setMore(false)}>
-            <button className="btn icon" onClick={onExit} title={t('game.exit')}>✕</button>
-            <button className={`btn icon ${tipsOn ? 'active' : ''}`} onClick={onTips} title={t(tipsOn ? 'tips.skip' : 'tips.restart')}>💡</button>
-            <button className="btn icon" onClick={onMute} title={t(muted ? 'game.sound_on' : 'game.sound_off')}>{muted ? '🔇' : '🔊'}</button>
-            <button className={`btn icon ${wobble ? 'active' : ''}`} onClick={onWobble} title={t('game.wobble')}>〰️</button>
+            <button className="btn icon" onClick={onExit} title={t('game.exit')} aria-label={t('game.exit')}>✕</button>
+            <button className={`btn icon ${tipsOn ? 'active' : ''}`} onClick={onTips} title={t(tipsOn ? 'tips.skip' : 'tips.restart')} aria-label={t('tips.toggle')} aria-pressed={tipsOn}>💡</button>
+            <button className="btn icon" onClick={onMute} title={t(muted ? 'game.sound_on' : 'game.sound_off')} aria-label={t('game.sound')} aria-pressed={!muted}>{muted ? '🔇' : '🔊'}</button>
+            <button className={`btn icon ${wobble ? 'active' : ''}`} onClick={onWobble} title={t('game.wobble')} aria-label={t('game.wobble')} aria-pressed={wobble}>〰️</button>
+            <button className="btn icon" onClick={onHelp} title={t('game.help')} aria-label={t('game.help')}>?</button>
             <FullscreenButton />
           </div>
         )}
@@ -294,16 +312,16 @@ export const Toolbar = memo(function Toolbar({ compact, paused, speed, wobble, m
   }
   return (
     <div className="ov ov-bc toolbar sketch-card">
-      <button className="btn icon" onClick={onExit} title={t('game.exit')}>✕</button>
-      <button className={`btn icon ${paused ? 'active' : ''}`} onClick={onPause} title={t('game.pause')}>{paused ? '▶' : '⏸'}</button>
-      <button className={`btn icon ${speed === 2 ? 'active' : ''}`} onClick={onSpeed} title={t('game.speed')}>{speed}×</button>
-      <button className="btn icon narrow-hide" onClick={() => onZoom(1 / 1.25)} title={t('game.zoom_out')}>−</button>
-      <button className="btn icon narrow-hide" onClick={() => onZoom(1.25)} title={t('game.zoom_in')}>+</button>
-      <button className="btn icon" onClick={onChronicle} title={t('game.chronicle')}><UiIcon name="chronicle" /></button>
-      <button className={`btn icon ${tipsOn ? 'active' : ''}`} onClick={onTips} title={t(tipsOn ? 'tips.skip' : 'tips.restart')}>💡</button>
-      <button className="btn icon" onClick={onMute} title={t(muted ? 'game.sound_on' : 'game.sound_off')}>{muted ? '🔇' : '🔊'}</button>
-      <button className={`btn icon ${wobble ? 'active' : ''}`} onClick={onWobble} title={t('game.wobble')}>〰️</button>
-      <button className="btn icon narrow-hide" title={t('game.hint')}>?</button>
+      <button className="btn icon" onClick={onExit} title={t('game.exit')} aria-label={t('game.exit')}>✕</button>
+      <button className={`btn icon ${paused ? 'active' : ''}`} onClick={onPause} title={t('game.pause')} aria-label={t('game.pause')} aria-pressed={paused}>{paused ? '▶' : '⏸'}</button>
+      <button className={`btn icon ${speed === 2 ? 'active' : ''}`} onClick={onSpeed} title={speedName} aria-label={speedName}>{speed}×</button>
+      <button className="btn icon narrow-hide" onClick={() => onZoom(1 / 1.25)} title={t('game.zoom_out')} aria-label={t('game.zoom_out')}>−</button>
+      <button className="btn icon narrow-hide" onClick={() => onZoom(1.25)} title={t('game.zoom_in')} aria-label={t('game.zoom_in')}>+</button>
+      <button className="btn icon" onClick={onChronicle} title={t('game.chronicle')} aria-label={t('game.chronicle')}><UiIcon name="chronicle" /></button>
+      <button className={`btn icon ${tipsOn ? 'active' : ''}`} onClick={onTips} title={t(tipsOn ? 'tips.skip' : 'tips.restart')} aria-label={t('tips.toggle')} aria-pressed={tipsOn}>💡</button>
+      <button className="btn icon" onClick={onMute} title={t(muted ? 'game.sound_on' : 'game.sound_off')} aria-label={t('game.sound')} aria-pressed={!muted}>{muted ? '🔇' : '🔊'}</button>
+      <button className={`btn icon ${wobble ? 'active' : ''}`} onClick={onWobble} title={t('game.wobble')} aria-label={t('game.wobble')} aria-pressed={wobble}>〰️</button>
+      <button className="btn icon narrow-hide" onClick={onHelp} title={t('game.help')} aria-label={t('game.help')}>?</button>
       <FullscreenButton />
     </div>
   );
@@ -312,11 +330,11 @@ export const Toolbar = memo(function Toolbar({ compact, paused, speed, wobble, m
 export const Coach = memo(function Coach({ text, index, total, onSkip }) {
   const { t } = useTranslation();
   return (
-    <div className="coach sketch-card" key={index}>
+    <div className="coach sketch-card" key={index} role="status">
       <span className="coach-icon">💡</span>
       <span>{text}</span>
       <span className="small muted coach-count">{index + 1}/{total}</span>
-      <button className="btn icon" onClick={onSkip} title={t('tips.skip')}>✕</button>
+      <button className="btn icon" onClick={onSkip} title={t('tips.skip')} aria-label={t('tips.skip')}>✕</button>
     </div>
   );
 });

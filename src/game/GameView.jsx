@@ -29,6 +29,7 @@ import { SOUND_KINDS } from '../assets/audioClip.js';
 import { TUTORIAL_STEPS, TUTORIAL_DONE, advanceTutorial } from './tutorial.js';
 
 const MESSAGE_MS = 2600;
+const HELP_MS = 12000; // the "?" help stays long enough to read
 const NEW_MONSTER_MS = 7000;
 const SUMMARY_MS = 9000;
 const voiceKey = (v) => `voice:${v.type}:${v.kind}`;
@@ -84,7 +85,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
 
   useEffect(() => {
     if (!message) return undefined;
-    const id = setTimeout(() => setMessage(null), MESSAGE_MS);
+    const id = setTimeout(() => setMessage(null), message.long ? HELP_MS : MESSAGE_MS);
     return () => clearTimeout(id);
   }, [message]);
 
@@ -354,6 +355,8 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
   }, []);
   const skipTips = useCallback(() => live.current.onSettings?.({ tutorialStep: TUTORIAL_DONE }), []);
   const exit = useCallback(() => live.current.onExit?.(), []);
+  // "?" – how to play, as a message that stays a while (also read by screen readers)
+  const help = useCallback(() => setMessage({ text: live.current.t('game.hint'), at: Date.now(), long: true }), []);
   // leaving a running game asks first – the game waits meanwhile; after the end (or while loading) it just leaves
   const [quitting, setQuitting] = useState(false);
   const pausedByQuit = useRef(false);
@@ -399,16 +402,26 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
   const onUnequip = useCallback((slot) => equipAct((w) => w.unequip(slot)), [equipAct]);
   const closePanel = useCallback(() => { setSelection(null); const s = scene(); if (s) s.selection = null; }, []);
 
-  // keyboard: 1/2/3 = attack type, I = backpack (GameOverlay), space = ready, P = pause;
+  // keyboard: 1/2/3 = attack type, I = backpack (GameOverlay), space = ready, P = pause,
+  // arrows / WASD = walk, B = the next place (Town Hall, building spots; its panel gets the
+  // focus), F = attack the nearest monster – the whole game without a mouse (SPEC §4c);
   // not while typing or while a dialog is open (P must not resume the game behind the chronicle)
+  const [panelFocus, setPanelFocus] = useState(0); // bumped when the keyboard picked a place
   useEffect(() => {
+    const WALK = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1], a: [-1, 0], d: [1, 0], w: [0, -1], s: [0, 1] };
     const onKey = (e) => {
-      if (!gameKey(e)) return;
+      if (!gameKey(e) || e.ctrlKey || e.metaKey || e.altKey) return;
+      const sc = scene();
+      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
       if (e.key === '1') setMode('melee');
       else if (e.key === '2') setMode('ranged');
       else if (e.key === '3') setMode('magic');
-      else if (e.key === ' ') { e.preventDefault(); ready(); }
-      else if (e.key === 'p' || e.key === 'P') togglePause();
+      // space on a focused button presses that button
+      else if (e.key === ' ') { if (e.target?.closest?.('button, [role=button]')) return; e.preventDefault(); ready(); }
+      else if (key === 'p') togglePause();
+      else if (WALK[key] && sc && !sc.paused) { e.preventDefault(); sc.walkBy(...WALK[key]); }
+      else if (key === 'b' && sc) { e.preventDefault(); sc.selectNext(e.shiftKey ? -1 : 1); setPanelFocus((n) => n + 1); }
+      else if (key === 'f' && sc && !sc.paused) sc.attackNearest();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -445,23 +458,24 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
           </>
         )}
         <Toolbar compact={device === 'phone'} paused={paused} speed={speed} wobble={wobble} muted={muted} tipsOn={tip < TUTORIAL_DONE}
-          onExit={askExit} onPause={togglePause} onSpeed={changeSpeed} onZoom={zoom} onWobble={toggleWobble} onMute={toggleMute} onTips={toggleTips} onChronicle={openChronicle} />
+          onExit={askExit} onPause={togglePause} onSpeed={changeSpeed} onZoom={zoom} onWobble={toggleWobble} onMute={toggleMute} onTips={toggleTips} onChronicle={openChronicle} onHelp={help} />
         {playing && newMonster && <MonsterNote enemy={enemyTypes.find((e) => e.id === newMonster.id)} key={newMonster.at} onMore={openChronicle} onClose={() => setNewMonster(null)} />}
         {chronicle && (
           <Modal onClose={closeChronicle} wide fill
-            header={<div className="row"><h2>📖 {t('chronicle.map_title')}</h2><span className="spacer" /><button className="btn" onClick={closeChronicle}>✕</button></div>}>
+            header={<div className="row"><h2>📖 {t('chronicle.map_title')}</h2><span className="spacer" /><button className="btn" onClick={closeChronicle} aria-label={t('common.close')} title={t('common.close')}>✕</button></div>}>
             <Chronicle enemies={monsters} themes={themes} seen={seen.current} />
           </Modal>
         )}
-        {message && <div className="game-msg sketch-card" key={message.at}>{message.text}</div>}
+        <div className="sr-live" role="status" aria-live="polite">{message?.text}</div>
+        {message && <div className="game-msg sketch-card" key={message.at} aria-hidden="true">{message.text}</div>}
         {playing && summary && (
           <RoundSummary key={summary.at} round={summary.round} total={hud.totalRounds} reward={summary.reward} income={summary.income} stats={summary.stats}
             unlocked={summary.unlocked.map((k) => unlockLabel(k, t, typeName))} onClose={() => setSummary(null)} />
         )}
-        {playing && tip < TUTORIAL_DONE && <Coach text={t(`tips.${TUTORIAL_STEPS[tip].id}`)} index={tip} total={TUTORIAL_DONE} onSkip={skipTips} />}
+        {playing && tip < TUTORIAL_DONE && <Coach text={t(`tips.${TUTORIAL_STEPS[tip].id}`, { context: device === 'pc' ? undefined : 'touch' })} index={tip} total={TUTORIAL_DONE} onSkip={skipTips} />}
         {playing && selection && (
           <SelectionPanel
-            worldRef={worldRef} selection={selection} version={panelVersion}
+            worldRef={worldRef} selection={selection} version={panelVersion} focusKey={panelFocus}
             types={types} weapons={weapons} assets={assets}
             onClose={closePanel} onBuild={onBuild} onUpgrade={onUpgrade} onSell={onSell}
             onUpgradeTownHall={onUpgradeTownHall} onUpgradeHero={onUpgradeHero} onBuyWeapon={onBuyWeapon}

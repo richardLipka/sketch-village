@@ -38,7 +38,7 @@ export default function ThemesEditor({ themes, assets = [], maps = [], onSave, o
           </select>
           <input type="text" value={themeName(th, lang)} onChange={(e) => setName(th, e.target.value)} style={{ flex: 1, minWidth: 140 }} />
           <span className="small muted">{t('themes.used', { n: uses(th.id) })}</span>
-          <button className="btn icon" onClick={() => remove(th)} title={t('common.delete')}>🗑</button>
+          <button className="btn icon" onClick={() => remove(th)} title={t('common.delete')} aria-label={t('common.delete')}>🗑</button>
         </div>
       ))}
       <button className="btn" onClick={add}>+ {t('themes.add')}</button>

@@ -18,23 +18,23 @@ export function PainterTools({ mode, map, tool, onTool, roadSize, onRoadSize, pe
       {mode === 'terrain' ? null : mode === 'paint' ? (
         <>
           {PAINT_TOOLS.map(([id, icon]) => (
-            <button key={id} className={`btn icon ${tool === id ? 'active' : ''}`} onClick={() => onTool(id)}>{icon} {t(`maps.tool_${id}`)}</button>
+            <button key={id} className={`btn icon ${tool === id ? 'active' : ''}`} onClick={() => onTool(id)} aria-pressed={tool === id}>{icon} {t(`maps.tool_${id}`)}</button>
           ))}
           <span className="muted">|</span>
           {(tool === 'road' || tool === 'grass') && ROAD_SIZES.map((s) => (
-            <button key={s} className={`btn icon ${roadSize === s ? 'active' : ''}`} onClick={() => onRoadSize(s)}>
+            <button key={s} className={`btn icon ${roadSize === s ? 'active' : ''}`} onClick={() => onRoadSize(s)} aria-pressed={roadSize === s} aria-label={`${t('maps.brush_size')} ${s}`} title={`${t('maps.brush_size')} ${s}`}>
               <span style={{ display: 'inline-block', width: s / 3, height: s / 3, borderRadius: '50%', background: tool === 'road' ? map.palette.path : map.palette.grass, border: '1px solid var(--ink)' }} />
             </button>
           ))}
           {(tool === 'pencil' || tool === 'fill') && (
             <>
               {tool === 'pencil' && PENCIL_SIZES.map((s) => (
-                <button key={s} className={`btn icon ${pencilSize === s ? 'active' : ''}`} onClick={() => onPencilSize(s)}>
+                <button key={s} className={`btn icon ${pencilSize === s ? 'active' : ''}`} onClick={() => onPencilSize(s)} aria-pressed={pencilSize === s} aria-label={`${t('maps.pencil_size')} ${s}`} title={`${t('maps.pencil_size')} ${s}`}>
                   <span style={{ display: 'inline-block', width: s + 2, height: s + 2, borderRadius: '50%', background: 'var(--ink)' }} />
                 </button>
               ))}
               {[...DECOR_COLORS, map.palette.path, map.palette.grass].map((c) => (
-                <button key={c} className={`swatch ${c === color ? 'on' : ''}`} style={{ background: c }} onClick={() => onColor(c)} aria-label={c} />
+                <button key={c} className={`swatch ${c === color ? 'on' : ''}`} style={{ background: c }} onClick={() => onColor(c)} aria-label={`${t('maps.colour')} ${c}`} aria-pressed={c === color} />
               ))}
             </>
           )}
@@ -42,7 +42,7 @@ export function PainterTools({ mode, map, tool, onTool, roadSize, onRoadSize, pe
       ) : (
         <>
           {PLACE_TOOLS.map(([id, icon]) => (
-            <button key={id} className={`btn icon ${placeTool === id ? 'active' : ''}`} onClick={() => onPlaceTool(id)}>
+            <button key={id} className={`btn icon ${placeTool === id ? 'active' : ''}`} onClick={() => onPlaceTool(id)} aria-pressed={placeTool === id}>
               {icon} {t(`maps.place_${id}`)}{id === 'spot' ? ` (${map.spots.length})` : ''}
             </button>
           ))}
@@ -50,7 +50,7 @@ export function PainterTools({ mode, map, tool, onTool, roadSize, onRoadSize, pe
             <>
               <span className="muted">|</span>
               {RUBBER_SIZES.map((s) => (
-                <button key={s} className={`btn icon ${rubberSize === s ? 'active' : ''}`} onClick={() => onRubberSize(s)} title={t('maps.rubber_size')} aria-label={`${t('maps.rubber_size')} ${s}`}>
+                <button key={s} className={`btn icon ${rubberSize === s ? 'active' : ''}`} onClick={() => onRubberSize(s)} aria-pressed={rubberSize === s} title={t('maps.rubber_size')} aria-label={`${t('maps.rubber_size')} ${s}`}>
                   <span style={{ display: 'inline-block', width: s / 3 + 4, height: s / 3 + 4, borderRadius: '50%', border: '2px dashed var(--ink)' }} />
                 </button>
               ))}
@@ -78,7 +78,7 @@ export function TerrainPanel({ map, colours, choices, onTexture }) {
             <span className="small" style={{ minWidth: 70 }}>{colourLabel(c)}</span>
             <span>→</span>
             {chosen ? <img className="tex-swatch" src={chosen.swatch} alt="" /> : <span className="tex-swatch" style={{ background: c }} />}
-            <select value={map.textures?.[c] ?? ''} onChange={(e) => onTexture(c, e.target.value)}>
+            <select value={map.textures?.[c] ?? ''} onChange={(e) => onTexture(c, e.target.value)} aria-label={`${t('maps.mode_terrain')}: ${colourLabel(c)}`}>
               <option value="">{t('maps.texture_none')}</option>
               {choices.filter((x) => !x.mine).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
               {choices.some((x) => x.mine) && (

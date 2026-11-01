@@ -47,6 +47,53 @@ function upgradeBuildingHp(file) {
   file.settings = { ...file.settings, dataVersion: 4 };
 }
 
+const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
+const isText = (v) => typeof v === 'string' || (isObj(v) && Object.values(v).every((x) => typeof x === 'string'));
+
+/**
+ * Records in the shapes the screens expect, so a damaged record (from an
+ * edited file, a bug, another tool) can't break a screen: records without an
+ * id are dropped; a component's name, pictures, numbers and worlds and a map's
+ * name, world and lists are repaired. A healthy record stays the same object.
+ * Returns { db, fixed } – fixed = how many records were dropped or repaired.
+ */
+export function cleanRecords(db) {
+  let fixed = 0;
+  const keep = (list, fix) => {
+    const out = [];
+    for (const r of Array.isArray(list) ? list : []) {
+      if (!isObj(r) || typeof r.id !== 'string' || !r.id) { fixed++; continue; }
+      const f = fix(r);
+      if (f !== r) fixed++;
+      out.push(f);
+    }
+    return out;
+  };
+  const asset = (a) => {
+    const nameOk = a.name === undefined || isText(a.name);
+    const imagesOk = a.images === undefined || (Array.isArray(a.images) && a.images.every((x) => x === null || typeof x === 'string'));
+    const statsOk = a.stats === undefined || isObj(a.stats);
+    const themesOk = a.themes === undefined || (Array.isArray(a.themes) && a.themes.every((x) => typeof x === 'string'));
+    if (nameOk && imagesOk && statsOk && themesOk) return a;
+    return {
+      ...a,
+      name: nameOk ? a.name : '',
+      images: imagesOk ? a.images : (Array.isArray(a.images) ? a.images.map((x) => (typeof x === 'string' ? x : null)) : []),
+      stats: statsOk ? a.stats : {},
+      ...(themesOk ? {} : { themes: Array.isArray(a.themes) ? a.themes.filter((x) => typeof x === 'string') : [] }),
+    };
+  };
+  const map = (m) => {
+    const lists = ['decorations', 'spots', 'caves'].filter((k) => m[k] !== undefined && !Array.isArray(m[k]));
+    const worldOk = m.world === undefined || (isObj(m.world) && m.world.width > 0 && m.world.height > 0);
+    const nameOk = m.name === undefined || typeof m.name === 'string';
+    if (!lists.length && worldOk && nameOk) return m;
+    return { ...m, ...Object.fromEntries(lists.map((k) => [k, []])), ...(worldOk ? {} : { world: { width: 1280, height: 720 } }), ...(nameOk ? {} : { name: String(m.name ?? '') }) };
+  };
+  const next = { ...db, assets: keep(db.assets, asset), maps: keep(db.maps, map), themes: keep(db.themes, (t) => t) };
+  return { db: next, fixed };
+}
+
 /** Validate and upgrade an imported file. Throws with a translation key on failure. */
 export function parseSaveFile(json) {
   let file;
@@ -60,7 +107,7 @@ export function parseSaveFile(json) {
   // Future format changes: migrate older versions here, step by step.
   for (const c of COLLECTIONS) if (!Array.isArray(file[c])) file[c] = [];
   upgradeBuildingHp(file);
-  return file;
+  return cleanRecords(file).db;
 }
 
 /**

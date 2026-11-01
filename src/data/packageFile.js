@@ -9,7 +9,6 @@
 import { buildSaveFile } from './saveFile.js';
 import { DATA_VERSION } from './migrate.js';
 
-export const PACKAGE_KINDS = ['map', 'component'];
 // the game's own GUI icons never travel with a map or a component
 const NEVER = new Set(['icon']);
 

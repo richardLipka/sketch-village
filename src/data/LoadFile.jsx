@@ -1,8 +1,10 @@
 import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Modal from '../ui/Modal.jsx';
+import Toast from '../ui/Toast.jsx';
 import { parseSaveFile } from './saveFile.js';
 import { resolveDataUrl, fetchSaveFile } from './library.js';
+import { importNote, importErrorText } from './useImporter.jsx';
 
 // "⬆ Load…" (Maps, studio, Save & load): a save file from the computer, or
 // from an address the kid types or pastes (a file on GitHub, the class's
@@ -34,7 +36,7 @@ export default function LoadFile({ label, title, hint, onImport, testId }) {
     setOpen(false);
     setBusy(false);
     const r = await onImport(file);
-    setMessage(r ? { ok: true, text: t(r.message ?? 'import.done_review', r.summary) } : { ok: false, text: t('import.cancelled') });
+    setMessage(importNote(r, t));
   };
 
   const fromComputer = (e) => {
@@ -64,7 +66,7 @@ export default function LoadFile({ label, title, hint, onImport, testId }) {
               <input id="load-address" type="text" inputMode="url" autoComplete="url" spellCheck={false} value={address} placeholder="https://…/….json" onChange={(e) => setAddress(e.target.value)} />
               <button className="btn" type="submit" disabled={busy || !address.trim()}>{busy ? '…' : t('load.load')}</button>
             </form>
-            {error && <p className="error-text" role="alert">{t(error, { defaultValue: t('import.error_generic') })}</p>}
+            {error && <p className="error-text" role="alert">{importErrorText(error, t)}</p>}
             <div className="row" style={{ justifyContent: 'flex-end' }}>
               <button className="btn" onClick={() => setOpen(false)}>{t('common.cancel')}</button>
             </div>
@@ -72,9 +74,7 @@ export default function LoadFile({ label, title, hint, onImport, testId }) {
         </Modal>
       )}
       {message && (
-        <div className={`toast sketch-card ${message.ok ? '' : 'error-text'}`} role="status" style={message.ok ? undefined : { background: 'var(--hl-red)' }} onClick={() => setMessage(null)}>
-          {message.text}
-        </div>
+        <Toast error={!message.ok} onClose={() => setMessage(null)}>{message.text}</Toast>
       )}
     </>
   );

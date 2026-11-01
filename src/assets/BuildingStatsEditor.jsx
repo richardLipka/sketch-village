@@ -100,7 +100,8 @@ export default function BuildingStatsEditor({ id, stats, types, projectiles = []
                   <td key={i}>
                     {core && i === 0 && (key === 'cost' || key === 'time' || key === 'round')
                       ? '—'
-                      : <NumField value={l[key]} min={min} max={max} step={step} onChange={(v) => setLevel(i, key, v)} />}
+                      : <NumField value={l[key]} min={min} max={max} step={step} onChange={(v) => setLevel(i, key, v)}
+                        ariaLabel={`${t(`feature.f_${key}`)} – ${t('rules.level_n', { n: i + 1 })}`} />}
                   </td>
                 ))}
               </tr>
@@ -110,7 +111,7 @@ export default function BuildingStatsEditor({ id, stats, types, projectiles = []
                 <td>{FEATURES.soldiers.icon} {t('feature.f_soldierKind')}</td>
                 {levels.map((l, i) => (
                   <td key={i}>
-                    <select value={l.soldierKind ?? ''} onChange={(e) => setLevel(i, 'soldierKind', e.target.value || null)} aria-label={t('feature.f_soldierKind')}>
+                    <select value={l.soldierKind ?? ''} onChange={(e) => setLevel(i, 'soldierKind', e.target.value || null)} aria-label={`${t('feature.f_soldierKind')} – ${t('rules.level_n', { n: i + 1 })}`}>
                       <option value="">💂 {t('feature.soldier_default')}</option>
                       {soldierChoices.soldiers.length > 0 && (
                         <optgroup label={t('cat.soldier')}>{soldierChoices.soldiers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>

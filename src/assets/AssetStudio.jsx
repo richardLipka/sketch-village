@@ -110,7 +110,7 @@ export default function AssetStudio({ assets, heroRules, buildingTypes = [], ene
     </>}>
 
       <div className="grid">
-        {!getCategory(category).fixed && <button className="asset-tile new btn" onClick={() => setEditing({ asset: emptyAsset(category), isNew: true })} title={t('studio.add')}>
+        {!getCategory(category).fixed && <button className="asset-tile new btn" onClick={() => setEditing({ asset: emptyAsset(category), isNew: true })} title={t('studio.add')} aria-label={t('studio.add')}>
           +
         </button>}
         {list.map((a) => {
@@ -121,13 +121,16 @@ export default function AssetStudio({ assets, heroRules, buildingTypes = [], ene
               <div className="checker" style={{ borderRadius: 6, display: 'grid', placeItems: 'center' }}>
                 {pics.length ? <img src={pics.at(-1)} alt="" /> : <span className="no-pic" style={{ color: a.stats?.color }}>{a.stats?.emoji ?? KIND_ICON[a.category]}</span>}
               </div>
-              <div className="name">{a.builtIn && '⭐ '}{compName(a, lang)} {themed && <span title={t('themes.label')}>{themeIcons(a)}</span>}</div>
+              <div className="name">
+                <button type="button" className="tile-open">{a.builtIn && '⭐ '}{compName(a, lang)}</button>
+                {themed && <span title={t('themes.label')}> {themeIcons(a)}</span>}
+              </div>
               <div className="author">{a.author && `✎ ${a.author}`}</div>
               {describe(a) && <div className="small muted">{describe(a)}</div>}
               {canShare(a) && (
                 <div className="row" style={{ justifyContent: 'center', gap: 4 }}>
-                  <button className="btn icon small" onClick={(e) => { e.stopPropagation(); duplicate(a); }} title={t('studio.duplicate')}>⧉</button>
-                  <button className="btn icon small" onClick={(e) => { e.stopPropagation(); download(a); }} title={t('studio.download_title')} data-testid="component-download">⬇</button>
+                  <button className="btn icon small" onClick={(e) => { e.stopPropagation(); duplicate(a); }} title={t('studio.duplicate')} aria-label={t('studio.duplicate')}>⧉</button>
+                  <button className="btn icon small" onClick={(e) => { e.stopPropagation(); download(a); }} title={t('studio.download_title')} aria-label={t('studio.download_title')} data-testid="component-download">⬇</button>
                 </div>
               )}
             </div>

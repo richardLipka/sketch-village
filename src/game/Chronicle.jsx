@@ -57,7 +57,7 @@ export default function Chronicle({ enemies, themes = [], seen = null, intro }) 
           {themes.map((th) => <button key={th.id} className={`btn chip ${theme === th.id ? 'active' : ''}`} onClick={() => setTheme(th.id)}>{th.icon} {themeName(th, lang)}</button>)}
         </div>
       )}
-      <div className="chronicle-grid">
+      <div className="chronicle-grid" tabIndex={0} role="region" aria-label={t('chronicle.list')}>
         {shown.map((e) => {
           const story = legendText(e.legend?.story, lang);
           const hint = legendText(e.legend?.hint, lang);

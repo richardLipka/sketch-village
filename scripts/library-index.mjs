@@ -11,9 +11,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseSaveFile } from '../src/data/saveFile.js';
+import { LIBRARY_FORMAT, LIBRARY_VERSION } from '../src/data/library.js';
 
 export const LIBRARY = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public', 'library');
-const FORMAT = 'sketch-village-library'; // data/library.js LIBRARY_FORMAT
 
 /** The listing entry of one save file (`raw` = its text). */
 export function entryOf(file, raw) {
@@ -37,8 +37,8 @@ export function entryOf(file, raw) {
 export function buildIndex(dir = LIBRARY) {
   const files = fs.readdirSync(dir).filter((n) => n.endsWith('.json') && n !== 'index.json').sort();
   return {
-    format: FORMAT,
-    version: 1,
+    format: LIBRARY_FORMAT,
+    version: LIBRARY_VERSION,
     files: files.map((n) => {
       try {
         return entryOf(n, fs.readFileSync(path.join(dir, n), 'utf8'));

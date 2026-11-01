@@ -83,14 +83,14 @@ export default function MapList({ maps, assets, enemyTypes, themes = [], balance
         {shown.map((m) => (
           <div key={m.id} className="asset-tile" onClick={() => setEditing(m)}>
             {m.background && <img src={m.background} alt="" style={{ maxWidth: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: 4 }} />}
-            <div className="name">{themeIcon(m.theme)} {m.name}</div>
+            <div className="name"><button type="button" className="tile-open">{themeIcon(m.theme)} {m.name}</button></div>
             <div className="author">{m.author && `✎ ${m.author}`}</div>
             <div className="small">{m.valid ? `✓ ${t('maps.ready')}` : `⚠ ${t('maps.not_ready')}`}</div>
             <div className="row" style={{ justifyContent: 'center', gap: 4 }}>
-              <button className="btn icon" onClick={(e) => { e.stopPropagation(); setWavesFor(m); }} title={t('waves.edit')}>🌊 {t('waves.edit')}</button>
-              <button className="btn icon" onClick={(e) => { e.stopPropagation(); duplicate(m); }} title={t('studio.duplicate')}>⧉</button>
+              <button className="btn icon" onClick={(e) => { e.stopPropagation(); setWavesFor(m); }} >🌊 {t('waves.edit')}</button>
+              <button className="btn icon" onClick={(e) => { e.stopPropagation(); duplicate(m); }} title={t('studio.duplicate')} aria-label={t('studio.duplicate')}>⧉</button>
               <button className="btn icon" onClick={(e) => { e.stopPropagation(); share(m); }} title={t('maps.share')} data-testid="map-download">⬇ {t('maps.download')}</button>
-              <button className="btn icon danger" onClick={(e) => { e.stopPropagation(); remove(m); }} title={t('common.delete')}>🗑</button>
+              <button className="btn icon danger" onClick={(e) => { e.stopPropagation(); remove(m); }} title={t('common.delete')} aria-label={t('common.delete')}>🗑</button>
             </div>
           </div>
         ))}

@@ -1,11 +1,14 @@
-// Input: clicks on the world, drag-pan, wheel and pinch zoom.
-// Methods of GameScene (../GameScene.js mixes them in); `this` is the scene.
+// Input: clicks on the world, drag-pan, wheel and pinch zoom, and the
+// keyboard's way to play (GameView sends the keys): walk, pick the next place,
+// attack the nearest monster. Methods of GameScene (../GameScene.js mixes them
+// in); `this` is the scene.
 
 import Phaser from '../phaser.js';
 
 const CLICK_SLOP = 8; // px of pointer movement still counted as a click
 export const MIN_ZOOM = 1;
 const MAX_ZOOM = 3;
+const KEY_STEP = 90; // map px the hero walks per arrow key press
 
 export class Input {
   setupInput() {
@@ -104,6 +107,55 @@ export class Input {
   select(sel) {
     this.selection = sel;
     this.cfg.onSelect?.(sel);
+  }
+
+  // ---------------- keyboard ----------------
+
+  /** Arrow keys / WASD: the hero walks that way (to the nearest road there); the view follows. */
+  walkBy(dx, dy) {
+    const h = this.world.hero;
+    const end = this.world.moveHeroTo(h.x + dx * KEY_STEP, h.y + dy * KEY_STEP);
+    if (!end) return;
+    this.cfg.onAnyEvent?.({ type: 'heroMoved' });
+    this.showOnScreen(end);
+  }
+
+  /** B: the next place – the Town Hall, then building spot 1, 2, … – is selected and the hero walks there, as a click would. */
+  selectNext(dir = 1) {
+    const w = this.world;
+    const places = [{ kind: 'townhall', at: w.townHall }, ...w.spots.map((s) => ({ kind: 'spot', id: s.id, at: s }))];
+    const sel = this.selection;
+    const cur = places.findIndex((p) => p.kind === sel?.kind && (p.kind === 'townhall' || p.id === sel?.id));
+    const next = places[(cur + dir + places.length) % places.length];
+    if (next.kind === 'townhall') {
+      this.select({ kind: 'townhall' });
+      if (!w.heroNear(w.townHall, w.townHall.radius)) w.moveHeroTo(w.townHall.x, w.townHall.y);
+    } else {
+      this.select({ kind: 'spot', id: next.id });
+      if (!w.heroNear(next.at) && w.moveHeroTo(next.at.x, next.at.y)) this.cfg.onAnyEvent?.({ type: 'heroMoved' });
+    }
+    this.showOnScreen(next.at);
+  }
+
+  /** F: attack the monster nearest to the hero (none: nothing happens). */
+  attackNearest() {
+    const w = this.world, h = w.hero;
+    let best = null, bd = Infinity;
+    for (const e of w.enemies) {
+      const d = Math.hypot(e.x - h.x, e.y - h.y);
+      if (d < bd) { best = e; bd = d; }
+    }
+    if (!best) return false;
+    w.attack(best.id);
+    this.flashMarker(best.x, best.y - 30, '⚔');
+    return true;
+  }
+
+  /** Pan the camera so that a point is well inside the view. */
+  showOnScreen(p) {
+    const v = this.cameras.main.worldView;
+    const m = Math.min(v.width, v.height) * 0.2;
+    if (p.x < v.x + m || p.x > v.right - m || p.y < v.y + m || p.y > v.bottom - m) this.cameras.main.pan(p.x, p.y, 300, 'Sine.easeInOut');
   }
 
   flashMarker(x, y, text) {

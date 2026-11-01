@@ -136,9 +136,9 @@ export default function AnimationEditor({ kinds, anims = {}, size = 128, removeB
             onChange={(img) => apply(replaceFrame(anim, i, img), i)}
           >
             <div className="frame-ops">
-              <button type="button" className="btn icon" title={t('anim.frame_left')} disabled={i === 0} onClick={() => apply(moveFrame(anim, i, -1), i - 1)}>◀</button>
-              <button type="button" className="btn icon" title={t('anim.frame_copy')} disabled={full} onClick={() => apply(duplicateFrame(anim, i), i + 1)}>⧉</button>
-              <button type="button" className="btn icon" title={t('anim.frame_right')} disabled={i === frames.length - 1} onClick={() => apply(moveFrame(anim, i, 1), i + 1)}>▶</button>
+              <button type="button" className="btn icon" title={t('anim.frame_left')} aria-label={t('anim.frame_left')} disabled={i === 0} onClick={() => apply(moveFrame(anim, i, -1), i - 1)}>◀</button>
+              <button type="button" className="btn icon" title={t('anim.frame_copy')} aria-label={t('anim.frame_copy')} disabled={full} onClick={() => apply(duplicateFrame(anim, i), i + 1)}>⧉</button>
+              <button type="button" className="btn icon" title={t('anim.frame_right')} aria-label={t('anim.frame_right')} disabled={i === frames.length - 1} onClick={() => apply(moveFrame(anim, i, 1), i + 1)}>▶</button>
             </div>
           </ImageSlot>
         ))}
@@ -170,7 +170,7 @@ export default function AnimationEditor({ kinds, anims = {}, size = 128, removeB
                 <button type="button" className="btn icon" onClick={() => nudge(0, -1)} aria-label="↑">↑</button>
                 <button type="button" className="btn icon" onClick={() => nudge(0, 1)} aria-label="↓">↓</button>
                 <button type="button" className="btn icon" onClick={() => nudge(1, 0)} aria-label="→">→</button>
-                <button type="button" className="btn icon" onClick={() => nudge(null)} title={t('anim.reset')}>⟲</button>
+                <button type="button" className="btn icon" onClick={() => nudge(null)} title={t('anim.reset')} aria-label={t('anim.reset')}>⟲</button>
                 <span className="small muted">{(anim.offsets?.[sel] ?? [0, 0]).join(', ')}</span>
               </div>
               <label className="small"><input type="checkbox" checked={onion} onChange={(e) => setOnion(e.target.checked)} /> {t('anim.show_previous')}</label>

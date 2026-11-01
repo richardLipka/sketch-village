@@ -65,13 +65,13 @@ test('everything opens and works without errors or warnings', async ({ page }) =
     await page.getByRole('button', { name: /Mapy/ }).click().catch(() => {});
     await page.getByRole('button', { name: /Nová prázdná|prázdn/ }).click();
     await page.waitForTimeout(500);
-    await page.getByRole('button', { name: /Zrušit/ }).first().click();
+    await page.getByRole('button', { name: 'Zrušit', exact: true }).first().click();
   });
   await step('waves', async () => {
-    await page.getByTitle('Vlny').first().click();
+    await page.getByRole('button', { name: /Vlny/ }).first().click();
     await page.locator('.screen-body .sketch-card b').nth(1).click();
     await page.getByRole('button', { name: /Přidat kolo|\+ / }).last().click();
-    await page.getByRole('button', { name: 'Zrušit' }).first().click();
+    await page.getByRole('button', { name: 'Zrušit', exact: true }).first().click();
   });
   await page.goto('/');
   await expect(page.getByRole('button', { name: /Hrát/ })).toBeVisible();

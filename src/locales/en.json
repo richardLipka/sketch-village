@@ -1,5 +1,10 @@
 {
   "app": {
+    "crash_title": "Something went wrong",
+    "crash_text": "This screen broke. Your drawings and maps are safe – they are stored in the browser. Go back to the menu, or download a backup to be sure.",
+    "crash_back": "Back to the menu",
+    "crash_backup": "Download a backup",
+    "crash_details": "What exactly happened",
     "title": "Sketch Village",
     "subtitle": "Defend the village you drew yourselves",
     "loading": "Loading…",
@@ -25,6 +30,7 @@
     "library": "Library"
   },
   "common": {
+    "close": "Close",
     "cancel": "Cancel",
     "done": "Done",
     "save": "Save",
@@ -74,6 +80,7 @@
     "clear": "Clear all"
   },
   "slot": {
+    "pick": "Pick this frame",
     "game_picture": "the game's picture",
     "photo": "Take photo",
     "upload": "Upload file",
@@ -260,6 +267,9 @@
     "pack_howto": "Download everything (button above), rename the file to default-data.json and replace public/default-data.json in the game's GitHub repository. After the website updates, every new computer starts with it, and others can press “Load class pack”."
   },
   "maps": {
+    "brush_size": "Brush width",
+    "pencil_size": "Pencil thickness",
+    "colour": "Colour",
     "load": "Load a map",
     "load_title": "Load a map",
     "load_hint": "A map someone downloaded (⬇ Download), from a file or an address. What you already have the same is used; what is a little different comes as a copy named after the map, and at the end you choose what to merge.",
@@ -357,12 +367,16 @@
     "start": "Start"
   },
   "game": {
+    "help": "Help – how to play",
+    "sound": "Sound",
+    "workers": "Workers",
+    "level": "level",
     "exit": "Quit",
     "quit_title": "End the game?",
     "quit_text": "You are in round {{n}} of {{total}}. If you end the game, everything built and collected in it is lost.",
     "quit_no": "Keep playing",
     "quit_yes": "End the game",
-    "hint": "Click a road = walk · click an enemy = attack · drag = move view · wheel = zoom · 1/2/3 = sword/bow/magic · space = Ready",
+    "hint": "Click a road = walk · click an enemy = attack · drag = move view · wheel = zoom · 1/2/3 = sword/bow/magic · space = Ready · Without a mouse: arrows or WASD = walk · B = next building place (Shift+B back), Tab = its buttons · F = attack the nearest · I = backpack · P = pause",
     "zoom_in": "Zoom in",
     "zoom_out": "Zoom out",
     "pause": "Pause (P)",
@@ -401,6 +415,7 @@
     "turn_phone": "Turn the phone sideways to play."
   },
   "build": {
+    "spot_n": "Building spot {{n}}",
     "type_house": "House",
     "type_tower": "Tower",
     "type_castle": "Castle",
@@ -508,6 +523,7 @@
     "soldier_default": "soldier"
   },
   "weapons": {
+    "take_off": "Take off into the backpack",
     "title": "Weapons",
     "hint": "Weapons add to the hero's attack. Sword-like ones hit up close, bows shoot, magic hurts everything around the target – even flying enemies. The hero finds them in chests from enemies or buys them in the town hall shop.",
     "class": "Kind",
@@ -599,6 +615,7 @@
     "f_splash": "Area damage (px)"
   },
   "waves": {
+    "enemy": "Enemy",
     "edit": "Waves",
     "title": "Waves – {{map}}",
     "start_coins": "Starting coins",
@@ -629,6 +646,12 @@
     "hero": "Hero: {{stat}} +{{n}}"
   },
   "tips": {
+    "walk_touch": "Tap the yellow road – your hero walks there. Drag a finger to move the map.",
+    "build_touch": "Tap a dashed square next to the road to build. Start with a tower – it shoots arrows!",
+    "fight_touch": "Tap an enemy to attack it. ⚔️ sword is strong, 🏹 bow shoots from far away.",
+    "townhall_touch": "Tap the town hall: upgrade it and make your hero stronger.",
+    "bow_touch": "Flying enemies can only be hit with the bow – tap 🏹 at the bottom right.",
+    "toggle": "Tips for starting",
     "walk": "Click the yellow road – your hero walks there.",
     "build": "Click a dashed square next to the road to build. Start with a tower – it shoots arrows!",
     "ready": "Ready? Press ⚑ Ready to call the wave early – you get bonus coins.",
@@ -762,6 +785,7 @@
     "panels_hint": "{{n}} of {{max}} frames · click a frame to line it up below"
   },
   "chronicle": {
+    "list": "List of monsters",
     "title": "Chronicle",
     "map_title": "Chronicle – monsters of this map",
     "intro": "All monsters of the land with their stories and hints. Write your own legends in the studio (Enemies).",

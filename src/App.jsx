@@ -2,11 +2,13 @@ import React, { useEffect, useState, useCallback, useMemo, useRef, Suspense, laz
 import { useTranslation } from 'react-i18next';
 import Screen from './ui/Screen.jsx';
 import Modal from './ui/Modal.jsx';
+import Toast from './ui/Toast.jsx';
+import ErrorBoundary from './ui/ErrorBoundary.jsx';
 import { loadDb, saveCollection, saveSettings, saveDb } from './data/store.js';
 import { mergeSaveFile } from './data/saveFile.js';
 import { fetchDefaultData } from './data/defaultData.js';
 import { migrateDb } from './data/migrate.js';
-import useImporter from './data/useImporter.jsx';
+import useImporter, { importErrorText } from './data/useImporter.jsx';
 import { dataParam, withoutDataParam, resolveDataUrl, isOwnSite, fetchSaveFile } from './data/library.js';
 import LanguageSwitcher from './ui/LanguageSwitcher.jsx';
 import FullscreenButton from './ui/FullscreenButton.jsx';
@@ -177,6 +179,8 @@ export default function App() {
         </main>
       )}
 
+      {/* a broken screen shows a card, never a blank page (the drawings are safe in the browser) */}
+      <ErrorBoundary key={screen} onBack={() => setScreen('menu')} onBackup={backupNow}>
       <Suspense fallback={<p className="muted">{t('app.loading')}</p>}>
       {screen === 'studio' && (
         <AssetStudio
@@ -208,6 +212,7 @@ export default function App() {
 
       {screen === 'data' && <DataPanel db={db} onReplaceDb={replaceDb} onBackup={backupNow} onImport={importFile} />}
       </Suspense>
+      </ErrorBoundary>
       </div>
 
       {reviewModal}
@@ -225,9 +230,9 @@ export default function App() {
         </Modal>
       )}
       {(link?.loading || link?.error) && (
-        <div className={`toast sketch-card ${link.error ? 'error-text' : ''}`} role="status" style={link.error ? { background: 'var(--hl-red)' } : undefined} onClick={() => link.error && setLink(null)}>
-          {link.loading ? t('library.link_loading') : t(link.error, { defaultValue: t('import.error_generic') })}
-        </div>
+        <Toast error={!!link.error} onClose={link.error ? () => setLink(null) : undefined}>
+          {link.loading ? t('library.link_loading') : importErrorText(link.error, t)}
+        </Toast>
       )}
 
       {screen !== 'play' && <UpdateToast />}

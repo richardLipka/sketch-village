@@ -123,7 +123,7 @@ export default function CameraCapture({ onCapture, onCancel }) {
         ) : (
           <>
             {hasMultipleCameras && status === 'ready' && (
-              <button className="btn" onClick={handleSwitch} title={t('camera.switch')}>⇄</button>
+              <button className="btn" onClick={handleSwitch} title={t('camera.switch')} aria-label={t('camera.switch')}>⇄</button>
             )}
             {status === 'error' ? (
               <button className="btn primary" onClick={() => startStream(facingMode)}>↺ {t('camera.retry')}</button>

@@ -50,7 +50,7 @@ export default function PickStrip({ children, label, selectedKey = null }) {
   const page = (dir) => ref.current?.scrollBy({ left: dir * ref.current.clientWidth * 0.8, behavior: 'smooth' });
   return (
     <div className="pick-strip-wrap">
-      <div className="pick-strip" ref={ref} onScroll={measure} role="listbox" aria-label={label} aria-orientation="horizontal">
+      <div className="pick-strip" ref={ref} onScroll={measure} role="group" aria-label={label}>
         {children}
       </div>
       {ends.left && <button type="button" className="btn icon strip-arrow left" onClick={() => page(-1)} aria-label={t('common.scroll_left')}>‹</button>}

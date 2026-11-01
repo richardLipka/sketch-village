@@ -129,12 +129,12 @@ function SoundRow({ kind, sound, onChange }) {
         {error && <span className="small error-text">{error}</span>}
       </div>
       <div className="row sound-actions">
-        {sound?.data && <button type="button" className="btn icon" title={t('sounds.play')} onClick={play}>▶</button>}
+        {sound?.data && <button type="button" className="btn icon" title={t('sounds.play')} aria-label={t('sounds.play')} onClick={play}>▶</button>}
         {recording === null
-          ? canRecord() && <button type="button" className="btn icon" title={t('sounds.record')} onClick={record}>🎤</button>
-          : <button type="button" className="btn icon danger" title={t('sounds.stop')} onClick={() => recRef.current?.stop()}>⏹</button>}
-        <button type="button" className="btn icon" title={t('sounds.load')} onClick={() => fileRef.current.click()}>📁</button>
-        {sound?.data && <button type="button" className="btn icon danger" title={t('sounds.remove')} onClick={() => onChange(null)}>✕</button>}
+          ? canRecord() && <button type="button" className="btn icon" title={t('sounds.record')} aria-label={t('sounds.record')} onClick={record}>🎤</button>
+          : <button type="button" className="btn icon danger" title={t('sounds.stop')} aria-label={t('sounds.stop')} onClick={() => recRef.current?.stop()}>⏹</button>}
+        <button type="button" className="btn icon" title={t('sounds.load')} aria-label={t('sounds.load')} onClick={() => fileRef.current.click()}>📁</button>
+        {sound?.data && <button type="button" className="btn icon danger" title={t('sounds.remove')} aria-label={t('sounds.remove')} onClick={() => onChange(null)}>✕</button>}
       </div>
       <input ref={fileRef} type="file" accept="audio/*" hidden onChange={onFile} />
     </div>

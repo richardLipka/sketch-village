@@ -78,7 +78,7 @@ export default function WaveEditor({ map, enemyTypes, themes = [], balance = BAL
         return (
           <div key={ri} className="sketch-card" style={{ padding: 10, marginBottom: 8 }}>
             <div className="row" onClick={() => setOpen(open === ri ? -1 : ri)} style={{ cursor: 'pointer' }}>
-              <b>{open === ri ? '▾' : '▸'} {t('waves.round', { n: ri + 1 })}</b>
+              <button type="button" className="tile-open round-toggle" aria-expanded={open === ri}><b>{open === ri ? '▾' : '▸'} {t('waves.round', { n: ri + 1 })}</b></button>
               <span className="small muted">{sum || t('waves.empty')} · ~{Math.ceil(roundDuration(r))} s · +{r.reward ?? roundReward(balance, ri)} 🪙</span>
               {tried && (
                 <span className={`round-test ${tried.flags.length ? 'flagged' : ''}`} title={t('maptest.title')}>
@@ -86,8 +86,8 @@ export default function WaveEditor({ map, enemyTypes, themes = [], balance = BAL
                 </span>
               )}
               <span className="spacer" />
-              <button className="btn icon" onClick={(e) => { e.stopPropagation(); dupRound(ri); }} title={t('studio.duplicate')}>⧉</button>
-              <button className="btn icon danger" onClick={(e) => { e.stopPropagation(); delRound(ri); }} title={t('common.delete')} disabled={waves.rounds.length < 2}>🗑</button>
+              <button className="btn icon" onClick={(e) => { e.stopPropagation(); dupRound(ri); }} title={t('studio.duplicate')} aria-label={t('studio.duplicate')}>⧉</button>
+              <button className="btn icon danger" onClick={(e) => { e.stopPropagation(); delRound(ri); }} title={t('common.delete')} aria-label={t('common.delete')} disabled={waves.rounds.length < 2}>🗑</button>
             </div>
             {open === ri && (
               <div style={{ marginTop: 8 }}>
@@ -106,7 +106,7 @@ export default function WaveEditor({ map, enemyTypes, themes = [], balance = BAL
                 </div>
                 {r.groups.map((g, gi) => (
                   <div key={gi} className="row small" style={{ gap: 10, marginBottom: 6 }}>
-                    <select value={g.enemy} onChange={(e) => setGroup(ri, gi, { enemy: e.target.value })}>
+                    <select value={g.enemy} onChange={(e) => setGroup(ri, gi, { enemy: e.target.value })} aria-label={t('waves.enemy')}>
                       {enemyOptions}
                     </select>
                     <label>{t('waves.count')} <input type="number" min={1} max={100} value={g.count} onChange={(e) => setGroup(ri, gi, { count: num(e.target.value, 1, 100) })} style={{ width: 55 }} /></label>
@@ -118,7 +118,7 @@ export default function WaveEditor({ map, enemyTypes, themes = [], balance = BAL
                         {map.caves.map((c, i) => <option key={c.id} value={c.id}>{t('waves.cave_n', { n: i + 1 })}</option>)}
                       </select>
                     </label>
-                    <button className="btn icon danger" onClick={() => delGroup(ri, gi)} title={t('common.delete')}>✕</button>
+                    <button className="btn icon danger" onClick={() => delGroup(ri, gi)} title={t('common.delete')} aria-label={t('common.delete')}>✕</button>
                   </div>
                 ))}
                 <button className="btn" onClick={() => addGroup(ri)}>+ {t('waves.add_group')}</button>

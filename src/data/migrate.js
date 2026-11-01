@@ -14,19 +14,25 @@
 //  A new built-in that a kid has already made under the same name (the class's
 //  goblin pack, skeleton warrior and roc became built-ins) takes over the kid's
 //  component – pictures, numbers and all – instead of appearing twice.
+//  Always: damaged records are repaired or dropped (saveFile.js cleanRecords).
 //  Always: the game's own pictures (the default arrow, magic bolt and catapult
 //  stone, the built-in surfaces – config/components.js PERMANENT_IDS) are never
 //  missing: one gone from an old or edited file comes back, still built-in.
+//  Always: a built-in whose name or legend is still an earlier default (the
+//  wolf became the spider rider, but a browser kept "Wolf" and the grey wolves'
+//  story) gets today's text in that language – the kids' own texts stay
+//  (config/oldDefaults.js, made from the git history).
 //  Always: building levels get the numbers of features added later (e.g. the
 //  soldiers' patrol distance) – a built-in its own default, otherwise the feature's.
 
 import { DEFAULT_COMPONENTS, defaultComponent, isPermanent } from '../config/components.js';
+import { freshTexts } from '../config/oldDefaults.js';
 import { DEFAULT_THEMES } from '../config/themes.js';
 import { FEATURES } from '../config/features.js';
 import { DEFAULT_BUILDING_TYPES } from '../config/buildings.js';
 import { RULES_ID } from '../config/rules.js';
 import { isWeapon, normalizeItem } from '../config/weapons.js';
-import { HP_SCALE_V4, scaleBuildingHp } from './saveFile.js';
+import { HP_SCALE_V4, scaleBuildingHp, cleanRecords } from './saveFile.js';
 
 export { HP_SCALE_V4 };
 
@@ -53,8 +59,10 @@ function renameId(v, from, to) {
   return v;
 }
 
-export function migrateDb(db) {
-  let changed = false;
+export function migrateDb(stored) {
+  const clean = cleanRecords(stored);
+  const db = clean.db;
+  let changed = clean.fixed > 0;
   const settings = { ...db.settings };
   const assets = [...(db.assets ?? [])];
   const byId = new Map(assets.map((a, i) => [a.id, i]));
@@ -120,6 +128,9 @@ export function migrateDb(db) {
     if (!a.builtIn || !def) continue;
     if (a.themes === undefined) { assets[i] = { ...assets[i], themes: [...(def.themes ?? [])] }; changed = true; }
     if (a.legend === undefined && def.legend) { assets[i] = { ...assets[i], legend: structuredClone(def.legend) }; changed = true; }
+    // a name or legend text still at an earlier default: today's (per language)
+    const fresh = freshTexts(assets[i], def);
+    if (fresh) { assets[i] = { ...assets[i], ...fresh }; changed = true; }
   }
 
   // 1a) numbers added to a feature later (soldierPatrol…) appear in every building level

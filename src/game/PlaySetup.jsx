@@ -53,10 +53,10 @@ export default function PlaySetup({ maps, assets, enemyTypes, buildings, rules, 
       {playable.length > 0 && (
         <PickStrip label={t('play.pick_map')} selectedKey={mapId}>
           {playable.filter((m) => m.id === mapId || matchesQuery(query, ...searchTexts(m))).map((m) => (
-            <div key={m.id} data-key={m.id} role="option" aria-selected={m.id === mapId} className="asset-tile map-pick" style={m.id === mapId ? { background: 'var(--hl-yellow)' } : undefined} onClick={() => setMapId(m.id)}>
+            <button type="button" key={m.id} data-key={m.id} aria-pressed={m.id === mapId} className="asset-tile map-pick" onClick={() => setMapId(m.id)}>
               <img src={m.background} alt="" />
-              <div className="name">{themes.find((th) => th.id === m.theme)?.icon} {m.name}</div>
-            </div>
+              <span className="name">{themes.find((th) => th.id === m.theme)?.icon} {m.name}</span>
+            </button>
           ))}
         </PickStrip>
       )}
@@ -66,11 +66,11 @@ export default function PlaySetup({ maps, assets, enemyTypes, buildings, rules, 
       {heroes.length > 0 && (
         <PickStrip label={t('play.pick_hero')} selectedKey={heroId}>
           {heroes.filter((h) => h.id === heroId || matchesQuery(query, ...searchTexts(h))).map((h) => (
-            <div key={h.id} data-key={h.id} role="option" aria-selected={h.id === heroId} className="asset-tile hero-pick" style={h.id === heroId ? { background: 'var(--hl-yellow)' } : undefined} onClick={() => setHeroId(h.id)}>
-              <img src={h.images[0]} alt={compName(h, i18n.language)} />
-              <div className="name">{compName(h, i18n.language)}</div>
-              <div className="author">{h.author && `✎ ${h.author}`}</div>
-            </div>
+            <button type="button" key={h.id} data-key={h.id} aria-pressed={h.id === heroId} className="asset-tile hero-pick" onClick={() => setHeroId(h.id)}>
+              <img src={h.images[0]} alt="" />
+              <span className="name">{compName(h, i18n.language)}</span>
+              <span className="author">{h.author && `✎ ${h.author}`}</span>
+            </button>
           ))}
         </PickStrip>
       )}

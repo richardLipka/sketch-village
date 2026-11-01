@@ -99,7 +99,7 @@ test('the robot plays a map in the wave editor and says how it went', async ({ p
   const errors = watchErrors(page);
   await openMenu(page);
   await page.getByRole('button', { name: /Mapy/ }).click();
-  await page.getByTitle('Vlny').first().click();
+  await page.getByRole('button', { name: /Vlny/ }).first().click();
   await page.getByRole('button', { name: /Zkusit/ }).click();
   await expect(page.locator('.map-test-report .verdict')).toContainText(/vyhrál|Akorát|těžké|lehké/, { timeout: 90_000 });
   await expect(page.locator('.map-test-round')).toHaveCount(20);

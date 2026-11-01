@@ -27,7 +27,7 @@ export default function FullscreenButton({ className = 'btn icon' }) {
   const on = useIsFullscreen();
   if (!document.documentElement.requestFullscreen) return null;
   return (
-    <button className={`${className} ${on ? 'active' : ''}`} onClick={toggleFullscreen} title={t(on ? 'app.fullscreen_exit' : 'app.fullscreen')}>
+    <button className={`${className} ${on ? 'active' : ''}`} onClick={toggleFullscreen} title={t(on ? 'app.fullscreen_exit' : 'app.fullscreen')} aria-label={t(on ? 'app.fullscreen_exit' : 'app.fullscreen')}>
       {on ? '🗗' : '⛶'}
     </button>
   );

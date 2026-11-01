@@ -20,6 +20,8 @@ i18n.use(initReactI18next).init({
   interpolation: { escapeValue: false },
 });
 
+if (typeof document !== 'undefined') document.documentElement.lang = i18n.language;
+
 i18n.on('languageChanged', (lng) => {
   try { localStorage.setItem(LANG_KEY, lng); } catch { /* private mode */ }
   document.documentElement.lang = lng;

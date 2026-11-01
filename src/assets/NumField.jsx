@@ -1,13 +1,14 @@
 import React from 'react';
 
 // A small number input that keeps the value inside [min, max]; `pct` shows a
-// 0..1 value as 0..100 %.
-export default function NumField({ label, value, min, max, step = 1, pct = false, onChange, width = 72, disabled }) {
+// 0..1 value as 0..100 %. Without a visible `label` (a cell of a table) it is
+// named by `ariaLabel` for screen readers.
+export default function NumField({ label, ariaLabel, value, min, max, step = 1, pct = false, onChange, width = 72, disabled }) {
   const shown = value === undefined || value === null ? '' : pct ? Math.round(value * 1000) / 10 : value;
   const input = (
     <input
       type="number" min={pct ? min * 100 : min} max={pct ? max * 100 : max} step={pct ? step * 100 : step} value={shown}
-      disabled={disabled} style={{ width }}
+      disabled={disabled} style={{ width }} aria-label={label ? undefined : ariaLabel}
       onChange={(e) => {
         const v = Number(e.target.value);
         if (e.target.value === '' || Number.isNaN(v)) return;

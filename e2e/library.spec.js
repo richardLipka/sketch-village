@@ -58,6 +58,6 @@ test('a file from another site is asked about first; a broken link says so', asy
   await expect(page.locator('.screen-head')).toContainText('Zelené údolí');
 
   await page.goto('/?data=nothing-here');
-  await expect(page.getByRole('status')).toContainText(/nepodařilo stáhnout/);
+  await expect(page.getByRole('alert')).toContainText(/nepodařilo stáhnout/); // an error note is an alert
   expect(errors.filter((e) => !/404|Failed to load resource/.test(e))).toEqual([]);
 });

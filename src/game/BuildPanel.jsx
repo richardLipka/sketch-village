@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import WeaponIcon from './WeaponIcon.jsx';
 import { itemLine } from './GameOverlay.jsx';
@@ -9,7 +9,9 @@ import { FEATURES } from '../config/features.js';
 // tiles as big as the backpack's; the game keeps running meanwhile.
 // `info` comes from World.describeSpot / describeTownHall; every option carries a
 // `reason` (null = allowed) so kids see *why* a button is disabled.
-// One click builds or upgrades; only selling asks "Really?" first.
+// One click builds or upgrades; only selling asks "Really?" first. Picked
+// with the keyboard (B, `focusKey` changes), the panel takes the focus, so Tab
+// goes straight to its buttons.
 //
 // The panel re-renders several times a second (HUD updates), so buttons are
 // rendered by plain functions, never by components defined inside this one:
@@ -30,7 +32,7 @@ const STAT_ICON = { melee: '⚔️', ranged: '🏹', armor: '🛡️', speed: '�
 
 const iconOf = (type) => (type?.core ? '🏛️' : FEATURES[type?.features?.[0]]?.icon ?? '🏗️');
 
-export default function BuildPanel({ info, types = [], weapons = [], assets = [], onClose, onBuild, onUpgrade, onSell, onUpgradeTownHall, onUpgradeHero, onBuyWeapon }) {
+export default function BuildPanel({ info, types = [], weapons = [], assets = [], focusKey = 0, onClose, onBuild, onUpgrade, onSell, onUpgradeTownHall, onUpgradeHero, onBuyWeapon }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const why = (reason, round) => (reason ? t(`build.reason_${reason}`, { n: round }) : null);
@@ -38,6 +40,8 @@ export default function BuildPanel({ info, types = [], weapons = [], assets = []
   const [shop, setShop] = useState(false);
   const spotKey = info.kind === 'spot' ? info.id : 'th';
   useEffect(() => { setConfirmSell(false); setShop(false); }, [spotKey]);
+  const box = useRef(null);
+  useEffect(() => { if (focusKey) box.current?.focus({ preventScroll: true }); }, [focusKey, spotKey]);
   const typeOf = (id) => types.find((ty) => ty.id === id);
   const nameOf = (id) => typeOf(id)?.name?.[lang] ?? id;
   const statLine = (id, s) => featureLine(typeOf(id), s, t);
@@ -147,7 +151,7 @@ export default function BuildPanel({ info, types = [], weapons = [], assets = []
               <span className="row" style={{ gap: 6 }}>
                 <b className="small">{t('build.sell_sure')}</b>
                 <button className="btn danger" onClick={() => { setConfirmSell(false); onSell(); }}>✓ {t('build.sell_yes')}</button>
-                <button className="btn" onClick={() => setConfirmSell(false)}>✕</button>
+                <button className="btn" onClick={() => setConfirmSell(false)} aria-label={t('common.cancel')} title={t('common.cancel')}>✕</button>
               </span>
             )}
             {info.sell.reason && <div className="small error-text">{why(info.sell.reason)}</div>}
@@ -160,7 +164,8 @@ export default function BuildPanel({ info, types = [], weapons = [], assets = []
   return (
     <>
       {overlay}
-      <div className="build-panel sketch-card" onPointerDown={(e) => e.stopPropagation()}>
+      <div className="build-panel sketch-card" onPointerDown={(e) => e.stopPropagation()} ref={box} tabIndex={-1} role="region"
+        aria-label={info.kind === 'townhall' ? t('game.town_hall') : t('build.spot_n', { n: (info.index ?? 0) + 1 })}>
         <button className="btn icon" style={{ float: 'right' }} onClick={onClose} aria-label={t('common.cancel')}>✕</button>
         {body}
         {!info.near && <p className="small muted" style={{ marginTop: 6 }}>🚶 {t('build.walking')}</p>}

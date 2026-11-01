@@ -8,7 +8,7 @@ export default function SearchBox({ value, onChange, count }) {
     <label className="search-box">
       <span aria-hidden="true">🔍</span>
       <input type="search" value={value} onChange={(e) => onChange(e.target.value)} placeholder={t('search.placeholder')} aria-label={t('search.label')} />
-      {value && <button type="button" className="btn icon" onClick={() => onChange('')} title={t('search.clear')}>✕</button>}
+      {value && <button type="button" className="btn icon" onClick={() => onChange('')} title={t('search.clear')} aria-label={t('search.clear')}>✕</button>}
       {value && count !== undefined && <span className="small muted">{t('search.found', { count })}</span>}
     </label>
   );

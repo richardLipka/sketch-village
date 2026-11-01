@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { buildSaveFile, parseSaveFile, mergeCollection, mergeSaveFile } from './saveFile.js';
+import { buildSaveFile, parseSaveFile, mergeCollection, mergeSaveFile, cleanRecords } from './saveFile.js';
+import { migrateDb } from './migrate.js';
 
 describe('save file', () => {
   it('round-trips through JSON', () => {
@@ -63,5 +64,37 @@ describe('files from before data version 4 (building HP −20 %)', () => {
 
   it('a file exported after the change stays as it is', () => {
     expect(parseSaveFile(file({ dataVersion: 4 })).assets[0].stats.levels.map((l) => l.hp)).toEqual([500, 750]);
+  });
+});
+
+describe('damaged records can’t break a screen', () => {
+  const good = { id: 'g', category: 'hero', name: 'Lara', images: ['data:image/png;base64,x', null], stats: { attack: 3 }, themes: ['plains'] };
+  const map = { id: 'm', name: 'Louka', world: { width: 1280, height: 720 }, decorations: [], spots: [], caves: [] };
+
+  it('healthy records stay the very same objects', () => {
+    const { db, fixed } = cleanRecords({ assets: [good], maps: [map], themes: [{ id: 'plains' }] });
+    expect(fixed).toBe(0);
+    expect(db.assets[0]).toBe(good);
+    expect(db.maps[0]).toBe(map);
+  });
+
+  it('broken ones are repaired, records without an id dropped', () => {
+    const { db, fixed } = cleanRecords({
+      assets: [{ ...good, images: 5, name: 7, stats: [1], themes: 'plains' }, { category: 'enemy' }, null, 'x'],
+      maps: [{ ...map, spots: 'a', world: null, name: 3 }],
+      themes: [{ name: 'no id' }],
+    });
+    expect(fixed).toBe(6);
+    expect(db.assets).toEqual([{ ...good, images: [], name: '', stats: {}, themes: [] }]);
+    expect(db.maps[0]).toMatchObject({ spots: [], world: { width: 1280, height: 720 }, name: '3' });
+    expect(db.themes).toEqual([]);
+  });
+
+  it('an imported file and the browser’s own data are repaired on the way in', () => {
+    const file = parseSaveFile(JSON.stringify({ format: 'sketch-village', version: 3, settings: {}, assets: [{ ...good, images: 'oops' }], maps: [], themes: [] }));
+    expect(file.assets[0].images).toEqual([]);
+    const { db, changed } = migrateDb({ settings: {}, assets: [{ ...good, images: { a: 1 } }] });
+    expect(changed).toBe(true);
+    expect(db.assets.find((a) => a.id === 'g').images).toEqual([]);
   });
 });

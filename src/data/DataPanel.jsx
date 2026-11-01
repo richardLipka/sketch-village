@@ -7,6 +7,8 @@ import { CATEGORY_IDS } from '../assets/categories.js';
 import { fetchDefaultData } from './defaultData.js';
 import SafetyCard from './SafetyCard.jsx';
 import LoadFile from './LoadFile.jsx';
+import { importNote } from './useImporter.jsx';
+import Toast from '../ui/Toast.jsx';
 
 // Export everything to one JSON file (components with their pictures and
 // animations, maps, themes, rules, settings incl. the language), import a file
@@ -19,7 +21,7 @@ export default function DataPanel({ db, onReplaceDb, onBackup, onImport }) {
 
   const mergeIn = async (file) => {
     const r = await onImport(file);
-    setMessage(r ? { ok: true, text: t(r.message ?? 'import.done_review', r.summary) } : { ok: false, text: t('import.cancelled') });
+    setMessage(importNote(r, t));
   };
 
   const doClassPack = async () => {
@@ -78,7 +80,7 @@ export default function DataPanel({ db, onReplaceDb, onBackup, onImport }) {
         <h2>{t('data.purge_title')}</h2>
         <p className="small muted">{t('data.purge_hint')}</p>
         <div className="row">
-          <select value={purgeCat} onChange={(e) => setPurgeCat(e.target.value)}>
+          <select value={purgeCat} onChange={(e) => setPurgeCat(e.target.value)} aria-label={t('data.pick_category')}>
             <option value="">{t('data.pick_category')}</option>
             {CATEGORY_IDS.map((c) => <option key={c} value={c}>{t(`cat.${c}`)}</option>)}
           </select>
@@ -89,9 +91,7 @@ export default function DataPanel({ db, onReplaceDb, onBackup, onImport }) {
       </div>
 
       {message && (
-        <div className={`toast sketch-card ${message.ok ? '' : 'error-text'}`} style={message.ok ? undefined : { background: 'var(--hl-red)' }} onClick={() => setMessage(null)}>
-          {message.text}
-        </div>
+        <Toast error={!message.ok} onClose={() => setMessage(null)}>{message.text}</Toast>
       )}
     </Screen>
   );

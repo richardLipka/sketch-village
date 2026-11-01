@@ -17,8 +17,6 @@ export const HERO_RULES = {
 };
 
 export const HERO_POINTS = HERO_RULES.points;
-export const HERO_STAT_MAX = HERO_RULES.statMax;
-export const HERO_BASE_HP = HERO_RULES.hp;
 
 export const DEFAULT_HERO_POINTS = { melee: 3, ranged: 3, armor: 2, speed: 2, magic: 2 };
 

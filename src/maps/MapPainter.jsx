@@ -412,7 +412,7 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
         <span className="spacer" />
         <label className="small"><input type="checkbox" checked={preview} onChange={(e) => setPreview(e.target.checked)} /> {t('maps.preview')}</label>
         <label className="small"><input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} /> {t('maps.show_grid')}</label>
-        <button className="btn icon" onClick={doUndo} disabled={!undo.current.length} title={t('sketch.undo')}>↶</button>
+        <button className="btn icon" onClick={doUndo} disabled={!undo.current.length} title={t('sketch.undo')} aria-label={t('sketch.undo')}>↶</button>
       </div>
 
       <p className="small muted painter-hint">

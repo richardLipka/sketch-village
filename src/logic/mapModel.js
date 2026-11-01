@@ -5,7 +5,6 @@ import { DEFAULT_PALETTE, worldToCell, cellCenter, nearestWalkable, isWalkable }
 import { flowField } from './pathfinding.js';
 
 export const WORLD = { width: 1280, height: 720 };
-export const SPOT_COUNT = 10; // spots on the sample map
 export const MIN_SPOTS = 1; // a map may have any number of building spots in this range
 export const MAX_SPOTS = 30;
 export const MAX_SPOT_DISTANCE = 64; // px from a spot to the nearest path

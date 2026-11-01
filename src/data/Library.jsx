@@ -4,6 +4,7 @@ import Screen from '../ui/Screen.jsx';
 import SearchBox from '../ui/SearchBox.jsx';
 import { matchesQuery } from '../ui/search.js';
 import { fetchLibrary, fetchSaveFile, resolveDataUrl, shareLink, localText } from './library.js';
+import { importNote, importErrorText } from './useImporter.jsx';
 
 // 📚 The public library (SPEC §13c): ready-made maps and packs from the game's
 // website (public/library/index.json). Loading one imports it like any save
@@ -32,11 +33,9 @@ export default function Library({ onImport, onPlay }) {
     setDone(null);
     try {
       const r = await onImport(await fetchSaveFile(resolveDataUrl(entry.file)));
-      setDone(r
-        ? { file: entry.file, ok: true, maps: r.maps, text: t(r.message ?? 'import.done_review', r.summary) }
-        : { file: entry.file, ok: false, text: t('import.cancelled') });
+      setDone({ file: entry.file, maps: r?.maps ?? [], ...importNote(r, t) });
     } catch (e) {
-      setDone({ file: entry.file, ok: false, text: t(e.message, { defaultValue: t('import.error_generic') }) });
+      setDone({ file: entry.file, ok: false, text: importErrorText(e, t) });
     } finally {
       setBusy(null);
     }
@@ -86,7 +85,7 @@ export default function Library({ onImport, onPlay }) {
             </div>
             <div className="library-actions">
               <button className="btn" disabled={!!busy} onClick={() => load(f)}>{busy === f.file ? '…' : '⬇'} {t('library.load')}</button>
-              <button className="btn icon" onClick={() => copyLink(f)} title={t('library.copy_link')}>🔗 {copied === f.file ? t('library.copied') : t('library.link')}</button>
+              <button className="btn icon" onClick={() => copyLink(f)} title={t('library.copy_link')} aria-label={t('library.copy_link')}>🔗 {copied === f.file ? t('library.copied') : t('library.link')}</button>
             </div>
           </div>
         ))}

@@ -200,7 +200,7 @@ export default function SketchPad({ size, initialImage, underlay = null, onSave,
         <div className="tools">
           <div className="row" style={{ gap: 6 }}>
             {TOOLS.map(([id, icon]) => (
-              <button key={id} className={`btn icon ${tool === id ? 'active' : ''}`} title={t(`sketch.tool_${id}`)} onClick={() => setTool(id)}>
+              <button key={id} className={`btn icon ${tool === id ? 'active' : ''}`} title={t(`sketch.tool_${id}`)} aria-label={t(`sketch.tool_${id}`)} onClick={() => setTool(id)}>
                 {icon}
               </button>
             ))}
@@ -224,19 +224,19 @@ export default function SketchPad({ size, initialImage, underlay = null, onSave,
           </div>
           <div className="row" style={{ gap: 6 }}>
             {SIZES.map((s) => (
-              <button key={s} className={`btn icon ${brush === s ? 'active' : ''}`} onClick={() => setBrush(s)} title={`${s}`}>
+              <button key={s} className={`btn icon ${brush === s ? 'active' : ''}`} onClick={() => setBrush(s)} title={`${s}`} aria-label={`${s}`}>
                 <span style={{ display: 'inline-block', width: s + 2, height: s + 2, borderRadius: '50%', background: 'var(--ink)' }} />
               </button>
             ))}
           </div>
           <div className="row" style={{ gap: 6 }}>
-            <button className="btn icon" onClick={undo} disabled={!undoStack.current.length} title={t('sketch.undo')}>↶</button>
-            <button className="btn icon" onClick={redo} disabled={!redoStack.current.length} title={t('sketch.redo')}>↷</button>
-            <button className="btn icon" onClick={flip} title={t('sketch.flip')}>⇋</button>
-            <button className="btn icon" onClick={startCrop} title={t('sketch.crop')}>✂️</button>
-            <button className="btn icon" onClick={() => fileRef.current.click()} title={t('sketch.load')}>📁</button>
+            <button className="btn icon" onClick={undo} disabled={!undoStack.current.length} title={t('sketch.undo')} aria-label={t('sketch.undo')}>↶</button>
+            <button className="btn icon" onClick={redo} disabled={!redoStack.current.length} title={t('sketch.redo')} aria-label={t('sketch.redo')}>↷</button>
+            <button className="btn icon" onClick={flip} title={t('sketch.flip')} aria-label={t('sketch.flip')}>⇋</button>
+            <button className="btn icon" onClick={startCrop} title={t('sketch.crop')} aria-label={t('sketch.crop')}>✂️</button>
+            <button className="btn icon" onClick={() => fileRef.current.click()} title={t('sketch.load')} aria-label={t('sketch.load')}>📁</button>
             <PasteButton onImage={setCropSrc} />
-            <button className="btn icon danger" onClick={clear} title={t('sketch.clear')}>🗑</button>
+            <button className="btn icon danger" onClick={clear} title={t('sketch.clear')} aria-label={t('sketch.clear')}>🗑</button>
           </div>
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={onFile} />
         </div>

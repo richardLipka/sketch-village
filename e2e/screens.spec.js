@@ -142,8 +142,8 @@ test('many maps: they slide sideways and every one can be picked', async ({ page
   await page.reload();
   await page.getByRole('button', { name: /Hrát/ }).click();
 
-  const strip = page.getByRole('listbox', { name: 'Vyber mapu' });
-  const last = strip.getByRole('option').last();
+  const strip = page.getByRole('group', { name: 'Vyber mapu' });
+  const last = strip.locator('.map-pick').last();
   await expect(last).toContainText('Mapa číslo 8');
   const inView = async (el) => {
     const s = await strip.boundingBox(), b = await el.boundingBox();
@@ -151,7 +151,7 @@ test('many maps: they slide sideways and every one can be picked', async ({ page
   };
   expect(await inView(last)).toBe(false);
   // one row only: every tile on the same line (the tiles lean a little, like drawn)
-  const ys = await strip.getByRole('option').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+  const ys = await strip.locator('.map-pick').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
   expect(Math.max(...ys) - Math.min(...ys)).toBeLessThan(10);
 
   const next = page.getByRole('button', { name: 'Posunout doprava' }).first();
@@ -161,7 +161,7 @@ test('many maps: they slide sideways and every one can be picked', async ({ page
   }
   expect(await inView(last)).toBe(true);
   await last.click();
-  await expect(last).toHaveAttribute('aria-selected', 'true');
+  await expect(last).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.screen-head')).toContainText('Mapa číslo 8');
   await expect(page.getByRole('button', { name: 'Posunout doleva' }).first()).toBeVisible();
   expect(errors).toEqual([]);

@@ -145,3 +145,45 @@ describe('data version 4: buildings have 20 % less HP', async () => {
     expect(db.maps[0].waves.rounds[0].groups.map((g) => g.enemy)).toEqual(['rukh', 'goblinPack']);
   });
 });
+
+describe('built-ins renamed since a browser stored them', () => {
+  // the class's browser: the kids renamed the wolf in Czech only, the rest is the old wolf
+  const stored = (patch) => {
+    const db = migrateDb({ settings: {}, assets: [] }).db;
+    return { ...db, assets: db.assets.map((a) => (patch[a.id] ? { ...a, ...patch[a.id] } : a)) };
+  };
+  const wolfLegend = {
+    story: { cs: 'Šedí vlci běhají rychleji než vítr. Když zavyjí, ptáci v lese ztichnou.', en: 'Grey wolves run faster than the wind. When they howl, the birds in the forest go quiet.' },
+    hint: { cs: 'Jsou rychlí: postav věže dál od radnice, ať je trefí dřív, než doběhnou.', en: 'They are fast: build towers far from the town hall so they are hit before they arrive.' },
+  };
+
+  it('an earlier default name or legend becomes today’s, language by language', () => {
+    const { db, changed } = migrateDb(stored({
+      wolf: { name: { cs: 'Pavoučí jezdec', en: 'Wolf' }, legend: wolfLegend },
+      // the kids wrote the king's Czech texts; the English ones are still the old dragon's
+      dragon: { name: { cs: 'Král goblinů', en: 'Dragon' }, legend: {
+        story: { cs: 'Král vládne goblinům a útočí se svou suitou. ', en: 'The dragon sleeps on a mountain of coins. Now and then he wakes up to see who is taking them.' },
+        hint: { cs: 'Útočí na dálku, volá své pomocníky.', en: 'He flies and breathes fire from afar: bow, magic and many towers. He pays a big treasure.' },
+      } },
+    }));
+    expect(changed).toBe(true);
+    const wolf = db.assets.find((a) => a.id === 'wolf');
+    const def = DEFAULT_COMPONENTS.find((c) => c.id === 'wolf');
+    expect(wolf.name).toEqual({ cs: 'Pavoučí jezdec', en: 'Spider rider' });
+    expect(wolf.legend).toEqual(def.legend);
+    const king = db.assets.find((a) => a.id === 'dragon');
+    expect(king.name).toEqual({ cs: 'Král goblinů', en: 'Goblin king' });
+    expect(king.legend.story).toEqual({ cs: 'Král vládne goblinům a útočí se svou suitou. ', en: 'The king rules the goblins and attacks with his retinue.' });
+    expect(king.legend.hint.cs).toBe('Útočí na dálku, volá své pomocníky.'); // the kids' text stays
+    expect(king.legend.hint.en).toBe(DEFAULT_COMPONENTS.find((c) => c.id === 'dragon').legend.hint.en);
+    expect(migrateDb(db).changed).toBe(false); // once
+  });
+
+  it('the kids’ own texts and their own components stay as they are', () => {
+    const mine = { id: 'k1', category: 'enemy', name: 'Wolf', images: [], stats: {}, legend: wolfLegend };
+    const base = stored({ wolf: { name: { cs: 'Můj vlk', en: 'My wolf' }, legend: { story: 'Náš vlk.', hint: 'Pozor.' } } });
+    const { db } = migrateDb({ ...base, assets: [...base.assets, mine] });
+    expect(db.assets.find((a) => a.id === 'wolf')).toMatchObject({ name: { cs: 'Můj vlk', en: 'My wolf' }, legend: { story: 'Náš vlk.', hint: 'Pozor.' } });
+    expect(db.assets.find((a) => a.id === 'k1')).toEqual(mine);
+  });
+});

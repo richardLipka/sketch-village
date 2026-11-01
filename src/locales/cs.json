@@ -1,5 +1,10 @@
 {
   "app": {
+    "crash_title": "Něco se pokazilo",
+    "crash_text": "Tahle obrazovka se rozbila. Tvoje kresby a mapy jsou v bezpečí – jsou uložené v prohlížeči. Vrať se do menu, nebo si pro jistotu stáhni zálohu.",
+    "crash_back": "Zpět do menu",
+    "crash_backup": "Stáhnout zálohu",
+    "crash_details": "Co přesně se stalo",
     "title": "Kreslená vesnice",
     "subtitle": "Ubraň vesnici, kterou jste si sami nakreslili",
     "loading": "Načítám…",
@@ -25,6 +30,7 @@
     "library": "Knihovna"
   },
   "common": {
+    "close": "Zavřít",
     "cancel": "Zrušit",
     "done": "Hotovo",
     "save": "Uložit",
@@ -74,6 +80,7 @@
     "clear": "Smazat vše"
   },
   "slot": {
+    "pick": "Vybrat tento snímek",
     "game_picture": "obrázek hry",
     "photo": "Vyfotit",
     "upload": "Nahrát soubor",
@@ -260,6 +267,9 @@
     "pack_howto": "Stáhni všechno (tlačítko výše), přejmenuj soubor na default-data.json a nahraď jím public/default-data.json v GitHub repozitáři hry. Po aktualizaci webu s ním začne každý nový počítač a ostatní mohou zmáčknout „Nahrát balíček třídy“."
   },
   "maps": {
+    "brush_size": "Šířka štětce",
+    "pencil_size": "Tloušťka tužky",
+    "colour": "Barva",
     "load": "Nahrát mapu",
     "load_title": "Nahrát mapu",
     "load_hint": "Mapu, kterou někdo stáhl (⬇ Stáhnout), ze souboru nebo z adresy. Co už máš stejné, se použije; co je trochu jiné, přibude jako kopie se jménem mapy a na konci si vybereš, co sloučit.",
@@ -361,12 +371,16 @@
     "start": "Začít"
   },
   "game": {
+    "help": "Nápověda – jak hrát",
+    "sound": "Zvuk",
+    "workers": "Dělníci",
+    "level": "úroveň",
     "exit": "Konec",
     "quit_title": "Ukončit hru?",
     "quit_text": "Hraješ kolo {{n}} z {{total}}. Když hru ukončíš, všechno postavené a nasbírané v této hře se ztratí.",
     "quit_no": "Hrát dál",
     "quit_yes": "Ukončit hru",
-    "hint": "Klik na cestu = jdi · klik na nepřítele = útok · táhni = posuň · kolečko = přiblížit · 1/2/3 = meč/luk/kouzla · mezerník = Připraven",
+    "hint": "Klik na cestu = jdi · klik na nepřítele = útok · táhni = posuň · kolečko = přiblížit · 1/2/3 = meč/luk/kouzla · mezerník = Připraven · Bez myši: šipky nebo WASD = jdi · B = další místo na stavbu (Shift+B zpět), Tab = jeho tlačítka · F = útok na nejbližšího · I = batoh · P = pauza",
     "zoom_in": "Přiblížit",
     "zoom_out": "Oddálit",
     "pause": "Pauza (P)",
@@ -405,6 +419,7 @@
     "turn_phone": "Otoč telefon na šířku a hraj."
   },
   "build": {
+    "spot_n": "Místo na stavbu {{n}}",
     "type_house": "Dům",
     "type_tower": "Věž",
     "type_castle": "Hrad",
@@ -512,6 +527,7 @@
     "soldier_default": "voják"
   },
   "weapons": {
+    "take_off": "Sundat do batohu",
     "title": "Zbraně",
     "hint": "Zbraně přidávají k útoku hrdiny. Meče a sekery bijí zblízka, luky střílejí, kouzla zraní všechno kolem cíle – i létající nepřátele. Hrdina je najde v truhlách od nepřátel nebo koupí v obchodě na radnici.",
     "class": "Druh",
@@ -603,6 +619,7 @@
     "f_splash": "Plošné poškození (px)"
   },
   "waves": {
+    "enemy": "Nepřítel",
     "edit": "Vlny",
     "title": "Vlny – {{map}}",
     "start_coins": "Mince na začátku",
@@ -633,6 +650,12 @@
     "hero": "Hrdina: {{stat}} +{{n}}"
   },
   "tips": {
+    "walk_touch": "Klepni na žlutou cestu – hrdina tam dojde. Táhnutím prstu posuneš mapu.",
+    "build_touch": "Klepni na čárkovaný čtverec u cesty a postav budovu. Začni věží – střílí šípy!",
+    "fight_touch": "Klepni na nepřítele a hrdina zaútočí. ⚔️ meč je silný, 🏹 luk střílí zdaleka.",
+    "townhall_touch": "Klepni na radnici: vylepšíš ji a posílíš hrdinu.",
+    "bow_touch": "Létající nepřátele trefí jen luk – klepni na 🏹 vpravo dole.",
+    "toggle": "Tipy pro začátek",
     "walk": "Klikni na žlutou cestu – hrdina tam dojde.",
     "build": "Klikni na čárkovaný čtverec u cesty a postav budovu. Začni věží – střílí šípy!",
     "ready": "Připraven? Zmáčkni ⚑ Připraven a vlna přijde dřív – dostaneš bonusové mince.",
@@ -766,6 +789,7 @@
     "panels_hint": "{{n}} z {{max}} snímků · klikni na snímek a dole ho srovnej"
   },
   "chronicle": {
+    "list": "Seznam příšer",
     "title": "Kronika",
     "map_title": "Kronika – příšery této mapy",
     "intro": "Všechny příšery země s jejich příběhy a radami. Vlastní legendy napiš v ateliéru (Nepřátelé).",

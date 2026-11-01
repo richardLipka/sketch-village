@@ -18,6 +18,14 @@ import ImportDuplicates from './ImportDuplicates.jsx';
 //   const result = await importFile(file); // null when the kid cancelled the review
 //   // result: { summary, maps, message } – maps: ids of the file's maps here (to play one),
 //   // message: the translation key that reports the summary
+/** The note after an import: what came in, or that it was cancelled (`result` null). */
+export const importNote = (result, t) => (result
+  ? { ok: true, text: t(result.message ?? 'import.done_review', result.summary) }
+  : { ok: false, text: t('import.cancelled') });
+
+/** The note when a file couldn't be read or downloaded (errors carry a translation key). */
+export const importErrorText = (error, t) => t(error?.message ?? error, { defaultValue: t('import.error_generic') });
+
 export default function useImporter(db, onReplaceDb) {
   const { i18n } = useTranslation();
   const [review, setReview] = useState(null); // { plan, resolve } waiting for the kid's decisions

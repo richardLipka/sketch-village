@@ -46,8 +46,8 @@ export default function EnemyStatsEditor({ id, stats: raw, enemies = [], project
         <NumField label={t('enemies.f_armorPct')} value={stats.armor} min={0} max={0.9} step={0.05} pct onChange={(v) => set({ armor: v })} />
         <label className="row small" style={{ gap: 6 }}>
           {t('enemies.f_coins')}
-          <NumField value={lo} min={0} max={99} onChange={(v) => set({ coins: [v, Math.max(v, hi)] })} width={56} />–
-          <NumField value={hi} min={0} max={99} onChange={(v) => set({ coins: [Math.min(lo, v), v] })} width={56} />
+          <NumField value={lo} min={0} max={99} onChange={(v) => set({ coins: [v, Math.max(v, hi)] })} width={56} ariaLabel={`${t('enemies.f_coins')} min`} />–
+          <NumField value={hi} min={0} max={99} onChange={(v) => set({ coins: [Math.min(lo, v), v] })} width={56} ariaLabel={`${t('enemies.f_coins')} max`} />
         </label>
         <NumField label={t('enemies.f_size')} value={stats.size} min={0.4} max={2.5} step={0.05} pct onChange={(v) => set({ size: v })} />
       </div>

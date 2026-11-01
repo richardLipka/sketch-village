@@ -45,16 +45,17 @@ export default function ImageSlot({ label, image, fallback, standard = null, pla
   return (
     <div className={`slot ${compact ? 'compact' : ''} ${selected ? 'selected' : ''} ${adder ? 'adder' : ''}`}>
       {label && <div><b>{label}</b></div>}
-      <div className="pic checker" style={!image && fallback ? { opacity: 0.45 } : undefined} onClick={onSelect} role={onSelect ? 'button' : undefined}>
+      <div className="pic checker" style={!image && fallback ? { opacity: 0.45 } : undefined} onClick={onSelect}
+        {...(onSelect ? { role: 'button', tabIndex: 0, 'aria-pressed': selected, 'aria-label': label ?? t('slot.pick'), onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(); } } } : {})}>
         {shown ? <img src={shown} alt="" /> : <span className="muted" style={{ fontSize: 40 }}>{placeholder ?? '?'}</span>}
       </div>
       {!image && !fallback && standard && <div className="small muted" data-testid="game-picture">{t('slot.game_picture')}</div>}
       <div className="row" style={{ justifyContent: 'center', gap: 4 }}>
-        <button className="btn icon" title={t('slot.photo')} onClick={() => setStage('camera')}>📷</button>
-        <button className="btn icon" title={t('slot.upload')} onClick={() => fileRef.current.click()}>📁</button>
+        <button className="btn icon" title={t('slot.photo')} aria-label={t('slot.photo')} onClick={() => setStage('camera')}>📷</button>
+        <button className="btn icon" title={t('slot.upload')} aria-label={t('slot.upload')} onClick={() => fileRef.current.click()}>📁</button>
         <PasteButton onImage={(img) => { setRaw(img); setStage('crop'); }} />
-        <button className="btn icon" title={image ? t('slot.edit') : t('slot.draw')} onClick={() => setStage('sketch')}>✏️</button>
-        {image && <button className="btn icon danger" title={removeTitle ?? t('slot.remove')} onClick={() => onChange(null)}>✕</button>}
+        <button className="btn icon" title={image ? t('slot.edit') : t('slot.draw')} aria-label={image ? t('slot.edit') : t('slot.draw')} onClick={() => setStage('sketch')}>✏️</button>
+        {image && <button className="btn icon danger" title={removeTitle ?? t('slot.remove')} aria-label={removeTitle ?? t('slot.remove')} onClick={() => onChange(null)}>✕</button>}
       </div>
       {children}
       <input ref={fileRef} type="file" accept="image/*" hidden onChange={onFile} />
