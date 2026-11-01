@@ -1,5 +1,5 @@
 import React, { memo, useEffect, useRef, useState } from 'react';
-import { ABILITIES } from '../config/abilities.js';
+import { ABILITIES, abilityNumbers } from '../config/abilities.js';
 import { useTranslation } from 'react-i18next';
 import { roundSummary } from '../logic/waves.js';
 import { unlockLabel } from '../config/unlocks.js';
@@ -85,20 +85,28 @@ export const WaveInfo = memo(function WaveInfo({ phase, round, totalRounds, prep
 });
 
 // Attack types: each button takes a weapon of that class into the hand (2 s).
-export const AttackBar = memo(function AttackBar({ mode, hasMelee, hasRanged, hasMagic, switching, onMode, ability, abilityLeft = 0, abilityCooldown = 1, heroDead, onAbility }) {
+export const AttackBar = memo(function AttackBar({ mode, hasMelee, hasRanged, hasMagic, switching, onMode, ability, heroDead, aiming, onAbility, onAbilityPreview }) {
   const { t } = useTranslation();
   const has = { melee: hasMelee, ranged: hasRanged, magic: hasMagic };
-  // the hero's special ability (E): a ring fills while it waits its cooldown
-  const abilityName = ability ? `${t(`ability.${ability}`)} (E)` : '';
-  const waiting = abilityLeft > 0;
+  // the hero's special ability (E): a ring fills while it waits its cooldown; pointed
+  // at or focused, its area and who it touches show on the map; arrow rain is aimed
+  const left = ability?.left ?? 0;
+  const waiting = left > 0;
+  const label = ability && [
+    `${t(`ability.${ability.id}`)} (E)`,
+    waiting ? t('ability.wait', { s: left }) : aiming ? t('ability.aim') : t(`ability.${ability.id}_hint`),
+    abilityNumbers(ability, t),
+  ].join(' – ');
+  const preview = (on) => () => onAbilityPreview?.(on);
   return (
     <div className="ov ov-br attack-bar">
       {ability && (
-        <button className={`btn attack ability-btn ${waiting ? 'waiting' : 'ready'}`} disabled={heroDead} onClick={onAbility} data-testid="ability"
-          title={waiting ? `${abilityName} · ${t('ability.wait', { s: abilityLeft })}` : abilityName} aria-label={waiting ? `${abilityName} · ${t('ability.wait', { s: abilityLeft })}` : abilityName}
-          style={{ '--cd': `${Math.round((abilityLeft / Math.max(1, abilityCooldown)) * 360)}deg` }}>
-          <span aria-hidden="true">{ABILITIES[ability]?.icon}</span>
-          {waiting && <span className="ability-left" aria-hidden="true">{abilityLeft}</span>}
+        <button className={`btn attack ability-btn ${waiting ? 'waiting' : 'ready'} ${aiming ? 'active' : ''}`} disabled={heroDead} onClick={onAbility} data-testid="ability"
+          aria-pressed={ABILITIES[ability.id]?.aimed ? !!aiming : undefined} title={label} aria-label={label}
+          onPointerEnter={preview(true)} onPointerLeave={preview(false)} onFocus={preview(true)} onBlur={preview(false)}
+          style={{ '--cd': `${Math.round((left / Math.max(1, ability.cooldown)) * 360)}deg` }}>
+          <span aria-hidden="true">{ABILITIES[ability.id]?.icon}</span>
+          {waiting && <span className="ability-left" aria-hidden="true">{left}</span>}
         </button>
       )}
       {WEAPON_CLASSES.map((k, i) => (

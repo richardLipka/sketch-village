@@ -11,6 +11,7 @@ import { newId } from '../data/saveFile.js';
 import { downloadJson } from '../data/safety.js';
 import { mapPackage, mapFileName } from './shareMap.js';
 import LoadFile from '../data/LoadFile.jsx';
+import UiIcon from '../ui/UiIcon.jsx';
 
 // All maps (= levels): create blank or sample, edit, duplicate, delete,
 // download one (⬇, with everything it needs) and load one (⬆ – a file or an address).
@@ -86,10 +87,10 @@ export default function MapList({ maps, assets, enemyTypes, themes = [], balance
             <div className="name"><button type="button" className="tile-open">{themeIcon(m.theme)} {m.name}</button></div>
             <div className="author">{m.author && `✎ ${m.author}`}</div>
             <div className="small">{m.valid ? `✓ ${t('maps.ready')}` : `⚠ ${t('maps.not_ready')}`}</div>
-            <div className="row" style={{ justifyContent: 'center', gap: 4 }}>
-              <button className="btn icon" onClick={(e) => { e.stopPropagation(); setWavesFor(m); }} >🌊 {t('waves.edit')}</button>
+            <div className="row map-actions">
+              <button className="btn icon" onClick={(e) => { e.stopPropagation(); setWavesFor(m); }} title={t('waves.edit_hint')}><UiIcon name="waves" /> {t('waves.edit')}</button>
               <button className="btn icon" onClick={(e) => { e.stopPropagation(); duplicate(m); }} title={t('studio.duplicate')} aria-label={t('studio.duplicate')}>⧉</button>
-              <button className="btn icon" onClick={(e) => { e.stopPropagation(); share(m); }} title={t('maps.share')} data-testid="map-download">⬇ {t('maps.download')}</button>
+              <button className="btn icon" onClick={(e) => { e.stopPropagation(); share(m); }} title={t('maps.share')} aria-label={t('maps.download')} data-testid="map-download">⬇</button>
               <button className="btn icon danger" onClick={(e) => { e.stopPropagation(); remove(m); }} title={t('common.delete')} aria-label={t('common.delete')}>🗑</button>
             </div>
           </div>

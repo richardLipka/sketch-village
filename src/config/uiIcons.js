@@ -15,6 +15,7 @@ export const UI_ICONS = [
   { key: 'magic', emoji: '✨', name: { cs: 'Kouzla', en: 'Magic' } },
   { key: 'backpack', emoji: '🎒', name: { cs: 'Batoh', en: 'Backpack' } },
   { key: 'chronicle', emoji: '📖', name: { cs: 'Kronika', en: 'Chronicle' } },
+  { key: 'waves', emoji: '👺', name: { cs: 'Vlny (v editoru map)', en: 'Waves (in the map editor)' } },
 ];
 
 export const uiIconId = (key) => `ui-${key}`;

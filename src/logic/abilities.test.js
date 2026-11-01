@@ -56,6 +56,7 @@ describe('abilities in the game', () => {
     const w = withAbility('strike', { power: 500 });
     expect(w.useAbility()).toEqual({ ok: false, reason: 'no_target' }); // nothing in reach: not wasted
     const g = goblinAtHero(w);
+    expect(w.abilityTargets().enemies).toEqual([g]); // shown before: who takes the blow
     expect(w.useAbility().ok).toBe(true);
     expect(g.dead).toBe(true);
     expect(w.drainEvents().some((e) => e.type === 'ability' && e.id === 'strike')).toBe(true);
@@ -64,6 +65,7 @@ describe('abilities in the game', () => {
     expect(w.hud().hero.ability.left).toBe(20);
     run(w, 20.1);
     expect(w.hud().hero.ability.left).toBe(0);
+    expect(w.drainEvents().some((e) => e.type === 'abilityReady')).toBe(true);
   });
 
   it('shout slows the monsters around, freeze stops them; both wear off', () => {
@@ -85,21 +87,50 @@ describe('abilities in the game', () => {
     }
   });
 
-  it('arrow rain hurts every monster in reach, flying ones too', () => {
-    const w = withAbility('arrowRain', { power: 30 });
-    const a = goblinAtHero(w, 20), b = w.spawnEnemy('bat', { x: w.hero.x - 40, y: w.hero.y });
+  it('arrow rain is aimed at a place: the hero’s arrows fly there and hit every monster around it, flying ones too', () => {
+    const w = withAbility('arrowRain', { power: 30, radius: 60, reach: 300 });
+    const h = w.hero;
+    const a = w.spawnEnemy('goblin', { x: h.x + 200, y: h.y }), b = w.spawnEnemy('bat', { x: h.x + 220, y: h.y + 20 });
+    goblinAtHero(w, 20); // near the hero, outside the place
     const ha = a.hp, hb = b.hp;
-    w.useAbility();
+    expect(w.useAbility({ x: h.x - 200, y: h.y })).toEqual({ ok: false, reason: 'no_target' }); // nobody there: not wasted
+    expect(w.abilityTargets({ x: h.x + 210, y: h.y }).enemies).toEqual([a, b]);
+    expect(w.useAbility({ x: h.x + 210, y: h.y }).ok).toBe(true);
+    const arrows = w.projectiles.filter((p) => p.owner === 'hero');
+    expect(arrows.length).toBeGreaterThan(5); // the hero's own arrows, a volley
+    expect(arrows.every((p) => p.look === null)).toBe(true);
+    expect(a.hp).toBe(ha); // they are still flying
+    w.hero.dead = true; w.hero.respawnAt = 1e9; // the hero itself doesn't shoot meanwhile
+    run(w, 1.5);
     expect(a.hp).toBeLessThan(ha);
     expect(b.hp).toBeLessThan(hb);
+    expect(w.projectiles).toHaveLength(0);
   });
 
-  it('heal mends the hero and the buildings near it; shield keeps the hero from harm', () => {
+  it('an aimed place too far is pulled back within reach; without a place it goes where most monsters are', () => {
+    const w = withAbility('arrowRain', { reach: 300, radius: 50 });
+    const h = w.hero;
+    const far = w.abilityTargets({ x: h.x + 1000, y: h.y });
+    expect(Math.round(far.x - h.x)).toBe(300);
+    expect(far.reach).toBe(300);
+    w.spawnEnemy('goblin', { x: h.x + 100, y: h.y });
+    for (const dy of [0, 10, 20]) w.spawnEnemy('goblin', { x: h.x - 150, y: h.y + dy });
+    const auto = w.abilityTargets();
+    expect(auto.enemies).toHaveLength(3);
+    expect(Math.abs(auto.x - (h.x - 150))).toBeLessThan(20);
+  });
+
+  it('heal mends the hero and the buildings near it – shown before; shield keeps the hero from harm', () => {
     const w = withAbility('heal', { power: 50, radius: 400 });
     w.hero.hp = 10; w.townHall.hp = 100;
+    const shown = w.abilityTargets();
+    expect(shown.friends.map((f) => [f.kind, f.hurt])).toEqual([['hero', true], ['building', true]]);
+    expect(withAbility('heal', { radius: 0 }).abilityTargets().friends.map((f) => f.kind)).toEqual(['hero']); // the Town Hall far away
     w.useAbility();
     expect(w.hero.hp).toBe(60);
     expect(w.townHall.hp).toBe(150);
+    const e = w.drainEvents().find((x) => x.type === 'ability');
+    expect(e.healed.map((x) => x.amount)).toEqual([50, 50]);
     const s = withAbility('shield', { duration: 4 });
     s.useAbility();
     const hp = s.hero.hp;

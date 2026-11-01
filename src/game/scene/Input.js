@@ -28,6 +28,7 @@ export class Input {
     });
 
     this.input.on('pointermove', (p) => {
+      this.aimAt = { x: p.worldX, y: p.worldY };
       if (pinch) {
         const pts = this.activeTouches();
         if (pts.length === 2) {
@@ -50,7 +51,10 @@ export class Input {
         if (this.activeTouches().length < 2) pinch = null;
         return;
       }
-      if (down && !down.moved && p.button === 0) this.onWorldClick(p.worldX, p.worldY);
+      if (down && !down.moved && p.button === 0) {
+        // aiming arrow rain: the click is the place (GameView uses the ability there)
+        if (this.aiming) { this.aimAt = { x: p.worldX, y: p.worldY }; this.cfg.onAim?.(p.worldX, p.worldY); } else this.onWorldClick(p.worldX, p.worldY);
+      }
       down = null;
     });
 

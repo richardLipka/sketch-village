@@ -156,12 +156,15 @@ export class Combat {
 
   updateProjectiles(dt) {
     for (const p of this.projectiles) {
+      if (p.wait > 0) { p.wait -= dt; continue; } // an arrow of a volley not shot yet
       const t = p.target;
       if (this.targetGone(t)) { p.done = true; continue; }
       const step = p.speed * dt;
       if (dist(p, t) <= step) {
         p.done = true;
-        if (p.splash > 0 && p.owner === 'enemy') {
+        if (p.decor) {
+          // one of arrow rain's arrows: only the middle one carries the hit
+        } else if (p.splash > 0 && p.owner === 'enemy') {
           // an enemy's area shot hurts every defender around where it lands
           this.damage(t, p.damage);
           this.enemySplash(t, p.splash, p.damage, t);

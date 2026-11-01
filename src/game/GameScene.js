@@ -7,7 +7,8 @@ import { Textures } from './scene/Textures.js';
 import { Input, MIN_ZOOM } from './scene/Input.js';
 import { Effects } from './scene/Effects.js';
 import { mapBorder, startScroll } from './viewport.js';
-import { Entities } from './scene/Entities.js';
+import { Entities, ABILITY_COLORS } from './scene/Entities.js';
+import { ABILITIES } from '../config/abilities.js';
 
 // Draws the World simulation (src/logic/world.js) and forwards clicks to it.
 // Camera: zoom (wheel, pinch, buttons) and drag-pan, clamped to the map and
@@ -45,6 +46,9 @@ export default class GameScene extends Phaser.Scene {
     this.animClock = 0; // ms of game time (follows speed and pause) that animations run on
     this.heroAnim = {};
     this.townHallAnim = {};
+    this.abilityPreview = false; // the ability's button is pointed at: its area and targets show
+    this.aiming = false; // arrow rain waits for a click on the place
+    this.aimAt = null; // where the pointer is on the map (world px)
   }
 
   // ---------------- animations ----------------
@@ -204,6 +208,11 @@ export default class GameScene extends Phaser.Scene {
       else { const sp = this.sprites.get(`b${e.id}`); if (sp) this.playOnce(sp, sp.base, ['attack', 'reload']); }
     }
     if (e.type === 'splash') this.splash(e.x, e.y, e.radius, e.owner === 'stone' ? 0x78716c : e.owner === 'enemy' ? 0xdc2626 : 0xa855f7);
+    // the hero's ability: its area flashes, healing shows on everything it mended, the button is ready again
+    if (e.type === 'ability' && e.radius && e.id !== 'arrowRain') this.splash(e.x, e.y, e.radius, ABILITY_COLORS[e.id]);
+    if (e.type === 'ability') for (const x of e.healed ?? []) this.floatText(x.x, x.y - 30, `+${x.amount}`, '#15803d');
+    if (e.type === 'abilityReady') this.floatText(e.x, e.y - 70, `${ABILITIES[e.id]?.icon ?? ''} ✓`, '#15803d');
+    if (e.type === 'allyGone') this.puff(e.x, e.y);
     if (e.type === 'summon') { this.splash(e.x, e.y, 36, 0x4c1d95); this.floatText(e.x, e.y - 36, `+${e.count}`, '#4c1d95'); }
     if (e.type === 'chestOpened') this.floatText(e.x, e.y - 24, e.weapon ? '🎁' : `+${e.coins}`, '#7c3aed');
     if (e.type === 'sold') { this.puff(e.x, e.y); if (e.refund) this.floatText(e.x, e.y - 30, `+${e.refund}`, '#a16207'); }

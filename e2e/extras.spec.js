@@ -32,7 +32,7 @@ test('a game saved on leaving goes on from the play screen; 3× speed, the abili
 
   // the hero's ability: Lara's arrow rain, with nothing in reach it isn't wasted
   const ability = page.getByTestId('ability');
-  await expect(ability).toHaveAttribute('aria-label', 'Déšť šípů (E)');
+  await expect(ability).toHaveAttribute('aria-label', /^Déšť šípů \(E\) – .*🎯 320/);
   if (!isMobile) {
     await page.keyboard.press('e');
     await expect(page.locator('.sr-live')).toHaveText('Žádná příšera v dosahu.');

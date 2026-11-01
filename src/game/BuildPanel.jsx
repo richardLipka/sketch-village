@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import WeaponIcon from './WeaponIcon.jsx';
 import { itemLine } from './GameOverlay.jsx';
 import { FEATURES } from '../config/features.js';
-import { ABILITIES } from '../config/abilities.js';
+import { ABILITIES, abilityNumbers } from '../config/abilities.js';
 
 // Panel for the selected building spot or the Town Hall (SPEC §7). The Town
 // Hall's shop (hero upgrades + items) opens as an overlay over the map with
@@ -31,11 +31,8 @@ export function featureLine(type, s, t) {
 
 const STAT_ICON = { melee: '⚔️', ranged: '🏹', armor: '🛡️', speed: '👟', magic: '✨' };
 
-/** An ability's numbers in a short line: "power 150 · ⭕ 70 · ⏱ 18 s". */
-export function abilityLine(a, t) {
-  const d = ABILITIES[a.id];
-  return (d?.uses ?? []).map((k) => t(`ability.short_${k}`, { v: k === 'power' && d.share ? Math.round(a.power * 100) : a[k] })).join(' · ');
-}
+/** An ability's numbers in a short line: "💥 150 · ⭕ 70 · ⏱ 18 s". */
+export const abilityLine = abilityNumbers;
 
 /** How far a building level shoots (arrows or stones), or null – shown as a circle while its option is pointed at. */
 export const rangeOf = (s) => s?.range ?? s?.lobRange ?? null;

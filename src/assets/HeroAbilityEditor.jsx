@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import NumField from './NumField.jsx';
-import { ABILITIES, ABILITY_IDS, PARAM_LIMITS, abilityOf, abilityAt } from '../config/abilities.js';
+import { ABILITIES, ABILITY_IDS, ABILITY_PARAMS, PARAM_LIMITS, abilityOf, abilityAt, abilityNumbers } from '../config/abilities.js';
 import { HERO_UPGRADE_COSTS } from '../config/buildings.js';
 
 // The hero's special ability (SPEC §6.4): one of eight, with its numbers. A
@@ -11,7 +11,7 @@ export default function HeroAbilityEditor({ hero, onChange }) {
   const { t } = useTranslation();
   const a = abilityOf(hero);
   const d = ABILITIES[a.id];
-  const pick = (id) => onChange({ id, ...Object.fromEntries(['power', 'radius', 'duration', 'cooldown'].map((k) => [k, ABILITIES[id][k]])) });
+  const pick = (id) => onChange({ id, ...Object.fromEntries(ABILITY_PARAMS.filter((k) => ABILITIES[id].uses.includes(k)).map((k) => [k, ABILITIES[id][k]])) });
   const setParam = (k, v) => onChange({ ...a, [k]: v });
   const top = abilityAt(a, HERO_UPGRADE_COSTS.length);
 
@@ -35,7 +35,7 @@ export default function HeroAbilityEditor({ hero, onChange }) {
         ))}
       </div>
       <p className="small muted" style={{ margin: '6px 0 0' }} data-testid="ability-top">
-        ⬆ {t('ability.upgraded', { n: HERO_UPGRADE_COSTS.length })}: {d.uses.map((k) => t(`ability.short_${k}`, { v: k === 'power' && d.share ? Math.round(top.power * 100) : top[k] })).join(' · ')}
+        ⬆ {t('ability.upgraded', { n: HERO_UPGRADE_COSTS.length })}: {abilityNumbers(top, t)}
       </p>
     </div>
   );

@@ -9,7 +9,7 @@ A small village-defense strategy game for kids. Every sprite (hero, enemies, hou
 ## Playing
 
 - **Save and leave**: ending a game offers to keep it; it is also kept after every round. **Play → Continue** goes on where it was left. The kept game is not part of the downloaded data.
-- **Special ability**: every hero has one of eight (mighty strike, battle shout, reinforcements, healing, arrow rain, freeze, shield, rally), picked with its numbers in the hero editor, used with the button next to the attacks or **E**, upgraded in the Town Hall shop.
+- **Special ability**: every hero has one of eight (mighty strike, battle shout, reinforcements, healing, arrow rain, freeze, shield, rally), picked with its numbers in the hero editor, used with the button next to the attacks or **E** (arrow rain is aimed at a place on the map), upgraded in the Town Hall shop. Pointing at the button shows its area and who it will hit or help.
 - **Speed** 1× / 2× / 3×, a **range circle** while choosing a building, optional **quiet music** (🎵), and the chronicle's **collection** ("you've met 9 of 14 monsters").
 - **Save & load → Back to the game's own components** lists what isn't the game's own, what was changed and what is missing, and cleans it up after asking.
 

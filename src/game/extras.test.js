@@ -48,7 +48,7 @@ describe('choosing a building, playing fast', () => {
 
   it('an ability in a short line; speeds 1×, 2×, 3×', () => {
     const t = (k, o) => `${k.split('_')[1]}=${o.v}`;
-    expect(abilityLine({ id: 'shout', power: 0.5, radius: 160, duration: 5, cooldown: 25 }, t)).toBe('power=50 · radius=160 · duration=5 · cooldown=25');
+    expect(abilityLine({ id: 'shout', power: 0.5, radius: 160, duration: 5, cooldown: 25 }, t)).toBe('📣 50 % · radius=160 · duration=5 · cooldown=25');
     expect(SPEEDS).toEqual([1, 2, 3]);
   });
 });

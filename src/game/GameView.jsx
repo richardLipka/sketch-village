@@ -22,7 +22,7 @@ import { unlockLabel } from '../config/unlocks.js';
 import { DEFAULT_WEAPONS, isWeapon } from '../config/weapons.js';
 import { coinTypesOf, GAME_LOOKS } from '../config/components.js';
 import { World } from '../logic/world.js';
-import { abilityOf } from '../config/abilities.js';
+import { ABILITIES, abilityOf } from '../config/abilities.js';
 import { storeSavedGame, clearSavedGame } from '../data/store.js';
 import { play, setMuted, soundFor, loadClip, playClip, startMusic, stopMusic } from './sound.js';
 import { VoiceDirector } from './monsterVoices.js';
@@ -297,7 +297,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
       });
       gameRef.current.scene.add('game', GameScene, true, {
         world, map, images, variants, anims, enemyTypes, buildingTypes: types, wobble: !!live.current.wobble,
-        onHud: setHud, onEvent, onSelect: setSelection, onAnyEvent: anyEvent,
+        onHud: setHud, onEvent, onSelect: setSelection, onAnyEvent: anyEvent, onAim: (x, y) => live.current.aimAt?.(x, y),
       });
       // dev-only handle for automated browser testing
       if (import.meta.env.DEV) window.__sv = { game: gameRef.current, world, voices: voices.current };
@@ -380,14 +380,49 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
   }, []);
   const toggleWobble = useCallback(() => live.current.onSettings?.({ wobble: !live.current.wobble }), []);
   const toggleMusic = useCallback(() => live.current.onSettings?.({ music: !live.current.music }), []);
-  // the hero's special ability (E): used now, or why not
-  const fireAbility = useCallback(() => {
-    const w = worldRef.current;
-    if (!w) return;
-    const r = w.useAbility();
+  // the hero's special ability (E): used now, or why not. Arrow rain is aimed: the
+  // first press shows its reach and waits for a click on the place (E again: where
+  // most monsters are, Escape: not now)
+  const [aiming, setAiming] = useState(false);
+  const stopAim = useCallback(() => {
+    const sc = scene();
+    if (sc) { sc.aiming = false; sc.input.setDefaultCursor('default'); }
+    setAiming(false);
+  }, []);
+  const abilityResult = useCallback((r) => {
+    const w = worldRef.current, sc = scene();
+    if (sc) sc.previewUntil = sc.time.now + 1500; // who it touched (or why not) shows a moment – also on a touch screen
     if (!r.ok && r.reason !== 'none') say(live.current.t(`ability.reason_${r.reason}`));
     setHud(w.hud());
   }, [say]);
+  const fireAbility = useCallback(() => {
+    const w = worldRef.current, sc = scene();
+    if (!w) return;
+    if (sc?.aiming) { stopAim(); abilityResult(w.useAbility()); return; }
+    if (sc && w.abilityNow && ABILITIES[w.abilityNow.id].aimed) {
+      const why = w.abilityCheck();
+      if (why) { abilityResult({ ok: false, reason: why }); return; }
+      sc.aiming = true;
+      sc.input.setDefaultCursor('crosshair');
+      setAiming(true);
+      say(live.current.t('ability.aim'));
+      return;
+    }
+    abilityResult(w.useAbility());
+  }, [say, stopAim, abilityResult]);
+  // a click on the map while aiming: the place (too far is pulled back within reach)
+  const aimAt = useCallback((x, y) => {
+    const w = worldRef.current;
+    if (!w) return;
+    const r = w.useAbility({ x, y });
+    if (r.ok || r.reason !== 'no_target') stopAim();
+    abilityResult(r);
+  }, [stopAim, abilityResult]);
+  live.current.aimAt = aimAt;
+  const heroDown = !!hud?.hero.dead || hud?.phase === 'won' || hud?.phase === 'lost';
+  useEffect(() => { if (heroDown) stopAim(); }, [heroDown, stopAim]);
+  // the ability's button pointed at (or focused): its area and who it touches show on the map
+  const previewAbility = useCallback((on) => { const sc = scene(); if (sc) sc.abilityPreview = on; }, []);
   // a build option pointed at: its range shows around the spot
   const previewRange = useCallback((range) => { const sc = scene(); if (sc) sc.previewRange = range; }, []);
   const toggleMute = useCallback(() => {
@@ -483,10 +518,11 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
       else if (key === 'b' && sc) { e.preventDefault(); sc.selectNext(e.shiftKey ? -1 : 1); setPanelFocus((n) => n + 1); }
       else if (key === 'f' && sc && !sc.paused) sc.attackNearest();
       else if (key === 'e' && sc && !sc.paused) fireAbility();
+      else if (e.key === 'Escape' && sc?.aiming) stopAim();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [setMode, ready, togglePause, fireAbility]);
+  }, [setMode, ready, togglePause, fireAbility, stopAim]);
 
   // which attack types the backpack allows
   const inventoryKey = hud ? hud.inventory.join(',') : '';
@@ -516,7 +552,7 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
               attack={hud.hero.attack} reach={hud.hero.reach} armorPct={hud.hero.armor}
               items={weapons} assets={assets} onEquipTo={onEquipTo} onUnequip={onUnequip} />
             <AttackBar mode={hud.hero.mode} hasMelee={has.melee} hasRanged={has.ranged} hasMagic={has.magic} switching={hud.hero.switching} onMode={setMode}
-              ability={hud.hero.ability?.id} abilityLeft={hud.hero.ability?.left} abilityCooldown={hud.hero.ability?.cooldown} heroDead={hud.hero.dead} onAbility={fireAbility} />
+              ability={hud.hero.ability} heroDead={hud.hero.dead} aiming={aiming} onAbility={fireAbility} onAbilityPreview={previewAbility} />
           </>
         )}
         <Toolbar compact={device === 'phone'} paused={paused} speed={speed} wobble={wobble} muted={muted} music={musicOn} tipsOn={tip < TUTORIAL_DONE}

@@ -5,6 +5,9 @@ import { hasFeature, buildingScale } from '../../config/features.js';
 import { GAME_LOOKS } from '../../config/components.js';
 import { INK, BUILDING_SIZE, TOWN_HALL_SIZE, drawBar } from './draw.js';
 
+// the colour of an ability's area on the map
+export const ABILITY_COLORS = { strike: 0xdc2626, shout: 0x6366f1, reinforcements: 0x2563eb, heal: 0x16a34a, arrowRain: 0x92400e, freeze: 0x0ea5e9, shield: 0x0ea5e9, rally: 0xea580c };
+
 export class Entities {
   sprite(id, create) {
     let s = this.sprites.get(id);
@@ -35,6 +38,9 @@ export class Entities {
       const shake = e.attacking && !this.cfg.anims?.[s.base]?.attack;
       s.img.setAngle((shake ? Math.sin(this.time.now / 60) * 6 : 0) + this.jitter(e.id) * 3);
       this.bar(s.bar, e.x, e.y + bob - size * 0.75 - 6, 36, e.hp / e.maxHp, 0xdc2626);
+      // slowed by a battle shout: pale blue; frozen: ice blue
+      const tint = e.slow ? (e.slow.by >= 1 ? 0x7dd3fc : 0xbfdbfe) : null;
+      if (s.tint !== tint) { if (tint) s.img.setTint(tint); else s.img.clearTint(); s.tint = tint; }
     }
 
     for (const b of w.buildings) {
@@ -87,6 +93,7 @@ export class Entities {
     }
 
     for (const p of w.projectiles) {
+      if (p.wait > 0) continue; // an arrow of a volley not shot yet
       // a projectile drawn in the studio when the shooter picked one (a built-in one not
       // redrawn is the game's own: arrow / spell / stone), else by who shoots
       const drawn = p.look && this.textures.exists(`proj:${p.look}`) ? `proj:${p.look}` : null;
@@ -161,6 +168,8 @@ export class Entities {
       this.townHall.setAlpha(th.hp > 0 ? 1 : 0.35);
     }
 
+    this.drawAbility();
+
     // selection highlight (+ the tower's / Town Hall's range); redrawn only when it changes
     const sel = this.selection;
     const p = sel && (sel.kind === 'townhall' ? th : w.spots.find((s) => s.id === sel.id));
@@ -181,5 +190,39 @@ export class Entities {
         if (this.previewRange) g.fillStyle(0x2563eb, 0.08).fillCircle(p.x, p.y, this.previewRange).lineStyle(2.5, 0x2563eb, 0.7).strokeCircle(p.x, p.y, this.previewRange);
       }
     }
+  }
+
+  /**
+   * The hero's ability on the map, redrawn every frame (a handful of circles):
+   * what lasts (the shield's bubble, rallied buildings' orange rings, ice under
+   * frozen monsters), and while
+   * the ability's button is pointed at (`abilityPreview`), arrow rain is being
+   * aimed (`aiming`) or a moment after a press (`previewUntil`): its area and who it would touch – monsters ringed red, the
+   * hero, buildings and soldiers it helps ringed green (brighter when hurt).
+   */
+  drawAbility() {
+    const w = this.world, h = w.hero;
+    if (!this.abilityG) {
+      this.abilityG = this.add.graphics().setDepth(-350); // areas: on the ground
+      this.abilityRings = this.add.graphics().setDepth(8900); // rings: over the drawings, under the bars
+    }
+    const g = this.abilityG.clear(), top = this.abilityRings.clear();
+    if (!h.dead && h.shielded > w.time) {
+      const k = 0.5 + 0.2 * Math.sin(this.time.now / 150);
+      top.fillStyle(0x38bdf8, 0.12).fillCircle(h.x, h.y - 20, 34).lineStyle(3, 0x0ea5e9, k).strokeCircle(h.x, h.y - 20, 34);
+    }
+    for (const b of [w.townHall, ...w.buildings]) {
+      const r = b === w.townHall ? 56 : 36;
+      if (b.rally && b.rally.until > w.time) top.lineStyle(4, 0xea580c, 0.55 + 0.3 * Math.sin(this.time.now / 120 + b.id)).strokeCircle(b.x, b.y, r);
+    }
+    // frozen monsters stand on ice, slowed ones on a pale blue patch
+    for (const e of w.enemies) if (e.slow && e.slow.until > w.time) g.fillStyle(e.slow.by >= 1 ? 0x38bdf8 : 0x93c5fd, e.slow.by >= 1 ? 0.55 : 0.4).fillEllipse(e.x, e.y + 4, 40, 16);
+    if (!(this.abilityPreview || this.aiming || this.time.now < (this.previewUntil ?? 0)) || h.dead || !w.abilityNow) return;
+    const t = w.abilityTargets(this.aiming ? this.aimAt : null);
+    const color = ABILITY_COLORS[w.abilityNow.id] ?? 0x2563eb;
+    if (t.reach) g.lineStyle(2, INK, 0.35).strokeCircle(h.x, h.y, t.reach); // how far it can be placed
+    if (t.radius) g.fillStyle(color, 0.12).fillCircle(t.x, t.y, t.radius).lineStyle(2.5, color, 0.75).strokeCircle(t.x, t.y, t.radius);
+    for (const e of t.enemies) top.lineStyle(3, 0xdc2626, 0.85).strokeCircle(e.x, e.y - (e.flying ? 18 : 0), e.radius + 8);
+    for (const f of t.friends) top.lineStyle(f.hurt ? 3.5 : 2, 0x16a34a, f.hurt ? 0.95 : 0.55).strokeCircle(f.x, f.y, f.r + 6);
   }
 }
