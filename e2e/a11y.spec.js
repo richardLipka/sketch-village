@@ -171,8 +171,9 @@ test('the keyboard alone: open a component, the dialog keeps focus, equip from t
   await slot.focus();
   await page.keyboard.press('Enter');
   await expect(slot).toContainText(itemName);
-  // and off again (after the 2 s weapon change): Enter on the worn item, then "Take off into the backpack"
-  await page.waitForTimeout(2300);
+  // and off again once the 2 s weapon change (game time – slower on a slow machine) is over:
+  // Enter on the worn item, then "Take off into the backpack"
+  await expect(page.locator('.btn.attack .switching')).toHaveCount(0, { timeout: 20_000 });
   await slot.focus();
   await page.keyboard.press('Enter');
   await page.getByRole('button', { name: /Sundat do batohu/ }).click();

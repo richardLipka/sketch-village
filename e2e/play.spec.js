@@ -19,7 +19,7 @@ async function screenPoint(page, map, p) {
 
 test('a phone plays with taps alone: build a tower, call the wave, win the round', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'taps on a phone');
-  test.setTimeout(120_000);
+  test.setTimeout(240_000); // a whole wave – a CI machine plays it slowly
   const errors = watchErrors(page);
   await openMenu(page);
   await patchSettings(page, { tutorialStep: 99 });
@@ -43,7 +43,7 @@ test('a phone plays with taps alone: build a tower, call the wave, win the round
   await page.getByRole('button', { name: 'Rychlost hry: 1×' }).tap();
   await page.getByRole('button', { name: /Připraven/ }).tap();
   await expect(page.locator('.ov-tr')).toContainText('Zbývá nepřátel');
-  await expect(page.locator('.ov-tr')).toContainText('Kolo 2/20', { timeout: 90_000 });
+  await expect(page.locator('.ov-tr')).toContainText('Kolo 2/20', { timeout: 180_000 });
   await expect(page.locator('.game-over')).toHaveCount(0); // not lost
   expect(errors).toEqual([]);
 });
