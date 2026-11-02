@@ -134,3 +134,21 @@ export function floodErase(data, w, h, sx, sy, tolerance = 25) {
     if (y < h - 1) tryP(p + w);
   }
 }
+
+/**
+ * Livelier colours: push every pixel's colour away from its own grey, so pale
+ * crayon reads as bright paint. amount 0..100 (100 = three times as colourful).
+ * In place, ignores transparent pixels; greys and black stay as they are.
+ */
+export function vividColors(data, amount = 0) {
+  if (amount <= 0) return;
+  const k = 1 + amount / 50;
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] === 0) continue;
+    const grey = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+    for (let c = 0; c < 3; c++) {
+      const v = grey + (data[i + c] - grey) * k;
+      data[i + c] = v < 0 ? 0 : v > 255 ? 255 : v;
+    }
+  }
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { estimatePaperColor, removePaper, floodErase } from './bgRemoval.js';
+import { estimatePaperColor, removePaper, floodErase, vividColors } from './bgRemoval.js';
 
 // Build a w×h RGBA image filled with `bg`, with `fg` pixels where draw(x,y) is true.
 function img(w, h, bg, fg, draw) {
@@ -58,5 +58,18 @@ describe('floodErase', () => {
     expect(alpha(d, 10, 4, 4)).toBe(0);
     expect(alpha(d, 10, 5, 4)).toBe(255);
     expect(alpha(d, 10, 6, 4)).toBe(255);
+  });
+});
+
+describe('vividColors', () => {
+  it('makes colours more colourful, leaves greys and transparent pixels alone', () => {
+    const d = new Uint8ClampedArray([200, 150, 150, 255, 120, 120, 120, 255, 200, 150, 150, 0]);
+    vividColors(d, 50);
+    expect(d[0] - d[1]).toBeGreaterThan(50); // red got redder
+    expect([...d.slice(4, 8)]).toEqual([120, 120, 120, 255]);
+    expect([...d.slice(8, 12)]).toEqual([200, 150, 150, 0]);
+    const same = new Uint8ClampedArray([200, 150, 150, 255]);
+    vividColors(same, 0);
+    expect([...same]).toEqual([200, 150, 150, 255]);
   });
 });

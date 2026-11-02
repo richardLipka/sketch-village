@@ -58,11 +58,12 @@
   },
   "bg": {
     "title": "Remove the paper",
-    "hint": "Use the slider to choose how much paper disappears. Checkerboard = transparent.",
+    "hint": "Use the sliders to choose how much paper disappears and how strong the lines and colours are. Checkerboard = transparent.",
+    "remove": "Remove the paper (switch off to keep the whole picture with its background)",
     "tolerance": "Erase paper",
     "ink": "Darken lines",
+    "vivid": "Livelier colours",
     "inside": "Also erase paper inside the drawing",
-    "skip": "Keep paper",
     "done": "Done"
   },
   "sketch": {

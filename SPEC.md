@@ -1,6 +1,6 @@
 # Sketch Village – Game Specification
 
-Status: **v1.0** – M1–M5 implemented and published (https://richardlipka.github.io/sketch-village/); balance v2 in §16. Remaining work and open questions: §14 "Later" and §15 (Q2).
+Status: **v1.x** – every milestone in §14 implemented and published (https://richardlipka.github.io/sketch-village/); the numbers in §16 are the game's current defaults (`src/config/`). Czech documentation for players and teachers: `public/docs/kreslena-vesnice.pdf` (§18). Remaining work and open questions: §14 "Later", §15 (Q2) and §17.
 
 ---
 
@@ -31,7 +31,7 @@ A short, replayable village-defense game for a group of kids who also produce al
 | Hosting | **GitHub Pages** (repo on github.com/richardLipka) | Static, free, HTTPS (required for camera) |
 
 ### 2.1 Hosting & deployment
-- Source in a public GitHub repo (`richardLipka/sketch-village`, name `TBD`), deployed to `https://richardlipka.github.io/<repo>/`.
+- Source in a public GitHub repo (`richardLipka/sketch-village`), deployed to `https://richardlipka.github.io/sketch-village/`.
 - **Fully static, no backend.** All data lives in the browser (IndexedDB, as one save file) and moves between computers only via the JSON save file (§13a) – downloaded, or loaded from the public library / a `?data=` link (§13c).
 - GitHub Actions workflow (`.github/workflows/deploy.yml`): on every push and pull request → `npm ci` → `npm run lint` → `npm test` → `npm run e2e` (Playwright, Chromium); on push to `main` then → `vite build` → deploy `dist/` to Pages. A failed browser test uploads its trace.
 - Vite `base` = `/<repo>/` so asset URLs work under the sub-path. No client-side routing that needs server rewrites (use in-app state or hash routes).
@@ -56,23 +56,28 @@ From `richardLipka/simple_editable_train`:
 1. **Category registry** instead of hardcoded train slots. Each category declares its own rules:
 
    ```js
-   // src/assets/categories.js
-   export const CATEGORIES = {
-     hero:     { label: 'Hero',     size: 128, aspect: 1, removeBg: true,  frames: 1, multiple: true },
-     enemy:    { label: 'Enemy',    size: 128, aspect: 1, removeBg: true,  frames: 1, multiple: true },
-     house:    { label: 'House',    size: 128, aspect: 1, removeBg: true,  levels: 3 },
-     tower:    { label: 'Tower',    size: 128, aspect: 1, removeBg: true,  levels: 3 },
-     coin:     { label: 'Coin',     size: 64,  aspect: 1, removeBg: true },
-     projectile:{label: 'Arrow',    size: 64,  aspect: 1, removeBg: true },
-     cave:     { label: 'Cave',     size: 128, aspect: 1, removeBg: true },
-     castle:   { label: 'Castle',   size: 128, aspect: 1, removeBg: true,  levels: 3 },
-     townhall: { label: 'Town Hall',size: 160, aspect: 1, removeBg: true },
-     soldier:  { label: 'Soldier',  size: 96,  aspect: 1, removeBg: true },
-     decoration:{label: 'Decoration',size: 128, aspect: 1, removeBg: true, multiple: true },
-     ui:       { label: 'UI icon',  size: 64,  aspect: 1, removeBg: true },
-   };
+   // src/assets/categories.js – size = stored square size in px
+   hero:       { size: 128, removeBg: true, levels: 4, slots: ['default', 'melee', 'ranged', 'magic'], stats: 'hero', anims: ['walk', 'attack'], moves: 'walks' },
+   enemy:      { size: 128, removeBg: true, levels: 1, stats: 'enemy', themed: true, anims: ['walk', 'attack'], legend: true, sounds: true, moves: 'walks' },
+   building:   { size: 128, removeBg: true, levels: 3, stats: 'building', themed: true, anims: ['attack', 'reload'] },
+   soldier:    { size: 96,  removeBg: true, levels: 1, anims: ['walk', 'attack'], moves: 'walks' },
+   weapon, shield, armor: { size: 96, removeBg: true, levels: 1, stats: 'item' },
+   coin:       { size: 64,  removeBg: true, levels: 1, stats: 'coin' },
+   chest:      { size: 64,  removeBg: true, levels: 1 },
+   projectile: { size: 64,  removeBg: true, levels: 1, moves: 'flies' },
+   cave:       { size: 128, removeBg: true, levels: 1 },
+   decoration: { size: 128, removeBg: true, levels: 1 },
+   texture:    { size: 128, removeBg: false, levels: 1 },   // a tiled surface: no paper removal
+   icon:       { size: 64,  removeBg: true, levels: 1, fixed: true },
    ```
-2. **Background removal** (new – source repo has none): paper-white → transparent via threshold + flood fill from the edges, with a tolerance slider and the magic wand for touch-ups.
+   (`levels` = number of pictures; a building's follow its levels, a hero's are named by `slots`.)
+2. **Paper removal** (`BackgroundRemover`, `bgRemoval.js` – the source repo has none): the paper colour is estimated from the picture's border and pixels close to it become transparent – by default only those connected to the border (flood fill), so white eyes and windows stay; *also inside* clears enclosed paper too. The step after cropping has:
+   - **Remove the paper** – a switch, on by default; **off keeps the whole picture with its background** (nothing is erased; the sliders below still work);
+   - **Erase paper** (tolerance 5–80) and **Also erase paper inside the drawing**;
+   - **Darken lines** (0–100: contrast around paper white, so faint pencil reads well);
+   - **Livelier colours** (0–100, `vividColors`: every pixel's colour pushed away from its own grey, up to 3× as colourful; greys and black stay);
+   - a **sharp preview**: it works on the cropped picture at its own resolution (the cropper gives 768 px, at most 1024 px are used), so it is never stretched – before, it was worked at 256 px and stretched to 360 px (more on hi-dpi screens), and looked blurrier than the same picture in the studio or the game. **Done** scales the result once into the category's square, keeping its shape.
+   The magic wand in the drawing pad touches up what is left.
 3. **Non-square / large assets** (the map) – crop aspect and output size taken from the category.
 4. **Asset record**: `{ id, category, name, author, image, level?, createdAt, stats? }` – the author field lets each kid see "their" asset in game.
 5. **Asset library screen**: grid per category, edit / redraw / duplicate / delete, pick which asset is active.
@@ -112,6 +117,7 @@ Enemies can have their own recorded sounds (`categories.js` → `sounds`; `asset
 ```
 [Photo | Upload | Paste | Draw] → Crop (category aspect) → Remove background → Touch-up in SketchPad → Name + author → Save to library
 ```
+- A texture (surface) skips the paper step; every other kind goes through it (the paper can be kept there, §3.2 2).
 - **Paste** (📋, `assets/clipboard.js`, `PasteButton`): a picture copied anywhere (a screenshot, "Copy image" in a browser, another app) goes the same way as a photo or an upload – crop, remove paper, touch up. The 📋 button reads the clipboard where the browser allows it; otherwise (or with no picture in it) a small box waits for **Ctrl+V / ⌘V**, or a long press → Paste on a phone or tablet. In the drawing pad, Ctrl+V works at once (the picture is cropped, then drawn on); the animation editor can paste a whole strip. Text fields keep their normal paste.
 - Escape closes only the top dialog (a paste box or cropper over the component editor leaves the editor open).
 
@@ -166,8 +172,8 @@ Checked by axe-core against **WCAG 2.1 A and AA** on every screen, editor and di
 - **Village centre** – the target of enemies (one point/area in the middle).
 - **10 building spots** at **fixed positions around the village centre**, **close to the path** (on grass, next to yellow), marked by hand in the map editor. The hero builds standing on the nearest path cell. Editor warns if a spot is farther than `maxSpotDistance` from a path.
 - **Buildings do not block paths** – enemies walk past and attack what is in range. A blocking **Wall** building may be added later (would require re-computing the flow field when built/destroyed; the pathfinding module is designed for that).
-- **Several caves per map**, **anywhere on the map** – at the border or in the middle. **Enemies spawn only from caves**; caves are just spawn points. A click with the cave tool puts the cave on the grass **right beside the nearest road** (on the side of the click, touching the road), so it is clear which way its enemies walk; a click with no road within 96 px places nothing and says why, and dragging a cave keeps it next to a road. Validation: every cave is within 48 px of a road that leads to the village, and not closer than 160 px to the Town Hall. Each cave has an id/name (used in the wave config, e.g. `"spawn": "cave-north"`) and is drawn with a `cave` asset (new asset category, kids draw it). Editor validates that every cave connects by path to the village centre.
-- **Cave shapes** (map editor, `maps/CavePanel.jsx`): with the cave tool a panel on the left (searchable) offers *The usual cave* (the first cave drawing), every **cave drawing** (spider cave, goblin camp…) and, in its own section, **decorations used as caves**; new caves get the picked shape and the size slider's size, and with a cave selected a click on a shape changes that cave. A cave is `{ id, x, y, asset?, w?, h? }`. A selected cave has the **8 handles** of a decoration (resize, stretch); a bigger cave is placed further out so its **edge** touches the road, and the check allows its middle `48 px + half of what it is bigger` from the road (`caveReach`). A cave resized or moved away from every road gets a **red frame** and the map says *Cave N is not next to a road*. The game, the library thumbnails, map files (its picture travels with the map) and *Back to the game's own components* (a map uses it) know each cave's shape and size.
+- **Several caves per map**, **anywhere on the map** – at the border or in the middle. **Enemies spawn only from caves**; caves are just spawn points. A click with the cave tool puts the cave on the grass **right beside the nearest road** (on the side of the click, touching the road), so it is clear which way its enemies walk; a click with no road within 96 px places nothing and says why, and dragging a cave keeps it next to a road. Validation: a road that leads to the village is within 16 px of every cave's frame (`caveRoad`; for a usual 64 px cave that is 48 px from its middle), and no cave is closer than 160 px to the Town Hall. Each cave has an id/name (used in the wave config, e.g. `"spawn": "cave-north"`) and is drawn with a `cave` asset (new asset category, kids draw it). Editor validates that every cave connects by path to the village centre.
+- **Cave shapes** (map editor, `maps/CavePanel.jsx`): with the cave tool a panel on the left (searchable) offers *The usual cave* (the first cave drawing), every **cave drawing** (spider cave, goblin camp…) and, in its own section, **decorations used as caves**; new caves get the picked shape and the size slider's size, and with a cave selected a click on a shape changes that cave. A cave is `{ id, x, y, asset?, w?, h? }`. A selected cave has the **8 handles** of a decoration (resize, stretch); a bigger cave is placed further out so its **edge** touches the road, and the check looks for a road within 16 px of its frame (`caveRoad`), so a big or stretched cave beside a road always counts. A cave resized or moved away from every road gets a **red frame** and the map says *Cave N is not next to a road*. The game, the library thumbnails, map files (its picture travels with the map) and *Back to the game's own components* (a map uses it) know each cave's shape and size.
 
 ### 5.1 Map Painter & Map Editor (in app)
 One screen with two modes:
@@ -210,20 +216,21 @@ Each hero has its own stats, set in the **Hero editor** (Asset Studio, next to t
 - Each point maps to concrete values via a config table:
 
 ```js
-// config/heroStats.js
-export const HERO_POINTS = 10;
-export const HERO_STAT_TABLE = {
-  melee:  { base: { damage: 10, range: 40,  cooldown: 0.8 }, perPoint: { damage: 4 } },
-  ranged: { base: { damage: 4,  range: 200, cooldown: 1.6 }, perPoint: { damage: 2, cooldown: -0.1 } },
-  armor:  { base: 0, perPoint: 1 },
-  speed:  { base: 90, perPoint: 12 },
+// config/heroStats.js – also editable in the Rules editor (rules.hero)
+export const HERO_RULES = {
+  points: 12, statMax: 5, hp: 100,
+  meleeDamage: 10, meleePerPoint: 4, meleeRange: 40, meleeCooldown: 0.8,
+  rangedDamage: 5, rangedPerPoint: 2, rangedRange: 200, rangedCooldown: 1.6, rangedCooldownPerPoint: 0.1, rangedMinCooldown: 0.6,
+  armorPerPoint: 0.05, armorMax: 0.6,
+  speed: 90, speedPerPoint: 12,
+  magicDamage: 8, magicPerPoint: 3, magicRange: 160, magicCooldown: 1.8,
 };
-// stored on the hero: { assetId: 'a1', points: { melee: 3, ranged: 3, armor: 2, speed: 2 } }
+// stored on the hero: { points: { melee: 3, ranged: 3, armor: 2, speed: 2, magic: 2 }, ability: { id, power, … } }
 ```
 
 ### 6.2 Hero upgrades (in game)
 - Bought **for coins in the Town Hall** (click Town Hall when the hero is near → upgrade panel).
-- Upgradeable: **melee power, ranged power (incl. arrow cooldown), armor, speed**. Each upgrade = +1 point in that stat; prices 15 / 30 / 50 (Rules editor). Upgrades are instant.
+- Upgradeable: **melee power, ranged power (incl. arrow cooldown), armor, speed, magic** (and the special ability, §6.4). Each upgrade = +1 point in that stat; prices 15 / 30 / 50 (Rules editor). Upgrades are instant.
 - Upgrades last for the current game only; **nothing carries over** to the next game or map.
 - HP is the same for every hero (base HP, not a distributed stat); the whole hero table (points, per-point values, HP, caps) is editable in the Rules editor (`rules.hero`).
 
@@ -612,6 +619,7 @@ e2e/                       Playwright browser tests (§15a)
 5g. **Lives & backpack** ✅ – every lost life sends the hero away for 10 s and back to the Town Hall; losing all 5 loses the game (the end screen says why). The bot now walks back to heal below 40 % HP and still wins every seed without losing a life; the same bot without healing loses every seed (new test). Small retune: dragon 280 HP / speed 36, rounds 14–15 spawns. **Backpack** rebuilt: three slots (right hand, left hand, armor) with the hero's attack / reach / armor shown live, items dragged onto slots with mouse or finger (or tap item → tap slot), wrong slots refused, worn items dragged back to take them off.
 5h. **Summoners, catapult, themes, terrain** ✅ – enemies can **call minions** (any enemies, several kinds mixed; how many, how often, at most alive, more on death; minions never summon): new built-ins **necromancer** → skeletons, **spider queen** → spiderlings (more when she dies), plus skeleton and spiderling. New building feature **lobs** and built-in **catapult** (rounds 6 / 10 / 15): area damage to walking enemies. **Themes** (§7.2) with an editor; maps have a theme. **Terrain textures** in the map editor with preview (§5.1). Waves: spider queen in rounds 8 and 19, necromancers in 12 and 17; necromancer tuned to 90 HP / every 8 s; the bot builds a catapult – all seeds won, waves 40–60 s. Architecture: building features run from a behaviour table, one spawn path for caves and summoners, ground-target projectiles, built-ins seeded by id.
 9. **Cave shapes, wave strength in %, ability icons, the new class pack** ✅ – every cave its own shape (cave drawings or decorations), resizable, kept beside a road (§5); groups with attack / health % and a plan growing a few % every round, one decimal place (§10); the eight abilities' icons drawable (§4b); the class pack replaced by the class's newest file with 11 maps, 7 heroes, 2 caves and 16 decorations; the library files made again with its drawings.
+10. **Picture upload, documentation** ✅ – the paper step can keep the paper completely (a switch instead of the old *Keep paper* button, which also skipped darkening), a **Livelier colours** slider, and a preview as sharp as the picture the game gets (§3.2 2); SPEC and README brought up to date with the code (§16 = the current defaults); Czech PDF documentation in two parts – a short guide and the full documentation (§18).
 8. **Saved games, abilities, collection, music** ✅ – a game is kept (Save and leave, after every round, when the window closes) and continued from the Play screen, outside the save file (§11b); the hero's special ability – eight to pick from in the hero editor, each with its numbers, upgraded in the Town Hall shop, button or E (§6.4); the chronicle's collection "you've met 9 of 14" (§9a); 3× speed; a range circle while a building option is pointed at (§7); optional quiet background music (🎵); back to the game's own components with a reviewed, ticked list (§13d). The class pack's heroes got their abilities, the library files were made again with them. Then: arrow rain aimed at a place with the hero's own arrows, every ability showing its area and who it touches before it is used and while it lasts (§6.4); the map list's buttons on one line with a goblin 👺 for the waves.
 7. **Wave strength (DSP), generated waves, the robot's limits** ✅ – every monster has a DSP (danger strength points, a goblin = 10) whose multipliers – ranged, flying, area damage, speed, toughness, attack, minions – were measured with the robot and fitted to every built-in monster (±11 %); waves can be generated from chosen monsters, stronger every round, and all waves of a map made stronger or weaker by a share; the robot finds for every wave how much stronger it may get before it is consistently defeated, in a table with the waves' DSP (§10b). The built-in plan now gets stronger every round (boss rounds with a band, the finale the strongest). Architecture: the World can be copied (`clone()`, the random generator's state is data), the balance robot is `startGame` / `stepGame` / `playGame` with its notes as plain data.
 6. **Accessibility, phone play, robustness, texts that match** ✅ – WCAG 2.1 AA (axe-core: no findings on any screen, PC and phone) and the whole game playable with the keyboard alone (§4c); the phone plays a round with taps alone (§11); every export has its import, one helper for the notes (§13a); damaged records are repaired and a broken screen shows a card instead of a blank page (§13a). **Texts that match the monsters**: a browser that stored the built-ins before the class renamed them (the spider rider still called *Wolf* in English, the grey wolves' story under the spider rider's picture, the old dragon's English story under the goblin king) gets today's name and legend in every language that still has an earlier default – the kids' own texts stay (`config/oldDefaults.js`, made from the git history by `npm run old-defaults`; a test checks that the hints match the numbers: fliers fly, shooters shoot from afar, armour is armour). Dead exports removed; the library index script shares the game's format constants. Unit tests run on Vitest 5 (the critical / high advisories of the old test runner are gone; the shipped game has no known vulnerable dependency).
@@ -633,7 +641,7 @@ e2e/                       Playwright browser tests (§15a)
 5k. **Data safety, installable app, notch, browser tests** ✅ – the browser is asked to keep the data, a backup reminder on the menu after 2 days of unsaved changes, a "Backup & keeping drawings safe" card (§13b); installable app that plays offline, updates wait for a reload outside the game (§2.2); iPhone notch / home bar safe areas (§4a); Playwright browser tests and ESLint run in CI before every deploy (§15a).
 5j. **Import review, shop overlay, phones** ✅ – import merges by name and shows what changed (update / keep / all), settings travel with the file (incl. language); the patrol distance is filled into older castles so it shows in the editor; "calls minions" is a checkbox (the choice is kept when switched off); the Town Hall shop is an overlay with backpack-sized tiles; automatic phone / tablet / PC layout (§4a); chronicle pictures at editor size.
 5i. **Animations, chronicle, patrols** ✅ – optional **animations** for heroes, enemies, soldiers (walk, attack) and buildings (attack, reload): a photographed strip of 4–12 frames is cut automatically (frame count guessed from the paper gaps), frames are lined up over the previous one (onion skin, drag or arrows), speed and preview in the component editor; the game plays them by what each thing does (§3.2a). **Chronicle** with legends and hints for every monster, in the menu and in the game, plus a "new monster" note (§12). **Soldiers patrol** only up to their castle's patrol distance and come back to their starting point (§7). World events for animations: `buildingAttack`, `soldierAttack`. Balance re-checked (round 16 retimed): all seeds won, waves 40–60 s.
-6. **Later** – rotating decorations, a "+" mark on reused level drawings, a round-summary card, per-map export, playtests on a real tablet and with kids, animated sprites (frame sheets photographed from a printed template), longbowmen soldiers that can hit flying enemies, walls.
+6. **Later** – rotating decorations, a "+" mark on reused level drawings, playtests on a real tablet and with kids, longbowmen soldiers that can hit flying enemies, walls.
 
 ## 15a. Browser tests
 
@@ -642,7 +650,7 @@ e2e/                       Playwright browser tests (§15a)
 - every menu screen opens without errors; a game starts, runs and pauses;
 - import: a new element is added, one with the same name and a change is reviewed and kept;
 - backup reminder: appears for 3-day-old changes, "Later" hides it across a reload, "Download backup" downloads a valid save file and clears it;
-- studio: an animation built from frame panels (draw, copy last, trace over the faded previous frame, paste → crop, only the selected frame shows tools, move, copy, remove, kept after saving); a picture from the clipboard goes to cropping; Ctrl+V on the drawing pad; the paste box says when there is no picture; a sound recorded with Chrome's fake microphone is trimmed, kept after saving, and a game with it runs; ▶ shows a playhead and "hear it as in the game" plays the mini wave and reports what was heard; Escape closes only the top dialog;
+- studio: an animation built from frame panels (draw, copy last, trace over the faded previous frame, paste → crop, only the selected frame shows tools, move, copy, remove, kept after saving); a picture from the clipboard goes to cropping; Ctrl+V on the drawing pad; the paste box says when there is no picture; a sound recorded with Chrome's fake microphone is trimmed, kept after saving, and a game with it runs; ▶ shows a playhead and "hear it as in the game" plays the mini wave and reports what was heard; Escape closes only the top dialog; the paper step: the preview has more pixels than it is shown at, the paper goes, switched off it stays (the tolerance slider is off), Livelier colours make the red redder, Done closes it;
 - smoke: every studio category and its editor, a new enemy without a picture, themes, map painter modes, a new map, waves, chronicle filters, odd numbers in the rules, a game clicked all over with every shortcut – no error or warning (PC and phone);
 - map editor: the decoration panel is left of the map and searchable; one click places exactly one decoration; a corner resizes keeping the shape, a side stretches; Delete removes the selected one; a polygon fills with the chosen picture inside it; phone: the game map covers the whole screen and the controls lie over it;
 - features: list search (studio, a new description, chronicle); phone lists one per line and a tap opens the item; the icons are a fixed set and a drawn heart shows in the game; the tower has the projectile choice and area damage, the castle a soldier kind per level that is saved;
@@ -681,7 +689,7 @@ Locally `PW_CHANNEL=chrome npm run e2e` uses the installed Chrome (no browser do
 | Q10 | Ranged ammo limited? | Unlimited arrows, cooldown, upgradeable |
 | Q11 | Per-hero stats? | Yes, editable in game |
 | Q12 | Upgrade levels | 3 levels (build + 2 upgrades), drawing per level, data-driven |
-| Q13 | Building types | Town Hall, House, Tower, Castle (soldiers); Wall later |
+| Q13 | Building types | Town Hall, House, Tower, Castle (soldiers), Catapult; any new kind made from features (§7.1); Wall later |
 | Q14 | Coin pickup | Hero must pick up; despawn after 30 s |
 | Q15 | Workers | Statistic from living houses |
 | Q16 | What enemies attack | Walk to centre, attack everything in range on the way |
@@ -715,7 +723,7 @@ Locally `PW_CHANNEL=chrome npm run e2e` uses the installed Chrome (no browser do
 | Q44 | Building during waves | Always allowed |
 | Q45 | Hero upgrades | Instant |
 | Q46 | Default content | Simple geometry (squares, circles…) until kids' drawings replace it |
-| Q47 | Animation | Single drawing + optional wobble now; animated sprites later |
+| Q47 | Animation | Single drawing + optional wobble, and optional walking / attack animations (§3.2a) |
 
 ## 17. Architecture notes and open issues
 
@@ -736,7 +744,7 @@ The open issues of 5u and what became of them (5v):
 
 Still open: a change made in the last moment before the tab is closed can be lost while a previous write is still running (IndexedDB can't be forced to finish on close); the non-current language could be loaded on demand.
 
-Before a wider release (checked in 6): the browser tests run in Chromium only – the game hasn't been tried on a real iPhone (Safari: no fullscreen API, sounds need a tap first, storage may be cleared after 7 days without a visit) or a low-end Android phone; screen readers were checked by axe-core and the keyboard tests, not by a person with NVDA / VoiceOver; the handwriting fonts come from Google Fonts (self-hosting them would avoid sending visitors' addresses to Google and help the first offline start); moderate advisories remain in build-time tools (ESLint, the PWA plugin's workbox-build) with no fixed version yet; a game in progress can't be saved and resumed; every change rewrites the whole save record, which gets slow on phones once a class stores tens of MB of drawings; there is no error reporting (privacy-friendly, but bugs on kids' devices stay unseen).
+Before a wider release (checked in 6): the browser tests run in Chromium only – the game hasn't been tried on a real iPhone (Safari: no fullscreen API, sounds need a tap first, storage may be cleared after 7 days without a visit) or a low-end Android phone; screen readers were checked by axe-core and the keyboard tests, not by a person with NVDA / VoiceOver; the handwriting fonts come from Google Fonts (self-hosting them would avoid sending visitors' addresses to Google and help the first offline start); moderate advisories remain in build-time tools (ESLint, the PWA plugin's workbox-build) with no fixed version yet; every change rewrites the whole save record, which gets slow on phones once a class stores tens of MB of drawings; there is no error reporting (privacy-friendly, but bugs on kids' devices stay unseen).
 
 ## 16. Balance draft (v1 – starting values, tune by playtesting)
 
@@ -755,14 +763,16 @@ All values become the **defaults** in `src/config/` and are editable in the in-g
 | Coin despawn | **30 s** (blinks last 5 s) | |
 | Worker speed-up | `buildTime = base / (1 + 0.15 × workers)` | 6 workers → 1.9× faster, 15 → 3.25× |
 | Building regen | 1 % max HP / s, starts 5 s after last hit | |
-| Enemy scaling | HP × `(1 + 0.04 × (round − 1))` | round 20 = ×1.76 |
+| Enemy scaling | HP × `(1 + 0.05 × (round − 1))` | round 20 = ×1.95 |
 | Hero respawn delay | 10 s (every lost life) | |
 | Hit invulnerability | 1.5 s after losing a life | |
 | Build/interaction radius | 90 px from spot / Town Hall | |
+| Weapon change | 2 s (no attacks meanwhile) | |
+| Chest | 2 % of monsters (bosses always), 60 s on the ground; 15 coins when the hero has every weapon | |
 
 ### 16.2 Hero
 
-Base HP **100**, **10 skill points**, **0–5 points per stat**.
+Base HP **100**, **12 skill points**, **0–5 points per stat** (`config/heroStats.js`).
 
 | Stat | Base (0 pts) | + per point | At 3 pts | At 5 pts |
 |---|---|---|---|---|
@@ -770,54 +780,63 @@ Base HP **100**, **10 skill points**, **0–5 points per stat**.
 | Ranged | dmg 5, range 200, cd 1.6 | +2 dmg, −0.1 cd | 11 dmg / 1.3 s → 8.5 DPS | 15 dmg / 1.1 s → 13.6 DPS |
 | Armor | 0 % | +5 % damage reduction | 15 % | 25 % |
 | Speed | 90 | +12 | 126 | 150 |
+| Magic (with a magic weapon) | dmg 8, range 160, cd 1.8 | +3 dmg | 17 dmg | 23 dmg |
 
 Armor cap 60 %. Ranged cooldown floor 0.6 s. Melee is ~3× stronger than ranged per second but risky (enemies hit back); ranged is the only answer to flying enemies.
 
-**Town Hall hero upgrades** – each level = +1 point in that stat (may exceed 5). Level *n* needs Town Hall level *n*.
+**Town Hall hero upgrades** – each level = +1 point in that stat (may exceed 5). Level *n* needs Town Hall level *n* and its unlock round (§10: bow 4 / 13 / 19, sword 6 / 15 / 19, armor 8 / 17 / 20, magic 9 / 16 / 20, speed 10 / 18 / 20).
 
 | Upgrade level | 1 | 2 | 3 |
 |---|---|---|---|
-| Cost (each of melee / ranged / armor / speed) | 15 | 30 | 50 |
+| Cost (each of melee / ranged / armor / speed / magic) | 15 | 30 | 50 |
 
 ### 16.3 Buildings
 
 Cost = coins to build (L1) or upgrade to that level. Rebuild after destruction = L1 cost. Time = base build time before worker speed-up. Selling returns 70 % of all coins spent on the building. All values below are defaults; the Rules editor changes them.
 
-v2 (after the balance bot): HP ×5 (buildings) / ×2 (Town Hall), tower and soldier damage ×1.5, round reward base 5 → 10. With these, an average build order wins all 20 rounds on a 4-cave test map and loses ~5 buildings in total, none in the first 4 rounds (`npm test` checks this).
+v2 (after the balance bot): HP ×5 (buildings) / ×2 (Town Hall), tower and soldier damage ×1.5, round reward base 5 → 10; data version 4: every building's HP −20 % (the tables show today's numbers). `balance.test.js` checks that the robot wins every difficulty as described in §11a. **Round** = the first round in which that level can be built (`round` of the level).
 
-**Town Hall** (pre-built, centre)
+**Town Hall** (pre-built, centre; shoots like a weak tower and heals a hero standing within 80 px by 8 HP/s)
 
-| Level | Upgrade cost | Time | HP | Unlocks |
-|---|---|---|---|---|
-| 1 | – | – | 600 | buildings L1, hero upgrades L1 |
-| 2 | 60 | 20 | 900 | buildings L2, hero upgrades L2 |
-| 3 | 100 | 30 | 1200 | buildings L3, hero upgrades L3 |
+| Level | Upgrade cost | Time | HP | Round | Damage / range / cd | Unlocks |
+|---|---|---|---|---|---|---|
+| 1 | – | – | 480 | 1 | 5 / 170 / 1.2 | buildings L1, hero upgrades L1 |
+| 2 | 60 | 20 | 720 | 3 | 8 / 190 / 1.1 | buildings L2, hero upgrades L2 |
+| 3 | 100 | 30 | 960 | 11 | 12 / 210 / 1.0 | buildings L3, hero upgrades L3 |
 
 **House**
 
-| Level | Cost | Time | HP | Workers |
-|---|---|---|---|---|
-| 1 | 20 | 10 | 400 | 1 |
-| 2 | 30 | 12 | 600 | 2 |
-| 3 | 45 | 15 | 800 | 3 |
+| Level | Cost | Time | HP | Round | Workers |
+|---|---|---|---|---|---|
+| 1 | 20 | 10 | 320 | 1 | 1 |
+| 2 | 30 | 12 | 480 | 7 | 2 |
+| 3 | 45 | 15 | 640 | 14 | 3 |
 
 **Tower** – shoots the enemy in range nearest to the centre; hits ground and flying.
 
-| Level | Cost | Time | HP | Damage | Range | Cooldown | DPS |
-|---|---|---|---|---|---|---|---|
-| 1 | 30 | 12 | 500 | 9 | 180 | 1.0 | 9 |
-| 2 | 45 | 14 | 750 | 15 | 200 | 0.9 | 17 |
-| 3 | 70 | 18 | 1000 | 22 | 220 | 0.75 | 29 |
+| Level | Cost | Time | HP | Round | Damage | Range | Cooldown | DPS |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 30 | 12 | 400 | 1 | 9 | 180 | 1.0 | 9 |
+| 2 | 45 | 14 | 600 | 5 | 15 | 200 | 0.9 | 17 |
+| 3 | 70 | 18 | 800 | 12 | 22 | 220 | 0.75 | 29 |
 
 **Castle** – max 3 soldiers, melee only (can't hit flying).
 
-| Level | Cost | Time | HP | Soldier HP | Soldier dmg / cd | Soldier respawn |
-|---|---|---|---|---|---|---|
-| 1 | 40 | 15 | 750 | 30 | 6 / 1.0 | 12 s |
-| 2 | 60 | 18 | 1100 | 45 | 9 / 1.0 | 10 s |
-| 3 | 90 | 22 | 1500 | 60 | 12 / 1.0 | 8 s |
+| Level | Cost | Time | HP | Round | Soldier HP | Soldier dmg / cd | Soldier respawn | Patrol |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 40 | 15 | 600 | 2 | 30 | 6 / 1.0 | 12 s | 160 |
+| 2 | 60 | 18 | 880 | 9 | 45 | 9 / 1.0 | 10 s | 180 |
+| 3 | 90 | 22 | 1200 | 16 | 60 | 12 / 1.0 | 8 s | 200 |
 
-Soldier speed 80, range 30, aggro radius 150 around castle (300 against enemies attacking that castle or its soldiers).
+**Catapult** – a slow stone at the biggest group of walking enemies in range; hurts every walking enemy where it lands (not flying ones, not closer than 50 px).
+
+| Level | Cost | Time | HP | Round | Damage | Range | Cooldown | Splash |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 45 | 16 | 440 | 6 | 14 | 230 | 3.2 | 45 |
+| 2 | 65 | 18 | 640 | 10 | 22 | 250 | 3.0 | 50 |
+| 3 | 95 | 22 | 880 | 15 | 32 | 270 | 2.8 | 55 |
+
+Soldier speed 80, range 30, aggro radius 160 around the castle; they never follow an enemy beyond the level's patrol distance.
 
 Full village (10 spots maxed + Town Hall + all hero upgrades) costs ≈ **2 000 coins**; a good run earns ≈ **1 500**, so players must choose – that's the strategy.
 
@@ -874,7 +893,17 @@ The names, numbers, pictures (class pack, §2.1) and legends follow the class’
 Total ≈ 450 enemies → ≈ 850 coins in drops if all are picked up, + 310 round rewards + 40 start + early bonuses (up to ~190) ≈ **1 400–1 500 coins**.
 
 ### 16.6 Sanity checks (to verify in first playtest)
-- Round 1 must be winnable by the hero alone (6 goblins × 25 HP vs ~27 melee DPS → yes).
+- Round 1 must be winnable by the hero alone (8 goblins × 25 HP vs ~27 melee DPS → yes).
 - Round 8 (first bats): the player needs ≥ 1 tower or a ranged-capable hero – show a tip in the next-wave preview ("Flying! Only arrows hit them").
-- Round 10 troll (400 HP × 1.36 = 544): needs ~2 L2 towers + hero, or the Town Hall takes ~25 % damage.
+- Round 10 troll (400 HP × 1.45 = 580): needs ~2 L2 towers + hero, or the Town Hall takes ~25 % damage.
 - If kids lose before round 6 too often: start coins 60, enemy scaling 0.03.
+
+## 18. Documentation (Czech, PDF)
+
+`public/docs/kreslena-vesnice.pdf` is the documentation for players and teachers, in Czech, in two parts (the website serves it: https://richardlipka.github.io/sketch-village/docs/kreslena-vesnice.pdf):
+
+1. **Stručný průvodce** (short guide) – what the game is, how to play it (mouse, keyboard, phone), and step by step: a new monster, a new building, uploading a picture (crop, the paper step), downloading, sharing and loading maps, monsters, heroes and buildings.
+2. **Úplná dokumentace** (full documentation) – every screen and editor, every number (hero, buildings, monsters, weapons, abilities, rules, difficulty), waves (rounds, groups, % strength and growth, all waves ±%, generating), the round summary and the robot's statistics, the DSP formula with its measured constants and a worked example, the save file and the library.
+
+Its source is `docs/src/kreslena-vesnice.html` with screenshots of the running game (`docs/src/img/`, taken by `npm run docs-shots`); `npm run docs` prints it to PDF in Chrome (`scripts/make-docs.mjs`). Its numbers are §16's.
+

@@ -4,10 +4,12 @@ A small village-defense strategy game for kids. Every sprite (hero, enemies, hou
 
 - Play: https://richardlipka.github.io/sketch-village/
 - Full design: [SPEC.md](SPEC.md)
+- Czech documentation (PDF, a short guide and the full documentation): [public/docs/kreslena-vesnice.pdf](public/docs/kreslena-vesnice.pdf), also at https://richardlipka.github.io/sketch-village/docs/kreslena-vesnice.pdf
 - Asset pipeline origin: `CameraCapture`, `CargoImageEditor`, `defaultLooks.js` (the game's own pictures of the arrow, bolt, stone and surfaces), `SketchPad`, `imageEncoding` from [richardLipka/simple_editable_train](https://github.com/richardLipka/simple_editable_train)
 
 ## Playing
 
+- **Pictures**: photo, upload, paste or draw → crop → the paper step: **Remove the paper** (switch it off to keep the whole picture with its background), how much paper to erase, **Darken lines** and **Livelier colours**. The preview is as sharp as the picture the game gets.
 - **Save and leave**: ending a game offers to keep it; it is also kept after every round. **Play → Continue** goes on where it was left. The kept game is not part of the downloaded data.
 - **Special ability**: every hero has one of eight (mighty strike, battle shout, reinforcements, healing, arrow rain, freeze, shield, rally), picked with its numbers in the hero editor, used with the button next to the attacks or **E** (arrow rain is aimed at a place on the map), upgraded in the Town Hall shop. Pointing at the button shows its area and who it will hit or help.
 - **Caves**: in the map editor every cave can look different – a cave drawing or any decoration – and be resized by its corners; one that is no longer beside a road gets a red frame.
@@ -43,6 +45,11 @@ npm run lint      # ESLint
 npm run e2e       # browser tests (Playwright): builds, serves and plays the game as a PC and a phone
 ```
 
+```bash
+npm run docs-shots   # screenshots of the running game for the documentation (needs npm run dev)
+npm run docs         # docs/src/kreslena-vesnice.html → public/docs/kreslena-vesnice.pdf
+```
+
 The browser tests need a browser: `npx playwright install chromium` once, or use the installed Chrome with `PW_CHANNEL=chrome npm run e2e`. `npm run icons` re-renders the app icons from `public/icons/icon.svg`.
 
 Camera capture needs `https` or `localhost`. Every push runs lint, unit and browser tests; a push to `main` then publishes to GitHub Pages (`.github/workflows/deploy.yml`).
@@ -59,7 +66,7 @@ All data lives in each browser. To give every computer the same drawings, maps a
 2. Rename the file to `default-data.json` and replace [`public/default-data.json`](public/default-data.json) in this repository, then push.
 3. A new computer loads it on its first start; others press **Save & load → Load class pack** (merges, deletes nothing).
 
-The shipped file holds the class's drawings: the built-in buildings, monsters and coins as the kids drew them, the goblin pack, skeleton warrior and roc, four heroes, the castle's soldiers, a chest and a few decorations. It has no maps, so a fresh browser also gets the built-in sample map.
+The shipped file holds the class's drawings and maps: the built-in buildings, monsters and coins as the kids drew them, the goblin pack, skeleton warrior and roc, seven heroes with their abilities, the castle's soldiers, a chest, two caves, 16 decorations, the drawn icons and 11 maps (the three library maps among them). A fresh browser starts with these maps instead of the sample map. Before committing a new one, remove personal settings (tutorial progress, met monsters, backup dates) – the shipped file's settings hold only the data version.
 
 ## Sharing one map or one component
 

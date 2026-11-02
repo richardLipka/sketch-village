@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<title>Kreslená vesnice – dokumentace</title>
+<!-- Source of docs/kreslena-vesnice.pdf (SPEC §18): npm run docs prints it to PDF in Chrome.
+     The numbers are the game's defaults (SPEC §16, src/config/). Pictures: npm run docs-shots. -->
+<style>
+  @page { size: A4; margin: 16mm 15mm 18mm 15mm; }
+  :root { --ink: #1e3a8a; --muted: #3e5599; --line: #c7d2fe; --hl: #fef3c7; --soft: #eef2ff; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Calibri, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1f2937; margin: 0; }
+  h1, h2, h3, h4 { color: var(--ink); font-family: "Segoe UI Semibold", "Segoe UI", Arial, sans-serif; line-height: 1.2; }
+  h1 { font-size: 22pt; margin: 0 0 6mm; border-bottom: 3px solid var(--ink); padding-bottom: 2mm; }
+  h2 { font-size: 15pt; margin: 7mm 0 2.5mm; border-bottom: 1.5px solid var(--line); padding-bottom: 1mm; }
+  h3 { font-size: 12pt; margin: 5mm 0 2mm; }
+  h4 { font-size: 10.5pt; margin: 3.5mm 0 1mm; }
+  p { margin: 1.5mm 0 2.5mm; }
+  ul, ol { margin: 1mm 0 2.5mm; padding-left: 6mm; }
+  li { margin: 0.6mm 0; }
+  .part { page-break-before: always; }
+  .part-title { font-size: 28pt; color: var(--ink); margin: 40mm 0 4mm; border: 0; }
+  .part-sub { font-size: 13pt; color: var(--muted); margin-bottom: 10mm; }
+  h2 { page-break-after: avoid; } h3, h4 { page-break-after: avoid; }
+  figure { margin: 3mm 0 4mm; text-align: center; page-break-inside: avoid; }
+  figure img { max-width: 100%; max-height: 105mm; border: 1px solid #94a3b8; border-radius: 2mm; }
+  figure.small img { max-height: 75mm; }
+  figcaption { font-size: 9pt; color: var(--muted); margin-top: 1mm; }
+  table { border-collapse: collapse; width: 100%; margin: 2mm 0 4mm; font-size: 9.3pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #cbd5e1; padding: 1mm 1.6mm; text-align: left; vertical-align: top; }
+  th { background: var(--soft); color: var(--ink); }
+  td.n, th.n { text-align: right; white-space: nowrap; }
+  .box { background: var(--hl); border-left: 4px solid #f59e0b; padding: 2mm 3mm; margin: 3mm 0; page-break-inside: avoid; }
+  .note { background: var(--soft); border-left: 4px solid var(--ink); padding: 2mm 3mm; margin: 3mm 0; page-break-inside: avoid; }
+  .formula { font-family: Consolas, "Courier New", monospace; background: #f8fafc; border: 1px solid #e2e8f0; padding: 2mm 3mm; margin: 2mm 0 3mm; white-space: pre-wrap; font-size: 9.3pt; page-break-inside: avoid; }
+  code, kbd { font-family: Consolas, "Courier New", monospace; font-size: 9.3pt; }
+  kbd { border: 1px solid #94a3b8; border-bottom-width: 2px; border-radius: 1mm; padding: 0 1.2mm; background: #fff; }
+  .steps li { margin: 1.2mm 0; }
+  .cover { text-align: center; padding-top: 45mm; }
+  .cover h1 { border: 0; font-size: 34pt; margin-bottom: 3mm; }
+  .cover .sub { font-size: 15pt; color: var(--muted); }
+  .cover img { width: 150mm; margin: 12mm 0; border: 1px solid #94a3b8; border-radius: 2mm; }
+  .toc { columns: 2; column-gap: 10mm; font-size: 10pt; }
+  .toc b { color: var(--ink); }
+  .two { display: flex; gap: 5mm; } .two > * { flex: 1; }
+  .muted { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- ============================ TITULNÍ STRANA ============================ -->
+<section class="cover">
+  <h1>Kreslená vesnice</h1>
+  <div class="sub">Obrana vesnice, kterou si děti samy nakreslí</div>
+  <img src="img/menu.jpg" alt="">
+  <p><b>Dokumentace</b><br>Část 1 – Stručný průvodce · Část 2 – Úplná dokumentace</p>
+  <p class="muted">Hra: https://richardlipka.github.io/sketch-village/<br>Stav k 2. 11. 2026</p>
+</section>
+
+<section class="part" style="page-break-before: always">
+  <h2>Obsah</h2>
+  <div class="toc">
+    <p><b>Část 1 – Stručný průvodce</b></p>
+    <ol>
+      <li>Co je Kreslená vesnice</li>
+      <li>Hlavní nabídka</li>
+      <li>Jak se hraje</li>
+      <li>Jak nahrát obrázek</li>
+      <li>Jak vytvořit nového nepřítele</li>
+      <li>Jak vytvořit novou budovu</li>
+      <li>Nová mapa ve zkratce</li>
+      <li>Stahování, sdílení a nahrávání</li>
+    </ol>
+    <p><b>Část 2 – Úplná dokumentace</b></p>
+    <ol>
+      <li>Obrazovky hry</li>
+      <li>Ateliér a součásti hry</li>
+      <li>Obrázky: fotka, oříznutí, papír</li>
+      <li>Hrdina</li>
+      <li>Zbraně, štíty a zbroj</li>
+      <li>Zvláštní schopnosti</li>
+      <li>Budovy</li>
+      <li>Nepřátelé</li>
+      <li>Mince a odměny</li>
+      <li>Vlny</li>
+      <li>Síla nepřátel ve vlnách v procentech</li>
+      <li>DSP – body nebezpečnosti</li>
+      <li>Statistiky a robot</li>
+      <li>Obtížnost</li>
+      <li>Mapy</li>
+      <li>Pravidla hry</li>
+      <li>Ukládání, soubory, knihovna</li>
+      <li>Zařízení, přístupnost, instalace</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ============================ ČÁST 1 ============================ -->
+<section class="part">
+  <h1 class="part-title">Část 1 – Stručný průvodce</h1>
+  <div class="part-sub">Co hra umí, jak se ovládá a jak do ní přidat vlastní obrázky, nepřátele, budovy a mapy.</div>
+
+  <h2>1. Co je Kreslená vesnice</h2>
+  <p>Kreslená vesnice je krátká strategická hra typu „obrana věžemi“ pro děti od 7 do 11 let. Hráč ovládá <b>hrdinu</b>, staví <b>budovy</b> kolem <b>radnice</b> a brání vesnici před <b>vlnami nepřátel</b>, kteří vylézají z jeskyní a jdou po cestách k radnici. Hra má 20 kol (vln); vyhraje, kdo všechna přežije.</p>
+  <p>Zvláštní na ní je, že <b>všechno se dá nakreslit</b>: hrdinové, nepřátelé, budovy, mince, šípy, jeskyně, ozdoby, povrchy i ikony. Děti kreslí na papír, vyfotí ho (nebo nahrají soubor, vloží obrázek ze schránky, případně nakreslí přímo ve hře) a hra obrázek použije. Dokud něco nakreslené není, hra kreslí jednoduchý tvar. Ke každé věci patří i její <b>čísla</b> (životy, útok, cena…), která děti mohou měnit.</p>
+  <ul>
+    <li>Hraje se v prohlížeči na počítači, tabletu i telefonu (na telefonu naležato), i bez internetu.</li>
+    <li>Česky, nebo anglicky (přepínač vpravo nahoře).</li>
+    <li>Všechna data jsou v prohlížeči; mezi počítači se přenášejí jedním souborem.</li>
+  </ul>
+
+  <h2>2. Hlavní nabídka</h2>
+  <figure class="small"><img src="img/menu.jpg" alt=""><figcaption>Hlavní nabídka</figcaption></figure>
+  <table>
+    <tr><th>Tlačítko</th><th>K čemu je</th></tr>
+    <tr><td>Hrát</td><td>výběr mapy, hrdiny a obtížnosti, pak hra; pokračování v rozehrané hře</td></tr>
+    <tr><td>Ateliér – součásti hry</td><td>obrázky a čísla všech součástí: hrdinové, nepřátelé, budovy, zbraně, mince, jeskyně, ozdoby, povrchy, ikony…</td></tr>
+    <tr><td>Mapy</td><td>seznam map, kreslení map, rozmístění radnice, míst na stavbu a jeskyní, vlny</td></tr>
+    <tr><td>Kronika</td><td>příběhy a rady ke všem nepřátelům, sbírka potkaných příšer</td></tr>
+    <tr><td>Knihovna</td><td>hotové mapy ze stránek hry</td></tr>
+    <tr><td>Pravidla</td><td>čísla platná pro celou hru (mince, příprava, hrdina, odemykání…)</td></tr>
+    <tr><td>Uložit a nahrát</td><td>stažení všeho do souboru, nahrání souboru, balíček třídy, záloha, úklid</td></tr>
+  </table>
+
+  <h2>3. Jak se hraje</h2>
+  <figure><img src="img/game.jpg" alt=""><figcaption>Hra: nahoře mince, dělníci a radnice, uprostřed životy hrdiny, vpravo kolo; dole nástroje, vpravo dole útoky a vybavení</figcaption></figure>
+  <h3>Cíl a průběh</h3>
+  <figure class="small"><img src="img/play.jpg" alt=""><figcaption>Hrát: výběr mapy, hrdiny a obtížnosti</figcaption></figure>
+  <ol>
+    <li>Na <b>Hrát</b> vyber mapu, hrdinu a obtížnost (Lehká / Normální / Těžká) a stiskni <b>Začít</b>.</li>
+    <li>Před každou vlnou běží <b>příprava</b> (první 45 s, další 20 s). Vpravo nahoře je vidět, kdo přijde a z kterých jeskyní.</li>
+    <li>Tlačítko <b>Připraven</b> pošle vlnu hned – za každou ušetřenou sekundu dostaneš půl mince.</li>
+    <li>Nepřátelé jdou po cestách k radnici a útočí na všechno v dosahu. Poražení nechávají <b>mince</b> – hrdina je musí sebrat (zmizí po 30 s).</li>
+    <li>Za mince stavíš a vylepšuješ budovy na <b>místech na stavbu</b> (čárkované čtverečky). Hrdina musí stát blízko.</li>
+    <li>Po každé vlně se ukáže <b>shrnutí</b> a odměna a odemkne se něco nového.</li>
+    <li><b>Vyhraješ</b>, když přežiješ všech 20 vln. <b>Prohraješ</b>, když padne radnice nebo hrdina ztratí všech 5 životů.</li>
+  </ol>
+  <figure class="small"><img src="img/summary.jpg" alt=""><figcaption>Shrnutí po vlně: poražení nepřátelé, sebrané mince, odměna, délka vlny, co se ztratilo a co je nové</figcaption></figure>
+  <h3>Hrdina</h3>
+  <ul>
+    <li><b>Klik / ťuknutí na cestu</b> – hrdina tam dojde. <b>Klik na nepřítele</b> – zaútočí.</li>
+    <li>Tři druhy útoku: ⚔️ <b>zblízka</b>, 🏹 <b>na dálku</b>, ✨ <b>kouzla</b> (jen s kouzelnou zbraní). Létající nepřátele zblízka trefit nejde.</li>
+    <li>Kulaté tlačítko vlevo od útoků (nebo <kbd>E</kbd>) je <b>zvláštní schopnost</b> hrdiny (např. léčení, déšť šípů); pak se chvíli dobíjí.</li>
+    <li>Když hrdina ztratí život, na 10 s zmizí a vrátí se u radnice. Radnice léčí hrdinu, který stojí u ní.</li>
+    <li>🎒 <b>Batoh</b>: zbraně, štíty a zbroj se přetahují do políček pravá ruka / levá ruka / zbroj.</li>
+    <li>Klik na <b>radnici</b> otevře <b>obchod</b>: vylepšení hrdiny, schopnosti a věci na prodej.</li>
+  </ul>
+  <h3>Ovládání klávesnicí (počítač)</h3>
+  <table>
+    <tr><th>Klávesa</th><th>Co dělá</th><th>Klávesa</th><th>Co dělá</th></tr>
+    <tr><td><kbd>šipky</kbd> / <kbd>WASD</kbd></td><td>chůze hrdiny</td><td><kbd>Mezerník</kbd></td><td>Připraven – vlna hned</td></tr>
+    <tr><td><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></td><td>útok zblízka / na dálku / kouzla</td><td><kbd>P</kbd></td><td>pauza</td></tr>
+    <tr><td><kbd>E</kbd></td><td>zvláštní schopnost</td><td><kbd>I</kbd></td><td>batoh</td></tr>
+    <tr><td><kbd>F</kbd></td><td>útok na nejbližšího nepřítele</td><td><kbd>B</kbd> (<kbd>Shift</kbd>+<kbd>B</kbd>)</td><td>další (předchozí) místo na stavbu; <kbd>Tab</kbd> + <kbd>Enter</kbd> staví</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>zavře horní okno</td><td><kbd>?</kbd></td><td>nápověda</td></tr>
+  </table>
+  <p>Tlačítka nástrojů dole: konec hry (zeptá se, nabídne <b>Uložit a odejít</b>), pauza, rychlost 1× / 2× / 3×, přiblížení − / +, kronika 📖, tipy 💡, zvuk, hudba 🎵, kreslené chvění 〰️, nápověda <b>?</b>, celá obrazovka. Mapu lze posouvat tažením a přibližovat kolečkem nebo prsty.</p>
+  <p><b>Telefon</b> se drží naležato: vlevo sloupec s pauzou, rychlostí a kronikou, vpravo útoky a vybavení; vše se ovládá ťuknutím.</p>
+
+  <h2>4. Jak nahrát obrázek</h2>
+  <p>Každá součást v Ateliéru má políčka na obrázky. Pod políčkem jsou tlačítka:</p>
+  <table>
+    <tr><th>Tlačítko</th><th>Co udělá</th></tr>
+    <tr><td>📷 Vyfotit</td><td>zapne kameru (zadní i přední), vyfotí obrázek</td></tr>
+    <tr><td>📁 Nahrát soubor</td><td>vybere obrázek z počítače nebo telefonu</td></tr>
+    <tr><td>📋 Vložit ze schránky</td><td>vloží obrázek zkopírovaný jinde (snímek obrazovky, „Kopírovat obrázek“); jinak čeká na <kbd>Ctrl</kbd>+<kbd>V</kbd></td></tr>
+    <tr><td>✏️ Nakreslit / Upravit kreslením</td><td>kreslicí plocha: tužka, guma, tvary, kyblík, kouzelná hůlka, zrcadlení, zpět</td></tr>
+  </table>
+  <ol class="steps">
+    <li><b>Kresli na bílý papír</b>, výrazně (fixou nebo silnou pastelkou). Postavy, které chodí nebo létají, kresli <b>otočené doprava ➜</b> – hra je otočí sama.</li>
+    <li>Papír polož na stůl, ať je rovnoměrně osvětlený, a vyfoť ho (nebo nahraj soubor).</li>
+    <li><b>Oříznutí</b>: posuň a přibliž obrázek tak, aby kresba vyplnila rámeček; jde i otočit. Stiskni <b>Oříznout</b>.</li>
+    <li><b>Odstraň papír</b> (obrázek níže):
+      <ul>
+        <li><b>Odstranit papír</b> – zapnuto: papír kolem kresby zmizí (šachovnice = průhledné). <b>Vypnuto: zůstane celý obrázek i s pozadím</b> – hodí se pro fotky nebo obrázky, které mají mít pozadí.</li>
+        <li><b>Gumovat papír</b> – kolik papíru zmizí. Když mizí i kresba, posuň doleva.</li>
+        <li><b>Gumovat i papír uvnitř obrázku</b> – i bílá místa uzavřená v kresbě (třeba mezi nohama).</li>
+        <li><b>Ztmavit čáry</b> – slabá tužka bude ve hře lépe vidět.</li>
+        <li><b>Živější barvy</b> – bledé pastelky budou sytější.</li>
+      </ul>
+      Náhled je stejně ostrý jako obrázek ve hře. Stiskni <b>Hotovo</b>.</li>
+    <li>Případně obrázek dolaď kreslením (✏️) – kouzelná hůlka smaže zbylé skvrny.</li>
+    <li>Dej součásti <b>jméno</b>, případně autora a popis, a stiskni <b>Uložit</b>.</li>
+  </ol>
+  <div class="two">
+    <figure><img src="img/crop.jpg" alt=""><figcaption>Oříznutí</figcaption></figure>
+    <figure><img src="img/paper.jpg" alt=""><figcaption>Odstranění papíru</figcaption></figure>
+  </div>
+  <div class="note">Povrchy (tráva, voda…) se papíru nezbavují – skládají se do plochy. Obrázek se ukládá jako malý čtverec (budovy, nepřátelé a hrdinové 128 px, zbraně 96 px, mince a šípy 64 px).</div>
+
+  <h2>5. Jak vytvořit nového nepřítele</h2>
+  <figure class="small"><img src="img/studio.jpg" alt=""><figcaption>Ateliér, karta Nepřátelé</figcaption></figure>
+  <ol class="steps">
+    <li><b>Ateliér → Nepřátelé → + Přidat</b> (nebo otevři hotového nepřítele a <b>Zkopírovat</b> ho).</li>
+    <li>Nahraj nebo nakresli obrázek (kapitola 4) a napiš <b>jméno</b>.</li>
+    <li>Nastav <b>čísla</b>: Životy, Rychlost, Útok, Útok každých (s), Dosah, Brnění %, Mince (od–do), Velikost. Zaškrtni, jestli <b>létá</b>, <b>střílí</b> (pak vyber, čím střílí) nebo je <b>boss</b>. Plošné poškození zraní všechno kolem zásahu.</li>
+    <li>Volitelně: <b>Svolává pomocníky</b> (které nepřátele, kolik najednou, jak často, nejvíc naživu, kolik vypustí, když zemře).</li>
+    <li>Pod čísly ukazuje <b>Síla (DSP)</b>, jak nebezpečný nepřítel je (goblin = 10) – mění se hned při psaní.</li>
+    <li>Napiš <b>legendu</b> (krátký příběh) a <b>radu pro hráče</b> – objeví se v Kronice.</li>
+    <li>Volitelně: <b>animace</b> chůze a útoku (řada snímků) a <b>zvuky</b> (vrčení, útok, porážka – nahrát mikrofonem nebo souborem).</li>
+    <li><b>Uložit.</b> Aby nepřítel přišel do hry, přidej ho do vln: <b>Mapy → 👺 Vlny</b> u mapy → kolo → <b>Přidat skupinu</b> → vyber nepřítele, počet a rozestup.</li>
+  </ol>
+  <figure><img src="img/enemy-editor-numbers.jpg" alt=""><figcaption>Editor nepřítele – čísla, pomocníci, síla (DSP)</figcaption></figure>
+
+  <h2>6. Jak vytvořit novou budovu</h2>
+  <p>Budova je složená z <b>vlastností</b> („Co umí“) a z <b>úrovní</b>. Nový druh budovy tedy nepotřebuje žádné programování.</p>
+  <ol class="steps">
+    <li><b>Ateliér → Budovy → + Přidat</b>.</li>
+    <li>Vyber, co to je:
+      <ul>
+        <li><b>Vlastní druh budovy</b> – nová budova s vlastními čísly;</li>
+        <li><b>Jiný vzhled budovy</b> – jen další obrázky existující budovy (hra pro každou postavenou budovu toho druhu vybere jeden vzhled).</li>
+      </ul></li>
+    <li>Zaškrtni, <b>co umí</b>: 👷 dělníci, 🏹 střílí šípy, 🪨 hází kameny (katapult), 🛡️ vojáci, 🪙 vydělává mince, ❤️ léčí hrdinu. Můžeš jich zaškrtnout víc.</li>
+    <li>V tabulce <b>Úrovně</b> nastav pro každou úroveň (1–5, tlačítka + / − Úroveň): Cena, Stavba (s), Životy, <b>Od kola</b> a čísla vybraných vlastností (např. Síla šípu, Dostřel, Střela každých). U střílení vyber i <b>střelu</b> a plošné poškození, u vojáků <b>kdo bojuje</b> (výchozí voják, nakreslený voják nebo kterýkoli nepřítel na naší straně).</li>
+    <li>Ke každé úrovni nahraj obrázek (chybějící úroveň použije předchozí obrázek).</li>
+    <li>Volitelně téma (svět), animace útoku a nabíjení. <b>Uložit.</b></li>
+  </ol>
+  <figure><img src="img/building-editor.jpg" alt=""><figcaption>Editor budovy – tabulka úrovní (Věž)</figcaption></figure>
+  <div class="note">Úroveň budovy nemůže být vyšší než úroveň radnice. Na mapě s tématem jdou stavět jen budovy toho tématu (a budovy bez tématu).</div>
+
+  <h2>7. Nová mapa ve zkratce</h2>
+  <ol class="steps">
+    <li><b>Mapy → + Nová prázdná mapa</b> (nebo Ukázková mapa).</li>
+    <li><b>Kreslit</b>: žlutá <b>Cesta</b> (po ní se chodí) od okrajů do středu, zelená <b>Tráva</b> cesty maže; tužka a kyblík na ozdoby.</li>
+    <li><b>Rozmístit</b>: <b>Radnice</b> (u cesty), <b>Místa na stavbu</b> (vedle cest), <b>Jeskyně</b> (klik vedle cesty – vlevo vybereš, jak vypadá, a zvětšíš ji za rohy), <b>Ozdoby</b> (stromy, skály…), <b>Guma</b>.</li>
+    <li><b>Povrch</b>: barvám mapy přiřaď povrchy (tráva, kostky, voda, sníh… nebo vlastní).</li>
+    <li>Dole se píše, co ještě chybí; když je <b>„Mapa je připravená ke hře!“</b>, ulož ji.</li>
+    <li>👺 <b>Vlny</b> u mapy: kdo přijde v kterém kole (kapitola 10 v části 2).</li>
+  </ol>
+  <figure><img src="img/map-caves.jpg" alt=""><figcaption>Editor mapy, režim Rozmístit, nástroj Jeskyně</figcaption></figure>
+
+  <h2>8. Stahování, sdílení a nahrávání</h2>
+  <p>Všechno, co děti vytvoří, je jen v tomhle prohlížeči. Mezi počítači se to přenáší <b>souborem</b> (<code>.json</code>), ve kterém jsou i všechny obrázky.</p>
+  <table>
+    <tr><th>Co</th><th>Jak stáhnout</th><th>Jak nahrát jinde</th></tr>
+    <tr><td><b>Všechno</b> (záloha)</td><td>Uložit a nahrát → <b>Stáhnout soubor</b></td><td>Uložit a nahrát → <b>Nahrát</b>; změněné věci si prohlédneš a rozhodneš</td></tr>
+    <tr><td><b>Jedna mapa</b></td><td>Mapy → <b>⬇</b> u mapy: <code>map-jméno.json</code> s mapou a vším, co ke hře potřebuje</td><td>Mapy → <b>⬆ Nahrát mapu</b> (nebo Nahrát v Ateliéru či v Uložit a nahrát)</td></tr>
+    <tr><td><b>Nepřítel, hrdina, budova, zbraň…</b></td><td>Ateliér → <b>⬇</b> na dlaždici součásti: <code>enemy-jméno.json</code> i s pomocníky, střelami, vojáky a dalšími vzhledy</td><td>Ateliér → <b>⬆ Nahrát</b></td></tr>
+    <tr><td><b>Mapa z Knihovny</b></td><td>–</td><td>Knihovna → <b>Nahrát</b> → Hrát tuto mapu; <b>Odkaz</b> zkopíruje odkaz, který otevře hru i s mapou</td></tr>
+  </table>
+  <ul>
+    <li>Nahrávat jde <b>ze svého počítače</b> nebo <b>z adresy na internetu</b> (<code>https://…</code> nebo jméno souboru z knihovny).</li>
+    <li>Co už je stejné, se použije. Co má stejné jméno, ale jiný obrázek nebo čísla, přibude jako <b>kopie</b> se jménem mapy, např. <i>Goblin (Zelené údolí)</i>. Na konci tabulka nabídne: <b>Nechat obojí</b>, <b>Jen moje</b>, nebo <b>Jen z mapy</b>.</li>
+    <li>Nic se nesmaže. Stejný soubor nahraný podruhé nic nepřidá.</li>
+    <li><b>Balíček třídy</b>: učitel stáhne vše, soubor přejmenuje na <code>default-data.json</code> a nahradí jím soubor v repozitáři hry. Nový počítač s ním začne, ostatní stisknou <b>Nahrát balíček třídy</b>.</li>
+    <li>Prohlížeč může data smazat (málo místa, Safari po 7 dnech). Hra proto po 2 dnech neuložených změn připomene <b>zálohu</b>; nainstalovaná hra (📲) je v bezpečí lépe.</li>
+  </ul>
+  <figure class="small"><img src="img/library.jpg" alt=""><figcaption>Knihovna: hotové mapy ze stránek hry</figcaption></figure>
+  <figure class="small"><img src="img/maps.jpg" alt=""><figcaption>Seznam map: 👺 Vlny, ⧉ kopie, ⬇ stáhnout, 🗑 smazat; nahoře ⬆ Nahrát mapu</figcaption></figure>
+</section>
+
+<!-- ============================ ČÁST 2 ============================ -->
+<section class="part">
+  <h1 class="part-title">Část 2 – Úplná dokumentace</h1>
+  <div class="part-sub">Všechny obrazovky, čísla a výpočty: hrdina, budovy, nepřátelé, vlny, síla v procentech, DSP, statistiky robota, ukládání.</div>
+
+  <h2>1. Obrazovky hry</h2>
+  <table>
+    <tr><th>Obrazovka</th><th>Obsah</th></tr>
+    <tr><td>Hrát</td><td>rozehraná hra (Pokračovat / Zahodit), mapy a hrdinové v řadě, kterou jde posouvat do stran, hledání, obtížnost, Začít</td></tr>
+    <tr><td>Hra</td><td>mapa, horní lišta (mince, dělníci, radnice, životy, kolo, odpočet, kdo přijde), nástroje, útoky, schopnost, vybavení, batoh, obchod, kronika, shrnutí vlny, konec hry</td></tr>
+    <tr><td>Ateliér</td><td>karty druhů součástí, hledání podle jména a popisu, filtr podle tématu, + Přidat, ⬆ Nahrát; editor součásti (obrázky + čísla)</td></tr>
+    <tr><td>Mapy</td><td>seznam map; editor mapy (Kreslit, Rozmístit, Povrch); editor vln (👺) se sílou vln, robotem a generováním vln</td></tr>
+    <tr><td>Kronika</td><td>📖 Nepřátelé (obrázek, legenda, rada, schopnosti) a 🏅 Sbírka („Potkal(a) jsi 9 ze 14 nepřátel“)</td></tr>
+    <tr><td>Knihovna</td><td>hotové soubory ze stránek hry s náhledy; Nahrát, Hrát tuto mapu, Odkaz</td></tr>
+    <tr><td>Pravidla</td><td>čísla celé hry (kapitola 16)</td></tr>
+    <tr><td>Uložit a nahrát</td><td>stáhnout / nahrát soubor, balíček třídy, bezpečí dat a instalace, Zpět k výchozím součástkám hry, mazání dat</td></tr>
+  </table>
+  <figure class="small"><img src="img/chronicle.jpg" alt=""><figcaption>Kronika: příběh, rada a schopnosti každého nepřítele</figcaption></figure>
+  <p>Hlavička každé obrazovky (název, tlačítka) zůstává na místě, posouvá se jen obsah. Všechny seznamy mají 🔍 hledání, které nehledí na velká písmena a háčky („skret“ najde Skřet).</p>
+
+  <h2>2. Ateliér a součásti hry</h2>
+  <p>Každá část hry je <b>součást</b>: záznam s obrázky a se všemi čísly. Vestavěné součásti (⭐ součást hry) jdou upravit a vrátit tlačítkem <b>Původní čísla</b>; děti je mohou kopírovat a přidávat vlastní.</p>
+  <table>
+    <tr><th>Druh (karta)</th><th class="n">Velikost</th><th>Papír</th><th>Obrázky</th><th>Čísla a další</th></tr>
+    <tr><td>Hrdinové</td><td class="n">128 px</td><td>ano</td><td>hrdina + s mečem / lukem / kouzly</td><td>body vlastností, zvláštní schopnost, animace chůze a útoku</td></tr>
+    <tr><td>Nepřátelé</td><td class="n">128 px</td><td>ano</td><td>1</td><td>čísla, pomocníci, střela, legenda, zvuky, animace, témata</td></tr>
+    <tr><td>Budovy</td><td class="n">128 px</td><td>ano</td><td>1 na úroveň</td><td>vlastnosti + úrovně, nebo jiný vzhled; animace útoku a nabíjení</td></tr>
+    <tr><td>Vojáci</td><td class="n">96 px</td><td>ano</td><td>1</td><td>animace; čísla dává hrad</td></tr>
+    <tr><td>Zbraně, Štíty, Zbroj</td><td class="n">96 px</td><td>ano</td><td>1</td><td>druh, ruce, útok / dosah / rychlost / plocha / brnění, cena, obchod, truhla</td></tr>
+    <tr><td>Mince</td><td class="n">64 px</td><td>ano</td><td>1</td><td>hodnota mince</td></tr>
+    <tr><td>Truhla</td><td class="n">64 px</td><td>ano</td><td>1</td><td>–</td></tr>
+    <tr><td>Šípy (střely)</td><td class="n">64 px</td><td>ano</td><td>1</td><td>vestavěné: šíp, kouzelná střela, kámen z katapultu</td></tr>
+    <tr><td>Jeskyně</td><td class="n">128 px</td><td>ano</td><td>1</td><td>tvar jeskyně v editoru mapy</td></tr>
+    <tr><td>Ozdoby</td><td class="n">128 px</td><td>ano</td><td>1</td><td>na mapu; mohou sloužit i jako jeskyně</td></tr>
+    <tr><td>Povrchy</td><td class="n">128 px</td><td>ne</td><td>1</td><td>skládají se do plochy; vestavěných 8 (tráva, louka, hliněná cesta, písek, kostky, skála, voda, sníh)</td></tr>
+    <tr><td>Ikony</td><td class="n">64 px</td><td>ano</td><td>1</td><td>pevná sada ikon ovládání (srdce, mince, útoky, batoh, 8 schopností…)</td></tr>
+  </table>
+  <ul>
+    <li><b>Obrázky hry</b> (šíp, kouzelná střela, kámen a 8 povrchů) jsou v Ateliéru s herním obrázkem. Dají se překreslit nebo nahradit, ale ne smazat; ✕ vrátí herní obrázek.</li>
+    <li><b>Animace</b>: řada až 12 snímků, každý se udělá jako obrázek (kreslení přes průsvitný předchozí snímek, foto, soubor, schránka); snímky se srovnají přes sebe, rychlost 2–20 snímků/s. Hotový pás snímků z jednoho papíru se rozřeže sám.</li>
+    <li><b>Zvuky nepřítel</b>: vrčení na cestě, útok, porážka; nahrávka max. 3 s, ticho se ořízne samo, okraje jdou doladit. „🎧 Poslechnout jako ve hře“ přehraje malou vlnu a ukáže, které zvuky by hra pustila (hra jich pouští málo, aby nebyl hluk: nejvýš 2 najednou).</li>
+    <li><b>Témata</b> (světy): pláně, skřetí les, hřbitov, nekromancie – a vlastní. Mapa s tématem nabízí jen budovy svého tématu.</li>
+  </ul>
+
+  <h2>3. Obrázky: fotka, oříznutí, papír</h2>
+  <p>Cesta obrázku: <b>Vyfotit / Nahrát / Vložit / Nakreslit → Oříznout → Odstranit papír → (doladit kreslením) → Uložit</b>.</p>
+  <ul>
+    <li><b>Oříznutí</b> dává obrázek o šířce 768 px; jde ho posunout, přiblížit a otočit.</li>
+    <li><b>Barva papíru</b> se zjistí z okraje obrázku (medián barev krajních bodů), takže nerovnoměrné světlo nevadí.</li>
+    <li><b>Gumovat papír</b> (5–80): body, jejichž barva se od papíru liší méně než daný podíl největšího možného rozdílu barev, jsou papír. Mizí jen papír spojený s okrajem (vyplňování od okraje), takže bílé oči a okna zůstanou. <b>Gumovat i papír uvnitř</b> smaže všechen papír. Okraj kresby se změkčí (poloprůhledný pruh).</li>
+    <li><b>Odstranit papír vypnuto</b>: nic se nesmaže, obrázek zůstane i s pozadím; Ztmavit čáry a Živější barvy fungují dál.</li>
+    <li><b>Ztmavit čáry</b> (0–100): zvýší kontrast kolem bílé papíru (až 3×), slabé čáry ztmavnou.</li>
+    <li><b>Živější barvy</b> (0–100): každou barvu oddálí od její vlastní šedi (až 3× sytější); šedá a černá zůstanou.</li>
+    <li><b>Náhled</b> pracuje s oříznutým obrázkem v plném rozlišení (až 1024 px), proto je stejně ostrý jako obrázek ve hře. <b>Hotovo</b> obrázek jednou zmenší do čtverce velikosti daného druhu a zachová jeho tvar.</li>
+  </ul>
+
+  <h2>4. Hrdina</h2>
+  <p>Každý hrdina má <b>12 bodů</b>, které rozdělí mezi 5 vlastností (nejvýš 5 do jedné). Všichni začínají ze stejného základu; čísla jdou změnit v Pravidlech.</p>
+  <table>
+    <tr><th>Vlastnost</th><th>Základ (0 bodů)</th><th>Za bod</th><th>3 body</th><th>5 bodů</th></tr>
+    <tr><td>⚔️ Zblízka</td><td>útok 10, dosah 40, úder každých 0,8 s</td><td>+4 útok</td><td>22</td><td>30</td></tr>
+    <tr><td>🏹 Na dálku</td><td>útok 5, dostřel 200, šíp každých 1,6 s</td><td>+2 útok, −0,1 s</td><td>11 / 1,3 s</td><td>15 / 1,1 s</td></tr>
+    <tr><td>🛡️ Brnění</td><td>0 %</td><td>+5 %</td><td>15 %</td><td>25 %</td></tr>
+    <tr><td>👟 Rychlost</td><td>90 px/s</td><td>+12</td><td>126</td><td>150</td></tr>
+    <tr><td>✨ Kouzla</td><td>útok 8, dosah 160, každých 1,8 s (jen s kouzelnou zbraní)</td><td>+3 útok</td><td>17</td><td>23</td></tr>
+  </table>
+  <div class="formula">utržené zranění = max(1, zaokrouhlit(útok × (1 − brnění)))      brnění nejvýš 60 %
+nejrychlejší šíp: 0,6 s</div>
+  <ul>
+    <li><b>Životy</b>: 100 na každý z 5 životů. Ztráta života = hrdina 10 s chybí a vrátí se u radnice s plnými životy (1,5 s nezranitelný). Radnice léčí hrdinu do 80 px o 8 životů za sekundu.</li>
+    <li><b>Vylepšení na radnici</b> (obchod): +1 bod do vlastnosti za 15 / 30 / 50 mincí; úroveň N potřebuje radnici úrovně N a kolo, od kterého je odemčená (luk 4 / 13 / 19, meč 6 / 15 / 19, brnění 8 / 17 / 20, kouzla 9 / 16 / 20, rychlost 10 / 18 / 20). Platí jen v dané hře.</li>
+    <li>Hrdina, který nic nedělá, hlídá okolí (130 px) a vrací se.</li>
+  </ul>
+
+  <h2>5. Zbraně, štíty a zbroj</h2>
+  <p>Zbraň <b>přidává</b> svá čísla k útoku hrdiny daného druhu. Obouruční zbraň zabere i levou ruku (štít). Výměna zbraně trvá 2 s. Zbraně se kupují v obchodě na radnici nebo padají z <b>truhel</b> (2 % nepřátel, boss vždy; truhla zmizí po 60 s; když hrdina má vše, dá 15 mincí).</p>
+  <table>
+    <tr><th>Věc</th><th>Druh</th><th>Ruce</th><th class="n">Útok</th><th class="n">Dosah</th><th class="n">Rychlost</th><th class="n">Plocha</th><th class="n">Brnění</th><th class="n">Cena</th><th class="n">Od kola</th></tr>
+    <tr><td>Dřevěný meč (start)</td><td>zblízka</td><td>1</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">–</td><td class="n">–</td><td class="n">–</td><td class="n">–</td></tr>
+    <tr><td>Krátký luk (start)</td><td>na dálku</td><td>2</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">–</td><td class="n">–</td><td class="n">–</td><td class="n">–</td></tr>
+    <tr><td>Meč</td><td>zblízka</td><td>1</td><td class="n">+6</td><td class="n">0</td><td class="n">0</td><td class="n">–</td><td class="n">–</td><td class="n">25</td><td class="n">1</td></tr>
+    <tr><td>Obouruční sekera</td><td>zblízka</td><td>2</td><td class="n">+16</td><td class="n">+5</td><td class="n">+0,25 s</td><td class="n">–</td><td class="n">–</td><td class="n">60</td><td class="n">6</td></tr>
+    <tr><td>Dlouhý luk</td><td>na dálku</td><td>2</td><td class="n">+2</td><td class="n">+60</td><td class="n">0</td><td class="n">–</td><td class="n">–</td><td class="n">30</td><td class="n">3</td></tr>
+    <tr><td>Kuše</td><td>na dálku</td><td>2</td><td class="n">+8</td><td class="n">+20</td><td class="n">+0,3 s</td><td class="n">–</td><td class="n">–</td><td class="n">55</td><td class="n">8</td></tr>
+    <tr><td>Kouzelná hůlka</td><td>kouzla</td><td>1</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">50</td><td class="n">–</td><td class="n">45</td><td class="n">5</td></tr>
+    <tr><td>Ohnivá hůl</td><td>kouzla</td><td>2</td><td class="n">+8</td><td class="n">+20</td><td class="n">−0,2 s</td><td class="n">75</td><td class="n">–</td><td class="n">90</td><td class="n">12</td></tr>
+    <tr><td>Dřevěný štít</td><td>štít</td><td>–</td><td colspan="4"></td><td class="n">8 %</td><td class="n">20</td><td class="n">2</td></tr>
+    <tr><td>Železný štít</td><td>štít</td><td>–</td><td colspan="4"></td><td class="n">15 %</td><td class="n">50</td><td class="n">7</td></tr>
+    <tr><td>Kožená zbroj</td><td>zbroj</td><td>–</td><td colspan="4"></td><td class="n">8 %</td><td class="n">25</td><td class="n">4</td></tr>
+    <tr><td>Kroužková zbroj</td><td>zbroj</td><td>–</td><td colspan="4"></td><td class="n">15 %</td><td class="n">60</td><td class="n">10</td></tr>
+  </table>
+  <p class="muted">„Rychlost“ = o kolik sekund se prodlouží (+) nebo zkrátí (−) čas mezi útoky. „Plocha“ = poloměr zásahu kouzla v px – zasáhne všechny nepřátele v okolí cíle, i létající.</p>
+  <figure class="small"><img src="img/backpack.jpg" alt=""><figcaption>Batoh: pravá ruka, levá ruka, zbroj a výsledná čísla hrdiny</figcaption></figure>
+
+  <h2>6. Zvláštní schopnosti</h2>
+  <p>Každý hrdina má jednu schopnost (vybírá se v editoru hrdiny i s čísly). Použije se kulatým tlačítkem nebo <kbd>E</kbd>, pak se dobíjí. Když na tlačítko ukážeš, mapa ukáže dosah a koho schopnost zasáhne nebo komu pomůže.</p>
+  <table>
+    <tr><th>Schopnost</th><th>Co dělá</th><th>Síla</th><th class="n">Dosah</th><th class="n">Trvá</th><th class="n">Dobíjení</th></tr>
+    <tr><td>💥 Mocný úder</td><td>jeden obrovský úder do nejsilnějšího nepřítele u hrdiny</td><td>120 zranění</td><td class="n">70</td><td class="n">–</td><td class="n">20 s</td></tr>
+    <tr><td>📣 Bojový pokřik</td><td>nepřátelé kolem chodí a útočí pomaleji</td><td>o 50 %</td><td class="n">160</td><td class="n">5 s</td><td class="n">25 s</td></tr>
+    <tr><td>🛡️ Posily</td><td>přijdou vojáci a bojují s hrdinou</td><td>3 vojáci (70 životů, útok 9)</td><td class="n">–</td><td class="n">15 s</td><td class="n">40 s</td></tr>
+    <tr><td>💚 Léčení</td><td>vyléčí hrdinu, budovy a vojáky kolem</td><td>60 životů</td><td class="n">150</td><td class="n">–</td><td class="n">30 s</td></tr>
+    <tr><td>🌧️ Déšť šípů</td><td>míří se na místo na mapě (nejvýš 320 px daleko); zasáhne všechny, i létající</td><td>40 zranění</td><td class="n">130</td><td class="n">–</td><td class="n">25 s</td></tr>
+    <tr><td>❄️ Mráz</td><td>nepřátelé kolem zamrznou (nechodí, neútočí, nesvolávají)</td><td>–</td><td class="n">120</td><td class="n">3 s</td><td class="n">35 s</td></tr>
+    <tr><td>🔰 Štít</td><td>hrdinu nic nezraní</td><td>–</td><td class="n">–</td><td class="n">5 s</td><td class="n">30 s</td></tr>
+    <tr><td>🎺 Povzbuzení</td><td>budovy kolem pracují rychleji (střely, vojáci, léčení)</td><td>+60 %</td><td class="n">220</td><td class="n">8 s</td><td class="n">35 s</td></tr>
+  </table>
+  <p>Meze v editoru: síla 0,1–500, dosah 0–400 px, kam lze poslat 60–800 px, trvání 0–30 s, dobíjení 3–120 s (zpomalení nejvýš 90 %, povzbuzení nejvýš +300 %). <b>Vylepšení v obchodě</b> (3 úrovně, ceny 15 / 30 / 50): každá úroveň síla +25 %, trvání +15 %, dobíjení −10 %.</p>
+
+  <h2>7. Budovy</h2>
+  <h3>Vlastnosti budov</h3>
+  <table>
+    <tr><th>Vlastnost</th><th>Čísla v úrovni</th><th>Co dělá</th></tr>
+    <tr><td>👷 Dělníci</td><td>Dělníci</td><td>zrychlují každou stavbu a vylepšení</td></tr>
+    <tr><td>🏹 Střílí šípy</td><td>Síla šípu, Dostřel, Střela každých, Plošné poškození</td><td>střílí na nepřítele v dosahu nejblíž radnici; zasáhne i létající</td></tr>
+    <tr><td>🪨 Hází kameny</td><td>síla, dostřel, každých, plocha</td><td>kámen na největší skupinu pěších nepřátel; zraní všechny v místě dopadu (ne létající, ne blíž než 50 px)</td></tr>
+    <tr><td>🛡️ Vojáci</td><td>Vojáků, Životy vojáka, Útok vojáka, Úder každých, Nový voják za, Hlídka</td><td>vojáci hlídkují po cestě kolem budovy (nejdál „Hlídka“ px), bojují s pěšími nepřáteli a vracejí se</td></tr>
+    <tr><td>🪙 Vydělává mince</td><td>Mince za kolo</td><td>po každém přežitém kole přidá mince</td></tr>
+    <tr><td>❤️ Léčí hrdinu</td><td>Léčení za s, Dosah léčení</td><td>léčí hrdinu, který stojí blízko</td></tr>
+  </table>
+  <p>Každá úroveň má navíc <b>Cena</b>, <b>Stavba (s)</b>, <b>Životy</b> a <b>Od kola</b>. Budova bez obrázku se kreslí tvarem podle své hlavní vlastnosti.</p>
+  <h3>Vestavěné budovy</h3>
+  <table>
+    <tr><th>Budova</th><th>Úr.</th><th class="n">Cena</th><th class="n">Stavba</th><th class="n">Životy</th><th class="n">Od kola</th><th>Hlavní čísla</th></tr>
+    <tr><td rowspan="3">Radnice (stojí od začátku; šípy + léčí hrdinu 8/s do 80 px)</td><td>1</td><td class="n">–</td><td class="n">–</td><td class="n">480</td><td class="n">1</td><td>šíp 5, dostřel 170, každých 1,2 s</td></tr>
+    <tr><td>2</td><td class="n">60</td><td class="n">20</td><td class="n">720</td><td class="n">3</td><td>šíp 8, dostřel 190, 1,1 s</td></tr>
+    <tr><td>3</td><td class="n">100</td><td class="n">30</td><td class="n">960</td><td class="n">11</td><td>šíp 12, dostřel 210, 1,0 s</td></tr>
+    <tr><td rowspan="3">Dům (dělníci)</td><td>1</td><td class="n">20</td><td class="n">10</td><td class="n">320</td><td class="n">1</td><td>1 dělník</td></tr>
+    <tr><td>2</td><td class="n">30</td><td class="n">12</td><td class="n">480</td><td class="n">7</td><td>2 dělníci</td></tr>
+    <tr><td>3</td><td class="n">45</td><td class="n">15</td><td class="n">640</td><td class="n">14</td><td>3 dělníci</td></tr>
+    <tr><td rowspan="3">Věž (šípy)</td><td>1</td><td class="n">30</td><td class="n">12</td><td class="n">400</td><td class="n">1</td><td>šíp 9, dostřel 180, 1,0 s (9 za s)</td></tr>
+    <tr><td>2</td><td class="n">45</td><td class="n">14</td><td class="n">600</td><td class="n">5</td><td>šíp 15, dostřel 200, 0,9 s (17 za s)</td></tr>
+    <tr><td>3</td><td class="n">70</td><td class="n">18</td><td class="n">800</td><td class="n">12</td><td>šíp 22, dostřel 220, 0,75 s (29 za s)</td></tr>
+    <tr><td rowspan="3">Hrad (3 vojáci)</td><td>1</td><td class="n">40</td><td class="n">15</td><td class="n">600</td><td class="n">2</td><td>voják 30 životů, útok 6/1 s, nový za 12 s, hlídka 160</td></tr>
+    <tr><td>2</td><td class="n">60</td><td class="n">18</td><td class="n">880</td><td class="n">9</td><td>45 životů, útok 9, nový za 10 s, hlídka 180</td></tr>
+    <tr><td>3</td><td class="n">90</td><td class="n">22</td><td class="n">1200</td><td class="n">16</td><td>60 životů, útok 12, nový za 8 s, hlídka 200</td></tr>
+    <tr><td rowspan="3">Katapult (kameny)</td><td>1</td><td class="n">45</td><td class="n">16</td><td class="n">440</td><td class="n">6</td><td>kámen 14, dostřel 230, 3,2 s, plocha 45</td></tr>
+    <tr><td>2</td><td class="n">65</td><td class="n">18</td><td class="n">640</td><td class="n">10</td><td>22, 250, 3,0 s, plocha 50</td></tr>
+    <tr><td>3</td><td class="n">95</td><td class="n">22</td><td class="n">880</td><td class="n">15</td><td>32, 270, 2,8 s, plocha 55</td></tr>
+  </table>
+  <h3>Pravidla budov</h3>
+  <div class="formula">doba stavby = základní doba ÷ (1 + 0,15 × dělníci)        (6 dělníků → 1,9× rychleji)
+oprava: 1 % největších životů za sekundu, 5 s po posledním zásahu
+prodej: vrátí 70 % všech mincí, které do budovy šly
+zbořená budova: přestavět za cenu úrovně 1 (začíná znovu na úrovni 1), nebo uklidit zdarma
+velikost ve hře: 1,2 × (1 + 0,1 × (úroveň − 1))</div>
+  <ul>
+    <li>Stavět jde jen na místech na stavbu a jen když hrdina stojí do 90 px. Stavět se smí i během vlny.</li>
+    <li>Úroveň budovy ≤ úroveň radnice. Když padne radnice, hra je prohraná.</li>
+    <li>Vojáci jsou nejvýš 3 na hrad, rychlost 80, dosah 30; nikdy nejdou dál, než je hlídka. Při vylepšení hradu se vylepší i vojáci venku.</li>
+    <li>Ukázání na volbu stavby ukáže modrý kruh dosahu; vybraná věž ukazuje červený kruh dosahu.</li>
+  </ul>
+
+  <h2>8. Nepřátelé</h2>
+  <h3>Čísla v editoru nepřítele</h3>
+  <table>
+    <tr><th>Číslo</th><th>Význam</th></tr>
+    <tr><td>Životy</td><td>kolik zranění vydrží (ve hře ještě × růst životů za kolo a × obtížnost)</td></tr>
+    <tr><td>Rychlost</td><td>px za sekundu</td></tr>
+    <tr><td>Útok, Útok každých (s)</td><td>zranění jednoho úderu / výstřelu a čas mezi nimi</td></tr>
+    <tr><td>Dosah</td><td>na jakou vzdálenost útočí (zblízka ~25, střelci 120–150)</td></tr>
+    <tr><td>Brnění %</td><td>o kolik procent menší zranění dostane: <code>max(1, zaokr(zranění × (1 − brnění)))</code></td></tr>
+    <tr><td>Mince</td><td>kolik mincí po něm zůstane (od–do)</td></tr>
+    <tr><td>Plošné poškození (px)</td><td>jeho zásah zraní i všechny obránce v tomto okruhu</td></tr>
+    <tr><td>létá / střílí / boss</td><td>létá rovnou k radnici přes všechno, zblízka nejde zasáhnout; střílí zdálky vybranou střelou; boss je větší a vždy nechá truhlu</td></tr>
+    <tr><td>Velikost</td><td>jak velký je ve hře (1 = běžný)</td></tr>
+    <tr><td>Svolává pomocníky</td><td>které nepřátele, kolik najednou, každých (s), nejvíc naživu, další, když zemře; pomocníci sami nesvolávají</td></tr>
+  </table>
+  <p>Nepřátelé vylézají jen z jeskyní, jdou po cestách k radnici a útočí na nejbližší věc v dosahu (budovy, vojáky, hrdinu); když ji zničí, jdou dál.</p>
+  <h3>Vestavění nepřátelé</h3>
+  <table>
+    <tr><th>Nepřítel</th><th>Druh</th><th class="n">Životy</th><th class="n">Rychl.</th><th class="n">Útok</th><th class="n">Každých</th><th class="n">Dosah</th><th class="n">Brnění</th><th class="n">Mince</th><th class="n">DSP</th></tr>
+    <tr><td>Goblin</td><td>zblízka</td><td class="n">25</td><td class="n">45</td><td class="n">4</td><td class="n">1,0</td><td class="n">25</td><td class="n">0 %</td><td class="n">1–2</td><td class="n">10</td></tr>
+    <tr><td>Smečka goblinů</td><td>zblízka</td><td class="n">25</td><td class="n">45</td><td class="n">4</td><td class="n">1,0</td><td class="n">25</td><td class="n">0 %</td><td class="n">1–2</td><td class="n">10</td></tr>
+    <tr><td>Pavoučí jezdec</td><td>zblízka, rychlý</td><td class="n">18</td><td class="n">90</td><td class="n">3</td><td class="n">0,7</td><td class="n">25</td><td class="n">0 %</td><td class="n">1–2</td><td class="n">9</td></tr>
+    <tr><td>Šaman</td><td>střílí</td><td class="n">20</td><td class="n">40</td><td class="n">5</td><td class="n">1,5</td><td class="n">150</td><td class="n">0 %</td><td class="n">2</td><td class="n">11</td></tr>
+    <tr><td>Hopgoblin</td><td>zblízka</td><td class="n">90</td><td class="n">30</td><td class="n">10</td><td class="n">1,4</td><td class="n">30</td><td class="n">15 %</td><td class="n">3–5</td><td class="n">31</td></tr>
+    <tr><td>Netopýr</td><td>létá</td><td class="n">15</td><td class="n">55</td><td class="n">3</td><td class="n">1,0</td><td class="n">25</td><td class="n">0 %</td><td class="n">1–2</td><td class="n">9</td></tr>
+    <tr><td>Rukh</td><td>létá</td><td class="n">150</td><td class="n">90</td><td class="n">10</td><td class="n">1,0</td><td class="n">25</td><td class="n">15 %</td><td class="n">3–6</td><td class="n">71</td></tr>
+    <tr><td>Troll</td><td>boss</td><td class="n">400</td><td class="n">22</td><td class="n">25</td><td class="n">2,0</td><td class="n">40</td><td class="n">25 %</td><td class="n">20</td><td class="n">113</td></tr>
+    <tr><td>Kostlivec</td><td>zblízka</td><td class="n">18</td><td class="n">42</td><td class="n">4</td><td class="n">1,1</td><td class="n">25</td><td class="n">0 %</td><td class="n">1</td><td class="n">8</td></tr>
+    <tr><td>Kostlivý bojovník</td><td>zblízka</td><td class="n">18</td><td class="n">42</td><td class="n">4</td><td class="n">1,1</td><td class="n">25</td><td class="n">0 %</td><td class="n">1</td><td class="n">8</td></tr>
+    <tr><td>Nekromant</td><td>střílí; svolává kostlivce a bojovníky (2 / 8 s, nejvýš 6)</td><td class="n">90</td><td class="n">26</td><td class="n">7</td><td class="n">1,8</td><td class="n">140</td><td class="n">10 %</td><td class="n">6–8</td><td class="n">94</td></tr>
+    <tr><td>Pavoučátko</td><td>zblízka</td><td class="n">8</td><td class="n">70</td><td class="n">2</td><td class="n">0,8</td><td class="n">22</td><td class="n">0 %</td><td class="n">0–1</td><td class="n">4</td></tr>
+    <tr><td>Pavoučice</td><td>svolává pavoučátka (3 / 9 s, nejvýš 6, +4 při smrti)</td><td class="n">130</td><td class="n">32</td><td class="n">9</td><td class="n">1,2</td><td class="n">28</td><td class="n">10 %</td><td class="n">5–7</td><td class="n">92</td></tr>
+    <tr><td>Král goblinů</td><td>boss, střílí; svolává goblina, hopgoblina, šamana (1 / 10 s, nejvýš 3)</td><td class="n">300</td><td class="n">32</td><td class="n">20</td><td class="n">2,0</td><td class="n">120</td><td class="n">20 %</td><td class="n">20</td><td class="n">154</td></tr>
+  </table>
+
+  <h2>9. Mince a odměny</h2>
+  <div class="formula">mince na začátku: 40 (Lehká × 1,25, Těžká × 0,85)
+odměna za kolo:  10 + číslo kola   (kolo 1 = 11, kolo 20 = 30; v editoru vln jde změnit u každého kola)
+               + mince z budov s vlastností „Vydělává mince“
+bonus za Připraven: dolů zaokrouhlit(zbývající sekundy × 0,5)</div>
+  <ul>
+    <li>Mince z nepřátel padají na zem a hrdina je musí sebrat (do 24 px). Po 30 s zmizí (posledních 5 s blikají).</li>
+    <li>Každý obrázek mince má svou <b>hodnotu</b>; hra platí co největšími mincemi (bez obrázků 1 a 5).</li>
+    <li>Tlačítko Připraven také posune rozestavěné budovy o přeskočený čas přípravy.</li>
+  </ul>
+
+  <h2>10. Vlny</h2>
+  <p>Každá mapa má svůj <b>plán vln</b> (Mapy → 👺 Vlny). Nahoře: <b>Mince na začátku</b>, <b>První příprava (s)</b>, <b>Příprava (s)</b> a <b>Každé kolo silnější o __ %</b>. Plán má libovolný počet kol (výchozí 20); kola jde přidávat, kopírovat (⧉) a mazat.</p>
+  <figure><img src="img/waves-round.jpg" alt=""><figcaption>Editor vln: kolo 2 otevřené, skupina goblinů s životy 150 %</figcaption></figure>
+  <h3>Kolo a skupina</h3>
+  <table>
+    <tr><th>Pole</th><th>Význam</th></tr>
+    <tr><td>Odměna 🪙, Příprava před (s)</td><td>odměna za kolo a čas přípravy před ním; prázdné = automaticky</td></tr>
+    <tr><td>Nepřítel</td><td>kdo ve skupině přijde (nepřátelé tématu mapy jsou nahoře)</td></tr>
+    <tr><td>Počet</td><td>kolik jich přijde</td></tr>
+    <tr><td>Rozestup (s)</td><td>čas mezi dvěma nepřáteli skupiny</td></tr>
+    <tr><td>Začít po (s)</td><td>za kolik sekund od začátku vlny skupina začne</td></tr>
+    <tr><td>Jeskyně</td><td>z které jeskyně; „všechny“ = střídají se po řadě (každá skupina začne jinou jeskyní)</td></tr>
+    <tr><td>⚔️ Útok %, ❤️ Životy %</td><td>síla nepřátel skupiny proti tomu, jak jsou nakreslení (kapitola 11)</td></tr>
+  </table>
+  <p>V záhlaví kola je shrnutí: kdo přijde, síla kola v DSP, přibližná délka, odměna a 📈 o kolik je kolo silnější díky růstu.</p>
+  <h3>Výchozí plán (20 kol)</h3>
+  <p>Vlny trvají 40–60 s, mezi nimi 20 s přípravy (první 45 s). Pomalí nepřátelé (hopgoblini, bossové) chodí na začátku vlny. Po každé vlně se odemkne něco nového:</p>
+  <table>
+    <tr><th>Kolo</th><th>Nové</th><th>Kolo</th><th>Nové</th></tr>
+    <tr><td>1</td><td>dům, věž</td><td>11</td><td>radnice 3</td></tr>
+    <tr><td>2</td><td>hrad</td><td>12</td><td>věž 3</td></tr>
+    <tr><td>3</td><td>radnice 2</td><td>13</td><td>luk +2</td></tr>
+    <tr><td>4</td><td>luk +1</td><td>14</td><td>dům 3</td></tr>
+    <tr><td>5</td><td>věž 2</td><td>15</td><td>meč +2, katapult 3</td></tr>
+    <tr><td>6</td><td>meč +1, katapult</td><td>16</td><td>hrad 3, kouzla +2</td></tr>
+    <tr><td>7</td><td>dům 2</td><td>17</td><td>brnění +2</td></tr>
+    <tr><td>8</td><td>brnění +1</td><td>18</td><td>rychlost +2</td></tr>
+    <tr><td>9</td><td>hrad 2, kouzla +1</td><td>19</td><td>luk +3, meč +3</td></tr>
+    <tr><td>10</td><td>rychlost +1, katapult 2</td><td>20</td><td>brnění +3, rychlost +3, kouzla +3</td></tr>
+  </table>
+  <h3>Růst životů za kolo</h3>
+  <div class="formula">životy nepřítele ve hře = životy z Ateliéru × (1 + 0,05 × (kolo − 1)) × obtížnost × Životy % skupiny
+                                    (kolo 20: × 1,95)</div>
+
+  <h2>11. Síla nepřátel ve vlnách v procentech</h2>
+  <p>Každá <b>skupina</b> má <b>⚔️ Útok</b> a <b>❤️ Životy</b> v procentech toho, jak je nepřítel nakreslený (100 = beze změny, 200 = dvojnásobek; povoleno 10–1000 %). Celý plán má <b>📈 Každé kolo silnější o</b> <i>r</i> % (0–50 %): první kolo je beze změny, druhé +<i>r</i> %, třetí +2<i>r</i> %… Všechna procenta se počítají <b>proti stejnému základu, proto se sčítají</b>:</p>
+  <div class="formula">procenta v kole k = procenta skupiny + r × (k − 1)
+násobek = max(0,1; procenta ÷ 100)          (zaokrouhleno na desetinu procenta)
+útok nepřítele   = útok × násobek útoku
+životy nepřítele = životy × násobek životů × růst životů za kolo × obtížnost</div>
+  <div class="box"><b>Příklad.</b> Plán roste o 10 % za kolo a goblini ve 20. kole mají Útok 200 % a Životy 200 %. Ve 20. kole: 200 + 10 × 19 = <b>390 %</b> – útok 4 × 3,9 = 15,6, životy 25 × 3,9 × 1,95 = 190.<br>
+  Plán s růstem 10 %: kolo 1 = 100 %, kolo 2 = 110 %, kolo 3 = 120 %, …, kolo 20 = 290 %.</div>
+  <ul>
+    <li>Pod skupinou je napsáno, jakou sílu má v tomto kole (<i>= v tomto kole ⚔️ 120 % · ❤️ 120 %</i>), v záhlaví kola <i>📈 +N %</i>.</li>
+    <li>Všechna procenta se ukládají a ukazují <b>nejvýš s jedním desetinným místem</b> (2,25 → 2,3). Stejně se zaokrouhlují čísla zranění, která ve hře vyskakují.</li>
+    <li>Pomocníci, které silnější nepřítel svolá, jsou stejně silnější.</li>
+    <li>Síla vln (DSP) to počítá (kapitola 12). „Všechny vlny slabší / silnější“ i generované vlny procenta skupin a růst zachovají.</li>
+  </ul>
+  <h3>Co říká robot (5 her, výchozí plán, testovací mapa)</h3>
+  <table>
+    <tr><th>Nastavení</th><th>Lehká</th><th>Normální</th><th>Těžká</th></tr>
+    <tr><td>růst 0 %</td><td>vyhrál 5/5, nic neztratil</td><td>vyhrál 5/5 (4,4 budovy za hru)</td><td>vyhrál 4/5</td></tr>
+    <tr><td>růst 1 %</td><td>5/5</td><td>5/5 (7,4 budovy)</td><td>padne v kole 17–19</td></tr>
+    <tr><td>růst 2 %</td><td>5/5</td><td>vyhrál 1/5</td><td>padne v kole 16–17</td></tr>
+    <tr><td>růst 3 %</td><td>5/5</td><td>padne v kole 17–19</td><td>padne v kole 15</td></tr>
+    <tr><td>růst 5 %</td><td>5/5</td><td>padne v kole 15–16</td><td>padne v kole 12–13</td></tr>
+    <tr><td>růst 10 %</td><td>padne v kole 15–16</td><td>padne v kole 11–12</td><td>padne v kole 7–8</td></tr>
+    <tr><td>všechny skupiny 120 %</td><td>5/5</td><td>5/5</td><td>padne v kole 16–17</td></tr>
+    <tr><td>všechny skupiny 150 %</td><td>5/5</td><td>padne v kole 15–17</td><td>padne v kole 7–8</td></tr>
+    <tr><td>všechny skupiny 200 %</td><td>padne v kole 17–20</td><td>padne v kole 6–7</td><td>padne v kole 5</td></tr>
+  </table>
+  <div class="note">Už <b>1–2 % za kolo</b> je znát. Růst 3 % robot na normální obtížnost nevyhraje.</div>
+
+  <h2>12. DSP – body nebezpečnosti</h2>
+  <p>DSP je jedno číslo, které říká, jak těžké je nepřítele zastavit. <b>Goblin má 10.</b> Podle DSP se porovnávají vlny, generují nové a celý plán se zesiluje nebo zeslabuje. Ukazuje se v editoru nepřítele (Síla (DSP): sám + pomocníci), v kronice, v záhlaví kola a v tabulce Síla vln.</p>
+  <h3>DSP jednoho nepřítele</h3>
+  <div class="formula">vlastní DSP = 10 × odolnost^0,7 × tempo × útok × střelba × plocha × létání
+
+odolnost = životy ÷ (1 − brnění) ÷ 25
+tempo    = (rychlost ÷ 45)^0,1
+útok     = 0,8 + 0,2 × (útok ÷ útok každých) ÷ 4
+střelba  = 1 + 0,4 × min(2, dosah ÷ 150)        (jen kdo střílí)
+plocha   = 1 + min(0,6; 0,0035 × plošné poškození v px)
+létání   = 1,3                                    (jen kdo létá)</div>
+  <p><b>Kdo svolává pomocníky</b>, k tomu přičte DSP všech, které za život svolá:</p>
+  <div class="formula">doba života = 800 ÷ rychlost        (10 až 45 s; pod 100 životů kratší: × √(odolnost ÷ 4))
+počet svolání = kolik najednou × doba života ÷ každých      (nejvýš 1,5 × nejvíc naživu)
+              + kolik vypustí, když zemře
+DSP = vlastní DSP + počet svolání × průměrné DSP pomocníků</div>
+  <h3>Kde se vzaly konstanty</h3>
+  <p>Konstanty <b>naměřil robot</b>: na začátku 6. a 12. kola výchozí hry přišlo N kopií jednoho nepřítele a N se zvětšovalo, dokud robot opakovaně neprohrál. Nepřítel, který robota zlomí s třetinovým počtem, má cenu 3 goblinů. Změřeno pro všechny vestavěné nepřátele a sedm upravených goblinů; DSP ÷ 10 se od naměřené ceny liší nejvýš o 11 % (v průměru 5 %).</p>
+  <table>
+    <tr><th>Schopnost (u goblina)</th><th class="n">Cena (goblinů)</th><th>Konstanta</th></tr>
+    <tr><td>střílí na 150 px</td><td class="n">1,40</td><td>střelba +0,4 na 150 px (nejvýš +0,8)</td></tr>
+    <tr><td>létá</td><td class="n">1,30</td><td>× 1,3</td></tr>
+    <tr><td>plošné poškození 80 px</td><td class="n">1,26</td><td>+0,35 % za px (nejvýš +60 %)</td></tr>
+    <tr><td>dvakrát rychlejší</td><td class="n">1,11</td><td>rychlost^0,1</td></tr>
+    <tr><td>4× víc životů</td><td class="n">2,50</td><td>odolnost^0,7</td></tr>
+    <tr><td>3× větší útok za sekundu</td><td class="n">1,38</td><td>váha útoku 0,2</td></tr>
+    <tr><td>svolá 2 gobliny každých 8 s</td><td class="n">2,97</td><td>každý svolaný pomocník se počítá celý</td></tr>
+  </table>
+  <h3>Síla vlny</h3>
+  <div class="formula">DSP kola = Σ přes skupiny ( počet × DSP nepřítele × síla skupiny ) × (1 + 0,05 × (kolo − 1))
+síla skupiny = násobek životů^0,7 × (0,8 + 0,2 × násobek útoku)    (kapitola 11)</div>
+  <div class="box"><b>Příklad (obrázek níže).</b> Kolo 2 má 10 goblinů. Bez úprav: 10 × 10 × 1,05 = <b>105 DSP</b>. Se skupinou na Životy 150 %: 1,5^0,7 = 1,328, takže 10 × 10 × 1,328 × 1,05 = <b>139 DSP</b> (+74 % proti kolu 1 s 80 DSP).<br>
+  <b>Troll</b>: odolnost = 400 ÷ 0,75 ÷ 25 = 21,3 → 21,3^0,7 = 8,52; tempo (22/45)^0,1 = 0,931; útok 0,8 + 0,2 × 12,5 ÷ 4 = 1,425; DSP = 10 × 8,52 × 0,931 × 1,425 = <b>113</b>.</div>
+  <figure><img src="img/waves-strength.jpg" alt=""><figcaption>Síla vln: DSP každého kola, změna proti předchozímu, kde robot padne</figcaption></figure>
+  <h3>Nástroje síly vln</h3>
+  <ul>
+    <li><b>Všechny vlny slabší / silnější o __ %</b> (1–90 %): každé kolo × (1 ± p). Počty se zaokrouhlí na celé nepřátele a zbytek doplní druh, který ho nejpřesněji vyplní (spíš pět goblinů než druhá pavoučice), nikdy druh, který v kole není. Každá skupina si nechá čas od prvního do posledního nepřítele (bude hustší). Každé kolo je do 10 % od cíle, v průměru 3 %.</li>
+    <li><b>🎲 Vytvořit vlny…</b>: vyber nepřátele, počet kol (1–60), sílu 1. vlny (DSP) a o kolik je každá další silnější (výchozí 16 % ≈ výchozí plán: 80 → ~1350). Kolo <i>r</i> míří na <i>první × (1 + růst)^(r − 1)</i>; jeden nepřítel smí být nejvýš 60 % kola, takže silní přijdou, až jsou vlny dost velké; každé kolo, které může, přinese nový druh (slabší dřív) a přimíchá až dva známé, z toho jeden dav. Náhled ukáže kola, než nahradí ta stávající. Stejná volba dá stejný plán.</li>
+  </ul>
+
+  <h2>13. Statistiky a robot</h2>
+  <h3>Shrnutí po vlně</h3>
+  <p>Po každé vlně se nahoře na 9 s (nebo do ťuknutí) ukáže: 👾 poražení nepřátelé, 🪙 sebrané mince, 🎁 odměna (+ mince z budov), ⏱ jak dlouho vlna trvala, ztracené budovy a životy, nebo „nic ztraceno!“, a co je nové v příštím kole.</p>
+  <h3>🤖 Nech robota zkusit</h3>
+  <p>V editoru vln. Robot (opatrný hráč: staví podle pořadí na nejbližší místa k radnici, sbírá mince, loví nepřátele u budov, chodí se léčit) zahraje <b>tuto mapu s těmito vlnami třikrát</b> na vybranou obtížnost (asi 3 s). Robot nepoužívá zvláštní schopnosti, aby síla vln byla měřená bez nich.</p>
+  <figure><img src="img/robot.jpg" alt=""><figcaption>Výsledek robota: verdikt a u každého kola délka vlny, ztracené budovy a životy</figcaption></figure>
+  <table>
+    <tr><th>Verdikt</th><th>Kdy</th></tr>
+    <tr><td>😵 Moc těžké</td><td>robot ani jednou nevyhrál</td></tr>
+    <tr><td>😬 Těžké</td><td>vyhrál jen někdy</td></tr>
+    <tr><td>🙂 Akorát</td><td>vyhrál, ale něco ztratil</td></tr>
+    <tr><td>😴 Možná moc lehké</td><td>vyhrál pokaždé a nic neztratil</td></tr>
+  </table>
+  <p>U každého kola: průměrná délka vlny (⏱), ztracené budovy (🏚) a životy (💔) a značky <b>krátké</b> (pod 20 s), <b>dlouhé</b> (nad 90 s), <b>těžké</b> (v průměru aspoň 1 budova nebo život).</p>
+  <h3>🧪 Najít hranice</h3>
+  <p>Robot zahraje mapu jednou pro každé ze tří semínek náhody a na začátku každého kola si uloží kopii hry. Z kopie hraje to kolo znovu se silnější vlnou (×1,25, ×1,5, ×2, ×3, ×4, ×6, ×8 – víc nepřátel stejných druhů), dokud <b>neprohraje aspoň 2 ze 3 her</b>, a pak mezeru půlí na 10 %. Kolo, které neudrží ani tak, jak je, zkouší slabší (×0,8 … ×0,25). V tabulce Síla vln pak u kola stojí <i>padne při ×2,4 (612 DSP)</i>, <i>vydrží i ×8</i>, <i>padne už teď (vydrží ×0,6)</i>, nebo <i>robot sem nedošel</i>. Červené řádky padají už teď, žluté mají méně než ×1,25 rezervy. Trvá asi 25 s pro 20 vln.</p>
+  <h3>Výchozí plán podle robota</h3>
+  <p>Výchozí plán je každé kolo silnější (80 → 1371 DSP) a rezerva robota se rovnoměrně zužuje z ×4,7 v 1. kole na ×1,7 ve 20. kole. Lehkou robot vyhraje bez ztráty budovy, normální pokaždé, těžkou ve 4 z 5 her.</p>
+
+  <h2>14. Obtížnost</h2>
+  <table>
+    <tr><th></th><th class="n">Životy nepřátel</th><th class="n">Rychlost</th><th class="n">Útok</th><th class="n">Mince na začátku</th><th class="n">Životy hrdiny navíc</th></tr>
+    <tr><td>🐣 Lehká</td><td class="n">70 %</td><td class="n">85 %</td><td class="n">70 %</td><td class="n">125 %</td><td class="n">+2</td></tr>
+    <tr><td>⚔️ Normální</td><td class="n">100 %</td><td class="n">100 %</td><td class="n">100 %</td><td class="n">100 %</td><td class="n">0</td></tr>
+    <tr><td>🔥 Těžká</td><td class="n">130 %</td><td class="n">112 %</td><td class="n">100 %</td><td class="n">85 %</td><td class="n">0</td></tr>
+  </table>
+  <p>Obtížnost se vybírá na obrazovce Hrát a pamatuje se. Čísla součástí zůstávají, hra je jen při hře násobí.</p>
+
+  <h2>15. Mapy</h2>
+  <figure class="small"><img src="img/map-place.jpg" alt=""><figcaption>Editor mapy – Rozmístit</figcaption></figure>
+  <ul>
+    <li>Mapa má 1280 × 720 px. <b>Žlutá = cesta</b> (chodí se po ní), <b>zelená = tráva</b> (nechodí se), jiné barvy také nejsou průchozí. Mapa se převede na mřížku po 16 px; buňka je průchozí, když je aspoň z poloviny žlutá. Nepřátelé jdou nejkratší cestou k radnici, létající rovně.</li>
+    <li><b>Kreslit</b>: Cesta (šířka štětce), Tráva, Tužka (tloušťka, barva), Kyblík, zpět; „Ukázat cesty“ ukáže průchozí mřížku.</li>
+    <li><b>Rozmístit</b>: Radnice (u cesty), Místa na stavbu (libovolný počet, vedle cest), Jeskyně, Ozdoba, Guma (klik smaže jednu věc, tažení smaže vše, přes co jde – jedním ↶ se vrátí; radnici jen klik).</li>
+    <li><b>Jeskyně</b>: klik vedle cesty (do 96 px) postaví jeskyni hned k cestě. Panel vlevo: Obvyklá jeskyně, nakreslené jeskyně a „Ozdoby jako jeskyně“, velikost. Vybraná jeskyně má 8 úchytů (zvětšit / natáhnout). Kontrola: cesta vedoucí k radnici musí být do 16 px od rámečku jeskyně a jeskyně nejméně 160 px od radnice; jinak má jeskyně červený rámeček a hláška „Jeskyně N není u cesty“.</li>
+    <li><b>Ozdoby</b>: panel s hledáním, jedno kliknutí = jedna ozdoba (jen na trávu), rámeček s úchyty (zvětšit, natáhnout), <kbd>Delete</kbd>, vyplnění mnohoúhelníku (hustota 1–10, různost velikostí 0–80 %). Ozdoby neovlivňují průchodnost.</li>
+    <li><b>Povrch</b>: každé barvě mapy jde přiřadit povrch (vestavěný nebo nakreslený); „Ukázat povrchy“ ukáže mapu jako ve hře.</li>
+    <li><b>Téma</b> mapy omezí budovy na budovy tématu a v editoru vln dá nepřátele tématu nahoru.</li>
+    <li>Dole je vždy, co chybí (radnice, místa, jeskyně, cesta k radnici…); připravenou mapu jde hrát.</li>
+  </ul>
+
+  <h2>16. Pravidla hry</h2>
+  <p>Obrazovka Pravidla mění čísla, která nepatří jedné součásti (ta jsou v Ateliéru). Ukládají se se vším ostatním.</p>
+  <table>
+    <tr><th>Pravidlo</th><th>Výchozí</th><th>Pravidlo</th><th>Výchozí</th></tr>
+    <tr><td>mince na začátku</td><td>40</td><td>dosah sebrání mince</td><td>24 px</td></tr>
+    <tr><td>první příprava / příprava</td><td>45 s / 20 s</td><td>mince zmizí po</td><td>30 s (bliká 5 s)</td></tr>
+    <tr><td>odměna za kolo</td><td>10 + kolo</td><td>bonus za Připraven</td><td>0,5 mince / s</td></tr>
+    <tr><td>růst životů nepřátel</td><td>+5 % za kolo</td><td>životy hrdiny</td><td>5</td></tr>
+    <tr><td>návrat hrdiny</td><td>10 s</td><td>nezranitelnost po ztrátě života</td><td>1,5 s</td></tr>
+    <tr><td>výměna zbraně</td><td>2 s</td><td>truhla</td><td>2 %, 60 s, 15 mincí</td></tr>
+    <tr><td>dosah stavění</td><td>90 px</td><td>zrychlení za dělníka</td><td>0,15</td></tr>
+    <tr><td>oprava budov</td><td>1 %/s po 5 s</td><td>prodej</td><td>70 %</td></tr>
+    <tr><td>vojáci: rychlost / dosah / hlídání</td><td>80 / 30 / 160 px</td><td>vylepšení hrdiny</td><td>15 / 30 / 50 mincí</td></tr>
+  </table>
+  <p>Dále tabulka hrdiny (kapitola 4) a <b>Co se kdy odemkne</b> (vylepšení hrdiny podle kol). Kdy jdou stavět úrovně budov, je u každé úrovně v Ateliéru („Od kola“). Tlačítko <b>Výchozí pravidla</b> vrátí vše.</p>
+
+  <h2>17. Ukládání, soubory, knihovna</h2>
+  <ul>
+    <li><b>Jeden soubor</b>: prohlížeč drží všechno jako jeden uložený soubor (IndexedDB) – všechny součásti s obrázky, animacemi a zvuky, mapy, témata, pravidla, nastavení. <b>Stáhnout soubor</b> dá přesně tento soubor.</li>
+    <li><b>Nahrání celého souboru</b>: věci se párují podle id, jinak podle jména (u součástí i podle druhu). Nové se přidají. U změněných se ukáže, co se změnilo (čísla, jména, texty, obrázky), a vybereš <b>Aktualizovat</b>, <b>Nechat moje</b>, <b>Aktualizovat vše</b>, <b>Nechat vše moje</b>, nebo zrušíš celé nahrání.</li>
+    <li><b>Soubor mapy nebo součásti</b> obsahuje i vše, co potřebuje (pomocníky, střely, vojáky, jiné vzhledy, budovy světa mapy, ozdoby, povrchy; ikony ovládání ne). Při nahrání: stejné se použije, částečně jiné přibude jako kopie <i>Jméno (Mapa)</i> / <i>Jméno (Autor)</i> / <i>Jméno (2)</i>, nové se přidá; nakonec tabulka kopií (Nechat obojí / Jen moje / Jen z mapy).</li>
+    <li><b>Knihovna</b>: soubory na stránkách hry; odkaz <code>…/sketch-village/?data=goblin-forest</code> otevře hru s nahraným souborem (soubor z jiné stránky se nejdřív zeptá).</li>
+    <li><b>Balíček třídy</b> (<code>public/default-data.json</code>): nový počítač s ním začne; <b>Nahrát balíček třídy</b> ho přidá kdykoli (nic nesmaže).</li>
+    <li><b>Zpět k výchozím součástkám hry</b>: porovná součásti s výchozími (hra + balíček třídy) a nabídne <b>Navíc – smazat</b>, <b>Změněné – vrátit</b>, <b>Chybí – doplnit</b>; vše se zaškrtnutím a s dotazem „Opravdu?“. Mapy, témata a pravidla zůstanou.</li>
+    <li><b>Rozehraná hra</b> se ukládá po každém kole, při Uložit a odejít a při zavření okna; na obrazovce Hrát je <b>Pokračovat</b>. Pamatuje se jedna, není součástí staženého souboru.</li>
+    <li><b>Bezpečí dat</b>: hra požádá prohlížeč, aby data neodmazal; po 2 dnech neuložených změn připomene zálohu.</li>
+  </ul>
+  <figure class="small"><img src="img/data.jpg" alt=""><figcaption>Uložit a nahrát</figcaption></figure>
+
+  <h2>18. Zařízení, přístupnost, instalace</h2>
+  <ul>
+    <li>Hra pozná <b>počítač, tablet a telefon</b>. Na telefonu (naležato) pokrývá mapa celou obrazovku, ovládání je v okrajích pro palce; batoh a obchod jsou přes celou obrazovku. Všechna tlačítka mají aspoň 44–48 px.</li>
+    <li>Kolem mapy je papírový okraj, takže mapu jde vytáhnout zpod ovládání.</li>
+    <li><b>Přístupnost</b>: obrazovky splňují WCAG 2.1 AA (kontrola axe-core), všechna tlačítka mají popisky, okna drží fokus, celá hra jde hrát jen klávesnicí, hlášky čtou čtečky obrazovky; omezení pohybu v systému vypne chvění.</li>
+    <li><b>Instalace a hra bez internetu</b>: po první návštěvě hra funguje i offline. Chrome / Edge / Android: Uložit a nahrát → 📲 Nainstalovat; iPhone / iPad: Safari → Sdílet → Přidat na plochu (na iPhonu jen tak Safari data drží natrvalo). Nová verze se nabídne mimo hru („Znovu načíst“).</li>
+  </ul>
+</section>
+</body>
+</html>

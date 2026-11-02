@@ -58,11 +58,12 @@
   },
   "bg": {
     "title": "Odstraň papír",
-    "hint": "Posuvníkem nastav, kolik papíru zmizí. Šachovnice = průhledné.",
+    "hint": "Posuvníky nastav, kolik papíru zmizí a jak výrazné budou čáry a barvy. Šachovnice = průhledné.",
+    "remove": "Odstranit papír (vypni, když má zůstat celý obrázek i s pozadím)",
     "tolerance": "Gumovat papír",
     "ink": "Ztmavit čáry",
+    "vivid": "Živější barvy",
     "inside": "Gumovat i papír uvnitř obrázku",
-    "skip": "Nechat papír",
     "done": "Hotovo"
   },
   "sketch": {

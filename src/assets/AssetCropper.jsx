@@ -7,7 +7,7 @@ import { loadImage, makeCanvas } from './imageEncoding.js';
 // Crop step (generalized CargoImageEditor). Outputs a lossless PNG at
 // `workSize` so the background-removal step still has detail to work with;
 // the final downscale + WebP encoding happens after that.
-export default function AssetCropper({ image, aspect = 1, workSize = 512, onDone, onCancel }) {
+export default function AssetCropper({ image, aspect = 1, workSize = 768, onDone, onCancel }) {
   const { t } = useTranslation();
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);

@@ -35,6 +35,42 @@ test('a picture from the clipboard goes to cropping like a photo', async ({ page
   expect(errors).toEqual([]);
 });
 
+test('the paper step: sharp preview, paper removal can be switched off, livelier colours', async ({ page }) => {
+  const errors = watchErrors(page);
+  await openGoblin(page);
+  await page.evaluate(async () => {
+    // pale paper with a pale red square in the middle
+    const c = document.createElement('canvas');
+    c.width = c.height = 400;
+    const g = c.getContext('2d');
+    g.fillStyle = '#eee8dc';
+    g.fillRect(0, 0, 400, 400);
+    g.fillStyle = '#d99a9a';
+    g.fillRect(100, 100, 200, 200);
+    const blob = await new Promise((r) => c.toBlob(r, 'image/png'));
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+  });
+  await page.locator('.slot').first().getByTitle('Vložit obrázek ze schránky').click();
+  await page.getByRole('button', { name: /Oříznout/ }).click();
+  const preview = page.getByTestId('bg-preview');
+  await expect(preview).toBeVisible();
+  // the preview has as many pixels as the cropped picture – more than it is shown at, so never upscaled
+  const px = (x, y) => preview.evaluate((c, [x, y]) => [...c.getContext('2d').getImageData(Math.round(c.width * x), Math.round(c.height * y), 1, 1).data], [x, y]);
+  await expect.poll(() => preview.evaluate((c) => c.width)).toBeGreaterThanOrEqual(512);
+  const box = await preview.boundingBox();
+  expect(await preview.evaluate((c) => c.width)).toBeGreaterThan(box.width);
+  await expect.poll(() => px(0.02, 0.02).then((p) => p[3])).toBe(0); // paper gone
+  await page.getByTestId('bg-remove').uncheck();
+  await expect.poll(() => px(0.02, 0.02).then((p) => p[3])).toBe(255); // paper kept
+  await expect(page.getByTestId('bg-tolerance')).toBeDisabled();
+  const [r1, g1] = await px(0.5, 0.5);
+  await page.getByTestId('bg-vivid').fill('100');
+  await expect.poll(() => px(0.5, 0.5).then(([r, g]) => r - g)).toBeGreaterThan(r1 - g1 + 40);
+  await page.getByRole('button', { name: /Hotovo/ }).click();
+  await expect(preview).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
 test('Ctrl+V on the drawing pad, and the paste box when the clipboard has no picture', async ({ page }) => {
   await openGoblin(page);
   await page.evaluate(() => navigator.clipboard.writeText('just text'));

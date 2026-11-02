@@ -16,7 +16,9 @@
     "make-library": "node scripts/make-library.mjs",
     "old-defaults": "node scripts/old-defaults.mjs",
     "calibrate-dsp": "node scripts/calibrate-dsp.mjs",
-    "wave-limits": "node scripts/wave-limits.mjs"
+    "wave-limits": "node scripts/wave-limits.mjs",
+    "docs": "node scripts/make-docs.mjs",
+    "docs-shots": "node scripts/docs-shots.mjs"
   },
   "dependencies": {
     "i18next": "^24.2.0",
