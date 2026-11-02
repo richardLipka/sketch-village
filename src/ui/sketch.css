@@ -356,7 +356,17 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 @keyframes end-sigh { 0%, 100% { transform: rotate(-12deg) translateY(6px) scaleY(1); } 50% { transform: rotate(-14deg) translateY(9px) scaleY(0.95); } }
 .end-sad-hero .tear { position: absolute; top: 40%; left: 58%; width: 7px; height: 10px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; background: #60a5fa; animation: end-tear 2.2s ease-in infinite; opacity: 0; }
 @keyframes end-tear { 0%, 30% { transform: translateY(0); opacity: 0; } 40% { opacity: 1; } 100% { transform: translateY(30px); opacity: 0; } }
-@media (max-height: 520px) { .end-heroes { height: 84px; margin: 0; } .end-hero, .end-won .end-hero.played { width: 56px; height: 56px; } .end-cloud { height: 40px; font-size: 30px; } .end-title { font-size: 30px; } }
+@media (max-height: 520px) {
+  .end-card { padding-top: 8px; padding-bottom: 10px; }
+  .end-card p { margin: 2px 0; }
+  .end-heroes { height: 84px; margin: 0; }
+  .end-hero, .end-won .end-hero.played { width: 56px; height: 56px; }
+  .end-hero.sad { width: 46px; height: 46px; }
+  .end-cloud { height: 30px; font-size: 26px; }
+  .end-cloud .drop { top: 24px; }
+  .end-title { font-size: 30px; margin: 4px 0 0; }
+  .end-title.sad { padding-bottom: 20px; }
+}
 
 /* narrow / portrait screens (tablets held upright, phones): the map leaves empty
    bands above and below, so the controls stack there instead of overlapping */

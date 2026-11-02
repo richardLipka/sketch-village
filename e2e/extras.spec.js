@@ -213,3 +213,60 @@ test('waves: a group made stronger in %, every round a few % stronger – one de
   expect(waves.rounds[0].groups[0]).not.toHaveProperty('attack'); // 100 % isn't stored
   expect(errors).toEqual([]);
 });
+
+/** Put a value under a key of the browser's IndexedDB store. */
+const writeKey = (page, key, value) => page.evaluate(async ([k, v]) => {
+  const db = await new Promise((ok) => { const r = indexedDB.open('keyval-store'); r.onsuccess = () => ok(r.result); });
+  await new Promise((ok) => { const r = db.transaction('keyval', 'readwrite').objectStore('keyval').put(v, k); r.onsuccess = ok; });
+  db.close();
+}, [key, value]);
+
+test('a game played to its end: the victory screen and the defeat screen (SPEC §11)', async ({ page, isMobile }) => {
+  test.setTimeout(120_000);
+  const errors = watchErrors(page);
+  await openMenu(page);
+  await startGame(page);
+  await page.getByRole('button', { name: /Připraven/ }).click();
+  await expect(page.locator('.ov-tr')).toContainText('Zbývá nepřátel');
+  await page.waitForTimeout(3000); // the first monsters come out of the caves
+  await clickExit(page, isMobile);
+  await page.getByTestId('quit-save').click();
+  await expect(page.getByTestId('saved-game')).toBeVisible();
+  const saved = await readKey(page, 'sv:game');
+
+  // the last round with every monster gone: the game ends with a victory
+  await writeKey(page, 'sv:game', { ...saved, round: saved.totalRounds, state: { ...saved.state, round: saved.totalRounds - 1, phase: 'wave', queue: [], enemies: [] } });
+  await page.reload();
+  await page.getByRole('button', { name: /Hrát/ }).click();
+  await page.getByTestId('continue').click();
+  const won = page.getByTestId('end-won');
+  await expect(won).toBeVisible({ timeout: 30_000 });
+  await expect(won.getByRole('heading', { name: 'Vesnice ubráněna!' })).toBeVisible();
+  await expect(won.getByTestId('fireworks')).toBeAttached();
+  await expect(won.locator('.end-hero.played')).toHaveCount(1);
+  expect(await won.locator('.end-hero').count()).toBeGreaterThan(1); // other drawn heroes jump along
+  await expect(won).toContainText(`Kolo ${saved.totalRounds} z ${saved.totalRounds}`);
+  await expect.poll(() => readKey(page, 'sv:game')).toBe(null); // an ended game isn't kept
+  // play again: a new game from round 1
+  await won.getByRole('button', { name: /Hrát znovu/ }).click();
+  await expect(page.getByTestId('end-won')).toHaveCount(0);
+  await expect(page.locator('.ov-tr')).toContainText(`Kolo 1/${saved.totalRounds}`);
+
+  // monsters at the Town Hall with almost nothing left: the game is lost
+  const th = saved.state.townHall;
+  const { enemies } = saved.state;
+  expect(enemies.length).toBeGreaterThan(0);
+  await writeKey(page, 'sv:game', { ...saved, state: { ...saved.state, townHall: { ...th, hp: 1 }, enemies: enemies.map((e) => ({ ...e, x: th.x + 30, y: th.y })) } });
+  await page.reload();
+  await page.getByRole('button', { name: /Hrát/ }).click();
+  await page.getByTestId('continue').click();
+  const lost = page.getByTestId('end-lost');
+  await expect(lost).toBeVisible({ timeout: 30_000 });
+  await expect(lost.getByRole('heading', { name: 'Konec hry' })).toBeVisible();
+  await expect(lost).toContainText('Radnice padla!');
+  await expect(lost.locator('.end-hero.sad')).toHaveCount(1);
+  await expect.poll(() => readKey(page, 'sv:game')).toBe(null);
+  await lost.getByRole('button', { name: 'Konec', exact: true }).click();
+  await expect(page.getByRole('button', { name: /Začít/ })).toBeVisible();
+  expect(errors).toEqual([]);
+});
