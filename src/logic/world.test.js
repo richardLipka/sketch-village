@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { expandRound, roundSummary, roundDuration } from './waves.js';
+import { expandRound, roundSummary, roundDuration, groupBoost, oneDecimal } from './waves.js';
+import { dspTable, roundDsp, wavesDsp } from './dsp.js';
 import { World } from './world.js';
 import { defaultWaves } from '../config/waves.js';
 import { DEFAULT_ENEMY_TYPES } from '../config/enemies.js';
@@ -62,6 +63,56 @@ function makeWorld(waves, opts = {}) {
 }
 
 const run = (w, seconds, dt = 1 / 30) => { for (let t = 0; t < seconds && w.phase !== 'lost' && w.phase !== 'won'; t += dt) w.update(dt); };
+
+describe('stronger groups and a plan that grows every round', () => {
+  it('a group’s own % and the growth per round add up against the same base', () => {
+    expect(groupBoost({})).toEqual({ hp: 1, attack: 1 });
+    expect(groupBoost({ hp: 200, attack: 150 })).toEqual({ hp: 2, attack: 1.5 });
+    // 10 % per round: round 1 as it is, round 2 +10 %, round 3 +20 % … round 20 +190 %
+    expect([0, 1, 2, 19].map((ri) => groupBoost({}, ri, 10).hp)).toEqual([1, 1.1, 1.2, 2.9]);
+    expect(groupBoost({ hp: 200, attack: 200 }, 19, 10)).toEqual({ hp: 3.9, attack: 3.9 });
+    expect(groupBoost({ hp: 100 }, 2, 3.33).hp).toBe(1.067); // the % with one decimal place: 106.7 %
+    expect(groupBoost({ hp: 5 }).hp).toBe(0.1); // never weaker than a tenth
+    expect(oneDecimal(106.66666)).toBe('106.7');
+    expect(oneDecimal(290.00000001)).toBe('290');
+    const q = expandRound({ groups: [{ enemy: 'goblin', count: 2, attack: 200 }] }, ['a'], { index: 1, growth: 10 });
+    expect(q.map((s) => [s.hp, s.attack])).toEqual([[1.1, 2.1], [1.1, 2.1]]);
+    expect(expandRound({ groups: [{ enemy: 'goblin', count: 1 }] }, ['a'])[0]).not.toHaveProperty('hp');
+  });
+
+  it('the monsters come out with that health and hit that much harder; their minions too', () => {
+    const w = makeWorld({ growth: 10, rounds: [{ groups: [] }, { groups: [{ enemy: 'goblin', count: 1, hp: 200, attack: 300, spawn: 'left' }] }] });
+    w.callReady(); w.update(0.01); // round 1 is empty
+    w.callReady(); w.update(0.01);
+    const e = w.enemies[0];
+    const strong = Math.round(25 * (1 + w.b.hpScalePerRound) * 2.1); // 200 % + 10 % growth in round 2
+    expect(e.maxHp).toBe(strong);
+    expect(e.attackK).toBe(3.1);
+    // a minion it calls is as much stronger
+    const minion = w.spawnEnemy('goblin', e, e);
+    expect(minion.maxHp).toBe(strong);
+    expect(minion.attackK).toBe(3.1);
+    minion.dead = true;
+    // it hits 3.1× as hard as a goblin does
+    w.hero.dead = true; w.hero.respawnAt = 1e9;
+    const hits = [];
+    const real = w.damage.bind(w);
+    w.damage = (target, amount) => { if (target.kind !== 'enemy') hits.push(amount); real(target, amount); };
+    run(w, 60);
+    expect(hits.length).toBeGreaterThan(0);
+    expect(hits[0]).toBeCloseTo(w.types.goblin.damage * 3.1, 6);
+  });
+
+  it('a stronger group and the growth count in the wave’s DSP', () => {
+    const table = dspTable(DEFAULT_ENEMY_TYPES);
+    const plain = { groups: [{ enemy: 'goblin', count: 10 }] };
+    const tough = { groups: [{ enemy: 'goblin', count: 10, hp: 200 }] };
+    expect(roundDsp(tough, 0, table) / roundDsp(plain, 0, table)).toBeCloseTo(2 ** 0.7, 3);
+    const rows = wavesDsp({ growth: 10, rounds: [plain, plain, plain] }, table);
+    expect(rows[1].dsp).toBeGreaterThan(wavesDsp({ rounds: [plain, plain, plain] }, table)[1].dsp);
+    expect(rows[2].change).toBeGreaterThan(0);
+  });
+});
 
 describe('World – caves anywhere', () => {
   it('enemies from a cave in the middle of the map step onto its road and walk to the village', () => {

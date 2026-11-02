@@ -4,11 +4,12 @@ import { compName } from '../config/components.js';
 import { mapCanvas, gridFromCanvas, ruggedRoads } from './mapRuntime.js';
 import { BUILT_IN_IDS, builtInTexture, terrainColours, texturedCanvas, textureSwatch } from './textures.js';
 import { themeName } from '../config/themes.js';
-import { validateMap, placeCave, MAX_SPOTS, CENTRE_RADIUS } from '../logic/mapModel.js';
+import { validateMap, placeCave, MAX_SPOTS, CENTRE_RADIUS, CAVE_SIZE, caveSize } from '../logic/mapModel.js';
 import { floodFill, hexToRgba } from '../assets/pixelOps.js';
 import { loadImage } from '../assets/imageEncoding.js';
 import { newId } from '../data/saveFile.js';
 import DecorPanel from './DecorPanel.jsx';
+import CavePanel from './CavePanel.jsx';
 import { PainterTools, TerrainPanel, DECOR_COLORS, ROAD_SIZES, PENCIL_SIZES, RUBBER_SIZES } from './PainterTools.jsx';
 import { drawOverlay } from './painterOverlay.js';
 import { matchesQuery, searchTexts } from '../ui/search.js';
@@ -17,6 +18,9 @@ import { DECOR_BASE, onDecor, handleAt, resizeDecor, fillPolygon, seededRng, tou
 // Map Painter & Map Editor (SPEC §5.1).
 //   Paint – yellow road brush, grass brush (erases road), decoration pencil, bucket fill.
 //   Place – town hall (village centre), any number of building spots, caves anywhere beside a road, decorations.
+//           Caves: each has its shape – the usual one, any cave drawing or a decoration
+//           (CavePanel.jsx) – and can be resized like a decoration; one not beside a
+//           road any more gets a red frame and the map says so.
 //           Decorations: their pictures in a searchable list on the left; a placed one
 //           is selected (a frame with 8 handles: corners resize, sides stretch), Delete
 //           removes the selected thing; or draw a polygon and fill it with decorations
@@ -56,6 +60,8 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
   const [rubberAt, setRubberAt] = useState(null); // where the rubber is (its circle on the overlay)
   const rub = useRef(null); // a rubber stroke: { before } – the map when it started (one undo step)
   const [decorAsset, setDecorAsset] = useState(null);
+  const [caveAsset, setCaveAsset] = useState(null); // the shape new caves get (null: the usual cave)
+  const [caveScale, setCaveScale] = useState(1);
   const [decorScale, setDecorScale] = useState(1);
   const [decorQuery, setDecorQuery] = useState('');
   const [decorMode, setDecorMode] = useState('place'); // place one | fill a polygon
@@ -88,6 +94,9 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
   const core = assets.find((a) => a.category === 'building' && a.stats?.core);
   const townhallImg = [core, ...assets.filter((a) => core && a.stats?.variantOf === core.id)].map((a) => a?.images?.find(Boolean)).find(Boolean);
   const caveImg = firstImage('cave');
+  // shapes a cave can have: cave drawings, then decorations
+  const caveDrawings = assets.filter((a) => a.category === 'cave' && a.images?.[0] && findable(a));
+  const sizeOfCave = (c) => caveSize(c);
 
   // after every change of the bitmap: walkable grid + the colours it is painted with
   const recomputeGrid = useCallback(() => {
@@ -136,8 +145,8 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
   // preload images used on the overlay
   useEffect(() => {
     const want = new Map();
-    for (const d of map.decorations) {
-      const a = assets.find((x) => x.id === d.asset);
+    for (const d of [...map.decorations, ...map.caves]) {
+      const a = d.asset && assets.find((x) => x.id === d.asset);
       if (a) want.set(a.id, a.images[0]);
     }
     if (townhallImg) want.set('townhall', townhallImg);
@@ -148,14 +157,15 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
       images.current[k] = await loadImage(src);
       changed = true;
     })).then(() => changed && setImgTick((n) => n + 1));
-  }, [map.decorations, assets, townhallImg, caveImg]);
+  }, [map.decorations, map.caves, assets, townhallImg, caveImg]);
 
   // ---------- overlay drawing ----------
   useEffect(() => {
     const c = overRef.current;
     if (!c || c.width !== W) return; // not sized yet (bitmap still loading)
     const rubber = rubberAt && mode === 'place' && placeTool === 'erase' ? { ...rubberAt, r: rubberSize } : null;
-    drawOverlay(c.getContext('2d'), { map, grid, showGrid, images: images.current, sel, poly, rubber, centreLabel: t('maps.marker_centre') });
+    const badCaves = grid ? validateMap(map, grid).problems.filter((p) => p.key === 'cave_off_path').map((p) => p.params.n - 1) : [];
+    drawOverlay(c.getContext('2d'), { map, grid, showGrid, images: images.current, sel, poly, rubber, centreLabel: t('maps.marker_centre'), badCaves });
   }, [map, grid, showGrid, W, H, t, sel, poly, imgTick, rubberAt, rubberSize, mode, placeTool]);
 
   // ---------- helpers ----------
@@ -183,8 +193,8 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
   };
   const update = (patch) => setMap((m) => ({ ...m, ...patch }));
 
-  // A cave goes anywhere, right beside the nearest road (null = no road near).
-  const caveAt = (p) => (grid ? placeCave(grid, p, { width: W, height: H }) : null);
+  // A cave goes anywhere, right beside the nearest road (null = no road near); a bigger one stands further out.
+  const caveAt = (p, size) => (grid ? placeCave(grid, p, { width: W, height: H }, size) : null);
 
   // Find a draggable marker under the point.
   const hitTest = (p) => {
@@ -193,7 +203,7 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
       if (onDecor(map.decorations[i], p)) return { kind: 'decorations', i };
     }
     for (let i = 0; i < map.spots.length; i++) if (near(map.spots[i])) return { kind: 'spots', i };
-    for (let i = 0; i < map.caves.length; i++) if (near(map.caves[i])) return { kind: 'caves', i };
+    for (let i = 0; i < map.caves.length; i++) if (near(map.caves[i]) || onDecor(map.caves[i], p)) return { kind: 'caves', i };
     if (near(map.centre, 40)) return { kind: 'centre' };
     return null;
   };
@@ -202,7 +212,7 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
     if (hit.kind === 'centre') update({ centre: { ...map.centre, x: p.x, y: p.y } });
     else {
       const list = [...map[hit.kind]];
-      const pos = hit.kind === 'caves' ? caveAt(p) : p;
+      const pos = hit.kind === 'caves' ? caveAt(p, sizeOfCave(list[hit.i])) : p;
       if (!pos) return; // dragged away from every road: the cave stays where it was
       list[hit.i] = { ...list[hit.i], ...pos };
       update({ [hit.kind]: list });
@@ -286,10 +296,10 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
       else setPoly([...poly, p]);
       return;
     }
-    // the selected decoration's handles: resize / stretch
-    const picked = sel?.kind === 'decorations' && map.decorations[sel.i];
-    const handle = picked && handleAt(picked, p, HANDLE_HIT * (W / overRef.current.getBoundingClientRect().width));
-    if (handle) { drag.current = { resize: handle, i: sel.i, start: { ...picked }, undoPending: true }; return; }
+    // the selected decoration's (or cave's) handles: resize / stretch
+    const picked = (sel?.kind === 'decorations' || sel?.kind === 'caves') && map[sel.kind][sel.i];
+    const handle = picked && handleAt(sel.kind === 'caves' ? { ...picked, ...sizeOfCave(picked) } : picked, p, HANDLE_HIT * (W / overRef.current.getBoundingClientRect().width));
+    if (handle) { drag.current = { resize: handle, kind: sel.kind, i: sel.i, start: { ...picked, ...(sel.kind === 'caves' ? sizeOfCave(picked) : {}) }, undoPending: true }; return; }
     const hit = hitTest(p);
     if (placeTool === 'erase') {
       // the rubber: what was clicked (the Town Hall too), then all it is pulled over – one undo step
@@ -314,10 +324,13 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
     if (placeTool === 'centre') update({ centre: { x: p.x, y: p.y, radius: CENTRE_RADIUS } });
     else if (placeTool === 'spot' && map.spots.length < MAX_SPOTS) update({ spots: [...map.spots, { id: newId(), ...p }] });
     else if (placeTool === 'cave') {
-      const pos = caveAt(p);
+      const s = Math.round(CAVE_SIZE * caveScale);
+      const size = { w: s, h: s };
+      const pos = caveAt(p, size);
       if (!pos) { undo.current.pop(); setPlaceMsg(t('maps.cave_need_road')); return; }
       setPlaceMsg(null);
-      update({ caves: [...map.caves, { id: newId(), ...pos }] });
+      update({ caves: [...map.caves, { id: newId(), ...pos, ...(caveAsset ? { asset: caveAsset } : {}), ...(s !== CAVE_SIZE ? size : {}) }] });
+      setSel({ kind: 'caves', i: map.caves.length }); // the new one is selected: resize it right away
     }
     else if (placeTool === 'decoration') {
       if (!decorAsset) { undo.current.pop(); setPlaceMsg(t('maps.pick_decor_first')); return; }
@@ -340,9 +353,10 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
     if (d?.undoPending) { pushUndo(); d.undoPending = false; } // the selected thing really moves now
     if (stroke.current) { paintSeg(stroke.current, p); stroke.current = p; }
     else if (d?.resize) {
-      const list = [...map.decorations];
-      list[d.i] = resizeDecor(d.start, d.resize, p);
-      update({ decorations: list });
+      const list = [...map[d.kind]];
+      const { scale: _s, ...frame } = resizeDecor(d.start, d.resize, p);
+      list[d.i] = frame;
+      update({ [d.kind]: list });
     } else if (d) {
       // kept on the map even when the pointer leaves it
       const to = { x: Math.max(0, Math.min(W, p.x + (d.dx ?? 0))), y: Math.max(0, Math.min(H, p.y + (d.dy ?? 0))) };
@@ -378,6 +392,16 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
   };
 
   const pickPlaceTool = (id) => { setPlaceTool(id); setPlaceMsg(null); setPoly([]); };
+
+  // a cave shape: for the selected cave (it changes now), else for the next ones
+  const selCave = sel?.kind === 'caves' ? map.caves[sel.i] : null;
+  const pickCaveShape = (id) => {
+    if (!selCave) { setCaveAsset(id); return; }
+    pushUndo();
+    const { asset: _a, ...rest } = selCave;
+    update({ caves: map.caves.map((c, i) => (i === sel.i ? (id ? { ...rest, asset: id } : rest) : c)) });
+    setCaveAsset(id);
+  };
 
   return (
     <section className="map-painter">
@@ -422,6 +446,13 @@ export default function MapPainter({ map: initial, assets, themes = [], onSave, 
 
       <div className="painter-body">
         {mode === 'terrain' && <TerrainPanel map={map} colours={colours} choices={textureChoices} onTexture={setTexture} />}
+        {mode === 'place' && placeTool === 'cave' && (
+          <CavePanel
+            query={decorQuery} onQuery={setDecorQuery} caves={caveDrawings} decorations={decorations} usual={caveImg}
+            asset={selCave ? (selCave.asset ?? null) : caveAsset} onAsset={pickCaveShape} scale={caveScale} onScale={setCaveScale}
+            selected={!!selCave} onDelete={() => { pushUndo(); removeMarker(sel); }}
+          />
+        )}
         {mode === 'place' && placeTool === 'decoration' && (
           <DecorPanel
             mode={decorMode} onMode={(m) => { setDecorMode(m); setPoly([]); setSel(null); }}

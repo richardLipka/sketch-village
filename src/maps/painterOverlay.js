@@ -2,7 +2,7 @@
 // decorations, the Town Hall circle, building spots, caves, the selection frame
 // with its handles, the polygon being drawn for a fill and the rubber. Pure drawing.
 
-import { CENTRE_RADIUS } from '../logic/mapModel.js';
+import { CENTRE_RADIUS, caveSize } from '../logic/mapModel.js';
 import { decorSize, handlePoints } from './decorEdit.js';
 
 const HANDLE = 9; // px half-size of a frame handle as drawn
@@ -10,8 +10,9 @@ const HANDLE = 9; // px half-size of a frame handle as drawn
 /**
  * Draw everything on top of the bitmap.
  * images: { [assetId], townhall?, cave? } loaded pictures (missing ones get an outline)
+ * badCaves: indexes of caves not beside a road (a red frame)
  */
-export function drawOverlay(ctx, { map, grid, showGrid, images, sel, poly, rubber, centreLabel }) {
+export function drawOverlay(ctx, { map, grid, showGrid, images, sel, poly, rubber, centreLabel, badCaves = [] }) {
   const { width: W, height: H } = map.world;
   ctx.clearRect(0, 0, W, H);
 
@@ -58,29 +59,39 @@ export function drawOverlay(ctx, { map, grid, showGrid, images, sel, poly, rubbe
     ctx.fillText(String(i + 1), s.x, s.y);
   });
 
-  for (const cv of map.caves) {
-    const img = images.cave;
-    if (img) ctx.drawImage(img, cv.x - 32, cv.y - 32, 64, 64);
+  // caves: their own shape (a cave drawing or a decoration), else the first cave drawing, else a dark arch
+  map.caves.forEach((cv, i) => {
+    const img = (cv.asset && images[cv.asset]) || images.cave;
+    const { w, h } = caveSize(cv);
+    if (img) ctx.drawImage(img, cv.x - w / 2, cv.y - h / 2, w, h);
     else {
       ctx.save();
       ctx.fillStyle = '#3f3f46';
       ctx.beginPath();
-      ctx.arc(cv.x, cv.y + 10, 26, Math.PI, 0);
-      ctx.lineTo(cv.x + 26, cv.y + 18);
-      ctx.lineTo(cv.x - 26, cv.y + 18);
+      ctx.ellipse(cv.x, cv.y + h * 0.16, w * 0.41, h * 0.41, 0, Math.PI, 0);
+      ctx.lineTo(cv.x + w * 0.41, cv.y + h * 0.28);
+      ctx.lineTo(cv.x - w * 0.41, cv.y + h * 0.28);
       ctx.fill();
       ctx.restore();
     }
-  }
+    if (badCaves.includes(i)) {
+      ctx.save();
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([6, 4]);
+      ctx.strokeRect(cv.x - w / 2, cv.y - h / 2, w, h);
+      ctx.restore();
+    }
+  });
 
-  // the selected thing: a frame; a decoration also gets its 8 handles
+  // the selected thing: a frame; a decoration or a cave also gets its 8 handles
   const picked = sel && (sel.kind === 'centre' ? map.centre : map[sel.kind]?.[sel.i]);
   if (picked) {
     ctx.save();
     ctx.strokeStyle = '#ca8a04';
     ctx.lineWidth = 3;
     ctx.setLineDash([8, 5]);
-    if (sel.kind === 'decorations') {
+    if (sel.kind === 'decorations' || sel.kind === 'caves') {
       const { w, h } = decorSize(picked);
       ctx.strokeRect(picked.x - w / 2, picked.y - h / 2, w, h);
       ctx.setLineDash([]);

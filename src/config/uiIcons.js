@@ -1,7 +1,23 @@
 // GUI icons the kids can redraw (SPEC §4b): the hearts, coins, workers… on the
 // game's controls. Each is a fixed built-in component of the studio category
 // `icon` (they can't be added or deleted, only drawn); until it is drawn the
-// emoji is shown.
+// emoji is shown. The heroes' special abilities have one each too.
+
+import { ABILITIES } from './abilities.js';
+
+const ABILITY_NAMES = {
+  strike: { cs: 'Mocný úder', en: 'Mighty strike' },
+  shout: { cs: 'Bojový pokřik', en: 'Battle shout' },
+  reinforcements: { cs: 'Posily', en: 'Reinforcements' },
+  heal: { cs: 'Léčení', en: 'Healing' },
+  arrowRain: { cs: 'Déšť šípů', en: 'Arrow rain' },
+  freeze: { cs: 'Zmrazení', en: 'Freeze' },
+  shield: { cs: 'Štít', en: 'Shield' },
+  rally: { cs: 'Povzbuzení', en: 'Rally' },
+};
+
+/** The GUI icon of a hero ability (its button, the shop, the hero editor). */
+export const abilityIcon = (id) => `ability_${id}`;
 
 export const UI_ICONS = [
   { key: 'heart', emoji: '♥', name: { cs: 'Srdce (život)', en: 'Heart (life)' } },
@@ -16,6 +32,9 @@ export const UI_ICONS = [
   { key: 'backpack', emoji: '🎒', name: { cs: 'Batoh', en: 'Backpack' } },
   { key: 'chronicle', emoji: '📖', name: { cs: 'Kronika', en: 'Chronicle' } },
   { key: 'waves', emoji: '👺', name: { cs: 'Vlny (v editoru map)', en: 'Waves (in the map editor)' } },
+  ...Object.entries(ABILITY_NAMES).map(([id, n]) => ({
+    key: abilityIcon(id), emoji: ABILITIES[id].icon, name: { cs: `Schopnost: ${n.cs}`, en: `Ability: ${n.en}` },
+  })),
 ];
 
 export const uiIconId = (key) => `ui-${key}`;

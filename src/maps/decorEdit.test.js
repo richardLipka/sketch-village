@@ -3,6 +3,15 @@ import { decorSize, onDecor, handleAt, handlePoints, resizeDecor, pointInPolygon
 
 const tree = { id: 't', asset: 'a', x: 100, y: 100, scale: 1 }; // 64 × 64
 
+describe('caves resized like decorations', () => {
+  it('the rubber reaches a big cave by its frame, not only its middle', () => {
+    const map = { decorations: [], spots: [], caves: [{ id: 'c', x: 300, y: 300, w: 200, h: 200 }] };
+    expect(touchedBy(map, { x: 390, y: 300 }, 10).caves).toEqual([0]);
+    expect(touchedBy(map, { x: 450, y: 300 }, 10).caves).toEqual([]);
+    expect(touchedBy({ ...map, caves: [{ id: 'd', x: 300, y: 300 }] }, { x: 340, y: 300 }, 10).caves).toEqual([0]);
+  });
+});
+
 describe('a decoration’s frame', () => {
   it('older decorations are square by scale; new ones have their own width and height', () => {
     expect(decorSize(tree)).toEqual({ w: DECOR_BASE, h: DECOR_BASE });

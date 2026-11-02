@@ -14,7 +14,8 @@ test('the strength table, +10 %, generated waves and the robot’s limits', asyn
   const errors = watchErrors(page);
   await openMenu(page);
   await page.getByRole('button', { name: /Mapy/ }).click();
-  await page.locator('.asset-tile').first().getByRole('button', { name: /Vlny/ }).click();
+  // a map of the class pack that plays the built-in plan
+  await page.locator('.asset-tile', { hasText: 'Lesy' }).getByRole('button', { name: /Vlny/ }).click();
 
   // every round with its DSP; the built-in plan gets stronger every round
   const rows = page.locator('.wave-strength-table tbody tr');
@@ -56,7 +57,7 @@ test('the strength table, +10 %, generated waves and the robot’s limits', asyn
 
   // saved with the map
   await page.getByRole('button', { name: /Uložit/ }).click();
-  await expect.poll(async () => (await readDb(page)).maps[0].waves?.rounds?.length).toBe(3);
+  await expect.poll(async () => (await readDb(page)).maps.find((m) => m.name === 'Lesy').waves?.rounds?.length).toBe(3);
   expect(errors).toEqual([]);
 });
 

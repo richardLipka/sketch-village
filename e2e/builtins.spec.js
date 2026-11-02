@@ -16,6 +16,10 @@ async function openStudioTab(page, tab) {
 test('arrows: the game’s pictures are in the studio, can be drawn over, never deleted', async ({ page }) => {
   const errors = watchErrors(page);
   await openMenu(page);
+  // the class pack has its own arrow, bolt and stone drawings: start from the game's pictures
+  const file = await readDb(page);
+  await writeDb(page, { ...file, assets: file.assets.map((a) => (['arrow', 'magicBolt', 'catapultStone'].includes(a.id) ? { ...a, images: [] } : a)) });
+  await page.reload();
   await openStudioTab(page, 'Šípy');
   for (const name of ['Šíp', 'Kouzelná střela', 'Kámen z katapultu']) {
     const tile = page.locator('.asset-tile', { hasText: `⭐ ${name}` });

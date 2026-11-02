@@ -21,7 +21,7 @@ test('a map file: download, load into a game drawn differently, merge the copies
 
   // ⬇ Download on the map tile
   await page.getByRole('button', { name: /Mapy/ }).click();
-  const tile = page.locator('.asset-tile').first();
+  const tile = page.locator('.asset-tile', { hasText: 'Lesy' }); // a class map playing the built-in plan
   const downloading = page.waitForEvent('download');
   await tile.getByTestId('map-download').click();
   const download = await downloading;

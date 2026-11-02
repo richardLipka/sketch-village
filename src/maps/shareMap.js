@@ -23,7 +23,7 @@ export function mapComponents(map, assets = [], balance) {
     // the buildings of the map's world (and the Town Hall)
     if (a.category === 'building' && !a.stats?.variantOf && (a.stats?.core || fitsTheme(a, map.theme))) start.push(a.id);
   }
-  for (const d of map.decorations ?? []) start.push(d.asset);
+  for (const d of [...(map.decorations ?? []), ...(map.caves ?? [])]) if (d.asset) start.push(d.asset);
   for (const id of Object.values(map.textures ?? {})) start.push(id);
   for (const r of wavesOf(map, balance).rounds) for (const g of r.groups ?? []) start.push(g.enemy);
   const ids = withReferences(start, assets);

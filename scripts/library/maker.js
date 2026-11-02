@@ -311,10 +311,11 @@ async function makeMap(def, decorById, home) {
 }
 
 export async function makeLibrary() {
-  const decorById = Object.fromEntries(Object.keys(DRAW).map((k, i) => [`lib-${k}`, decoration(k, 100 + i)]));
   // what a fresh game has: the built-ins with the class pack's drawings
   const pack = parseSaveFile(await (await fetch('/default-data.json')).text());
   const home = migrateDb(mergeSaveFile({ settings: {}, assets: [], maps: [], themes: [], rules: [] }, pack).db).db;
+  // the library's decorations – as the class (re)drew them when the pack has them
+  const decorById = Object.fromEntries(Object.keys(DRAW).map((k, i) => [`lib-${k}`, home.assets.find((a) => a.id === `lib-${k}`) ?? decoration(k, 100 + i)]));
   const out = [];
   for (const def of MAPS) out.push(await makeMap(def, decorById, home));
   return out;

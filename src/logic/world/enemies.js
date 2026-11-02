@@ -6,23 +6,28 @@ import { hpScale } from '../waves.js';
 import { dist, SEPARATION } from './shared.js';
 
 export class Enemies {
-  /** A wave entry comes out of its cave. */
-  spawn({ enemy, cave }) {
+  /** A wave entry comes out of its cave (as strong as its group: hp / attack multipliers, logic/waves.js). */
+  spawn({ enemy, cave, hp = 1, attack = 1 }) {
     const c = this.caves.find((x) => x.id === cave);
-    if (c) this.spawnEnemy(enemy, c);
+    if (c) this.spawnEnemy(enemy, c, null, { hp, attack });
   }
 
-  /** A new enemy at `at` (ground ones step onto the nearest road); `summoner` = who called it. */
-  spawnEnemy(typeId, at, summoner = null) {
+  /**
+   * A new enemy at `at` (ground ones step onto the nearest road); `summoner` = who
+   * called it – its minions are as much stronger as it is; `boost` = { hp, attack } multipliers.
+   */
+  spawnEnemy(typeId, at, summoner = null, boost = null) {
     const type = this.types[typeId];
     if (!type) return null;
-    const hp = Math.max(1, Math.round(type.hp * hpScale(this.b, this.round) * this.difficulty.enemyHp));
+    const k = boost ?? { hp: summoner?.hpK ?? 1, attack: summoner?.attackK ?? 1 };
+    const hp = Math.max(1, Math.round(type.hp * hpScale(this.b, this.round) * this.difficulty.enemyHp * k.hp));
     const start = type.flying ? { x: at.x, y: at.y } : this.snapToRoad(at);
     const e = {
       id: this.nextId++, kind: 'enemy', type: type.id, x: start.x, y: start.y,
       hp, maxHp: hp, flying: !!type.flying, radius: (type.boss ? this.b.bossRadius : this.b.enemyRadius) * (type.size ?? 1),
       cooldown: 0, next: null, offset: (this.rng() * 2 - 1) * SEPARATION, dead: false, attacking: false,
       summoner: summoner?.id ?? null, summonTimer: type.minionEvery ?? 0,
+      ...(k.hp !== 1 ? { hpK: k.hp } : {}), ...(k.attack !== 1 ? { attackK: k.attack } : {}),
     };
     this.enemies.push(e);
     this.emit('spawn', { id: e.id, enemy: type.id, summoned: !!summoner });
@@ -84,10 +89,11 @@ export class Enemies {
     if (target) {
       if (e.cooldown === 0) {
         e.cooldown = type.cooldown;
-        if (type.ranged) this.shoot(e, target, type.damage, 'enemy', type.splash ?? 0, type.projectile ?? null);
+        const damage = type.damage * (e.attackK ?? 1); // a group made stronger in the wave editor hits harder
+        if (type.ranged) this.shoot(e, target, damage, 'enemy', type.splash ?? 0, type.projectile ?? null);
         else {
-          this.damage(target, type.damage);
-          if (type.splash > 0) this.enemySplash(target, type.splash, type.damage, target);
+          this.damage(target, damage);
+          if (type.splash > 0) this.enemySplash(target, type.splash, damage, target);
         }
         this.emit('enemyAttack', { id: e.id, enemy: e.type });
       }

@@ -147,3 +147,69 @@ test('moving things show which way they go: on the pictures, the frames and the 
   expect(errors).toEqual([]);
 });
 
+test('caves: a shape for each cave – a cave drawing or a decoration – resized by its corners', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'the editors are checked on the PC');
+  test.setTimeout(90_000);
+  const errors = watchErrors(page);
+  await openMenu(page);
+  await page.getByRole('button', { name: /Mapy/ }).click();
+  await page.locator('.screen-body .asset-tile').first().click();
+  await page.getByRole('button', { name: /Rozmístit/ }).click();
+  await page.getByRole('button', { name: /🕳️ Jeskyně/ }).click();
+  const panel = page.getByTestId('cave-panel');
+  await expect(panel.getByRole('button', { name: 'Obvyklá jeskyně' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(panel).toContainText('Ozdoby jako jeskyně');
+  const before = (await readDb(page)).maps[0].caves.length;
+
+  // road pixels away from the Town Hall: a click on the road puts the cave beside it (and selects it)
+  const stage = page.locator('.map-stage');
+  await stage.scrollIntoViewIfNeeded();
+  const box = await stage.boundingBox();
+  const roads = await page.evaluate(() => {
+    const c = document.querySelector('.map-stage canvas');
+    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    const out = [];
+    for (let y = 60; y < c.height - 60; y += 37) for (let x = 60; x < c.width - 60; x += 37) {
+      const i = (y * c.width + x) * 4;
+      if (Math.abs(d[i] - 0xf2) < 6 && Math.abs(d[i + 1] - 0xd2) < 6 && Math.abs(d[i + 2] - 0x4b) < 6 && Math.hypot(x - c.width / 2, y - c.height / 2) > 250) out.push({ x, y, w: c.width });
+    }
+    return out;
+  });
+  const del = panel.getByRole('button', { name: /Smazat jeskyni/ });
+  for (const r of roads) {
+    await page.mouse.click(box.x + (r.x / r.w) * box.width, box.y + (r.y / r.w) * box.width);
+    if (await del.isVisible()) break;
+    await page.keyboard.press('Escape');
+  }
+  await expect(del).toBeVisible();
+  // the selected cave takes a decoration's shape
+  const decor = panel.locator('.decor-group').nth(1).locator('.decor-tile').first();
+  await decor.click();
+  await expect(decor).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.painter-status')).toContainText('připravená');
+  await page.getByRole('button', { name: /Uložit/ }).first().click();
+  const map = (await readDb(page)).maps[0];
+  expect(map.caves).toHaveLength(before + 1);
+  const assets = (await readDb(page)).assets;
+  expect(assets.find((a) => a.id === map.caves.at(-1).asset)?.category).toBe('decoration');
+  expect(errors).toEqual([]);
+});
+
+test('waves: a group made stronger in %, every round a few % stronger – one decimal place', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'the editors are checked on the PC');
+  const errors = watchErrors(page);
+  await openMenu(page);
+  await page.getByRole('button', { name: /Mapy/ }).click();
+  await page.getByRole('button', { name: /Vlny/ }).first().click();
+  await page.getByTestId('wave-growth').fill('2.25');
+  await expect(page.getByTestId('wave-growth')).toHaveValue('2.3');
+  await page.getByTestId('group-hp').first().fill('200');
+  await expect(page.getByTestId('group-boost').first()).toHaveText('= v tomto kole ⚔️ 100 % · ❤️ 200 %');
+  await expect(page.locator('.sketch-card').filter({ hasText: 'Kolo 3' }).first()).toContainText('📈 +4.6 %');
+  await page.getByRole('button', { name: /Uložit/ }).first().click();
+  await expect.poll(async () => (await readDb(page)).maps[0].waves?.growth).toBe(2.3);
+  const waves = (await readDb(page)).maps[0].waves;
+  expect(waves.rounds[0].groups[0].hp).toBe(200);
+  expect(waves.rounds[0].groups[0]).not.toHaveProperty('attack'); // 100 % isn't stored
+  expect(errors).toEqual([]);
+});

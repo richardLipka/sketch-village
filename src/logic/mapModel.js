@@ -12,18 +12,46 @@ export const CAVE_REACH = 96; // px: a click this close to a road places a cave 
 export const CAVE_MAX_DISTANCE = 48; // px from a cave to its road
 export const CAVE_MIN_CENTRE_DISTANCE = 160; // px: a cave right at the Town Hall would be no fun
 export const CENTRE_RADIUS = 60;
+export const CAVE_SIZE = 64; // px of a cave as placed (it can be resized like a decoration)
 
-const CAVE_GAP = 22; // px from the road edge to the cave's middle – the cave touches the road
+const CAVE_GAP = 22; // px from the road edge to the middle of a cave of CAVE_SIZE – the cave touches the road
+
+/** A cave's size in map px: { w, h } (older caves have none: CAVE_SIZE). */
+export const caveSize = (c) => ({ w: c?.w ?? CAVE_SIZE, h: c?.h ?? CAVE_SIZE });
+
+const CAVE_EDGE = CAVE_MAX_DISTANCE - CAVE_SIZE / 2; // px a road may be away from a cave's frame (16: a usual cave's middle 48 px)
+
+/**
+ * The road cell beside a cave: the one nearest its middle among the road cells
+ * its frame (CAVE_EDGE px around it) touches – so a big or stretched cave counts
+ * by its edge, not its middle. null when no road touches it.
+ */
+export function caveRoad(grid, c) {
+  const { w, h } = caveSize(c);
+  const x0 = Math.max(0, Math.floor((c.x - w / 2 - CAVE_EDGE) / grid.cell)), x1 = Math.min(grid.cols - 1, Math.floor((c.x + w / 2 + CAVE_EDGE) / grid.cell));
+  const y0 = Math.max(0, Math.floor((c.y - h / 2 - CAVE_EDGE) / grid.cell)), y1 = Math.min(grid.rows - 1, Math.floor((c.y + h / 2 + CAVE_EDGE) / grid.cell));
+  let best = null;
+  for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) {
+    if (!isWalkable(grid, cx, cy)) continue;
+    const p = cellCenter(grid, cx, cy), d = Math.hypot(p.x - c.x, p.y - c.y);
+    if (!best || d < best.d) best = { cx, cy, d };
+  }
+  return best;
+}
 
 /**
  * Where a cave clicked at `p` goes: anywhere on the map, but always right beside
  * the nearest road (on the side of the click), so it is clear where its enemies
- * walk. null when no road is within CAVE_REACH.
+ * walk. null when no road is within CAVE_REACH. `size` ({ w, h }): a bigger cave
+ * stands further out, so that its edge (not its middle) touches the road.
  */
-export function placeCave(grid, p, world = WORLD) {
+export function placeCave(grid, p, world = WORLD, size = null) {
   const at = worldToCell(grid, p.x, p.y);
-  const n = nearestWalkable(grid, at.cx, at.cy, Math.ceil(CAVE_REACH / grid.cell) + 1);
-  if (!n || n.dist * grid.cell > CAVE_REACH) return null;
+  const { w, h } = caveSize(size);
+  const extra = Math.max(0, (Math.max(w, h) - CAVE_SIZE) / 2);
+  const reach = CAVE_REACH + extra;
+  const n = nearestWalkable(grid, at.cx, at.cy, Math.ceil(reach / grid.cell) + 1);
+  if (!n || n.dist * grid.cell > reach) return null;
   const road = cellCenter(grid, n.cx, n.cy);
   const walkAt = (x, y) => { const c = worldToCell(grid, x, y); return x >= 0 && y >= 0 && x < world.width && y < world.height && isWalkable(grid, c.cx, c.cy); };
 
@@ -48,7 +76,9 @@ export function placeCave(grid, p, world = WORLD) {
   let x = from.x, y = from.y;
   for (let i = 0; i < 64 && walkAt(x, y); i++) { x += dx * 4; y += dy * 4; }
   const clamp = (v, max) => Math.round(Math.min(max - 20, Math.max(20, v)));
-  return { x: clamp(x + dx * CAVE_GAP, world.width), y: clamp(y + dy * CAVE_GAP, world.height) };
+  // a bigger cave further out by how much bigger it is that way (a wide one beside a road going up and down…)
+  const gap = CAVE_GAP + Math.max(0, (Math.abs(dx) * (w - CAVE_SIZE) + Math.abs(dy) * (h - CAVE_SIZE)) / 2);
+  return { x: clamp(x + dx * gap, world.width), y: clamp(y + dy * gap, world.height) };
 }
 
 export function emptyMap(name = '') {
@@ -62,7 +92,7 @@ export function emptyMap(name = '') {
     palette: { ...DEFAULT_PALETTE },
     centre: null, // { x, y, radius }
     spots: [], // [{ id, x, y }]
-    caves: [], // [{ id, x, y, asset? }]
+    caves: [], // [{ id, x, y, asset?, w?, h? }] – asset: a cave drawing or a decoration (none: the first cave drawing)
     heroRespawn: null, // unused since v1.1 – the hero always (re)spawns at the Town Hall
     decorations: [], // [{ id, asset, x, y, scale }]
     theme: null, // theme (world) id – config/themes.js
@@ -107,7 +137,7 @@ export function validateMap(map, grid) {
     if (map.centre && Math.hypot(c.x - map.centre.x, c.y - map.centre.y) < CAVE_MIN_CENTRE_DISTANCE) {
       problems.push({ key: 'cave_too_close', params: { n: i + 1 } });
     }
-    const cell = near(c, CAVE_MAX_DISTANCE);
+    const cell = caveRoad(grid, c);
     if (!cell) problems.push({ key: 'cave_off_path', params: { n: i + 1 } });
     else if (field && field[cell.cy * grid.cols + cell.cx] === Infinity) problems.push({ key: 'cave_not_connected', params: { n: i + 1 } });
   });

@@ -10,6 +10,8 @@ A small village-defense strategy game for kids. Every sprite (hero, enemies, hou
 
 - **Save and leave**: ending a game offers to keep it; it is also kept after every round. **Play → Continue** goes on where it was left. The kept game is not part of the downloaded data.
 - **Special ability**: every hero has one of eight (mighty strike, battle shout, reinforcements, healing, arrow rain, freeze, shield, rally), picked with its numbers in the hero editor, used with the button next to the attacks or **E** (arrow rain is aimed at a place on the map), upgraded in the Town Hall shop. Pointing at the button shows its area and who it will hit or help.
+- **Caves**: in the map editor every cave can look different – a cave drawing or any decoration – and be resized by its corners; one that is no longer beside a road gets a red frame.
+- **Wave strength in %**: in the wave editor each group has attack and health in % (200 = double), and the whole plan can grow a few % every round (1–2 % is already much harder). The ability icons can be drawn in the studio (Icons).
 - **Speed** 1× / 2× / 3×, a **range circle** while choosing a building, optional **quiet music** (🎵), and the chronicle's **collection** ("you've met 9 of 14 monsters").
 - **Save & load → Back to the game's own components** lists what isn't the game's own, what was changed and what is missing, and cleans it up after asking.
 

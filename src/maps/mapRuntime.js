@@ -2,7 +2,7 @@
 
 import { makeCanvas, loadImage } from '../assets/imageEncoding.js';
 import { buildGrid } from '../logic/pathGrid.js';
-import { CENTRE_RADIUS, emptyMap, validateMap } from '../logic/mapModel.js';
+import { CENTRE_RADIUS, emptyMap, validateMap, caveSize } from '../logic/mapModel.js';
 import { newId } from '../data/saveFile.js';
 import { texturedCanvas } from './textures.js';
 import { decorSize } from './decorEdit.js';
@@ -40,8 +40,11 @@ export async function mapThumbnail(map, assets = [], width = 192) {
   const ctx = c.getContext('2d');
   ctx.drawImage(shown, 0, 0, c.width, c.height);
   const pics = {};
-  for (const d of [...(map.decorations ?? [])].sort((a, b) => a.y - b.y)) {
-    const src = assets.find((a) => a.id === d.asset)?.images?.[0];
+  // decorations and caves (their own shape, else the first cave drawing), back to front
+  const usualCave = assets.find((a) => a.category === 'cave' && a.images?.some(Boolean));
+  const things = [...(map.decorations ?? []), ...(map.caves ?? []).map((c) => ({ ...c, asset: c.asset ?? usualCave?.id, ...caveSize(c) }))];
+  for (const d of things.sort((a, b) => a.y - b.y)) {
+    const src = assets.find((a) => a.id === d.asset)?.images?.find(Boolean);
     if (!src) continue;
     pics[d.asset] ??= await loadImage(src).catch(() => null);
     const { w, h } = decorSize(d);

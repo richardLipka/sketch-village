@@ -338,6 +338,7 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 .decor-picker { padding: 8px 10px; display: grid; gap: 6px; }
 .decor-tile { display: flex; flex-direction: column; align-items: center; width: 84px; min-height: 48px; padding: 4px; border: 2px solid transparent; border-radius: 8px; background: #fffdf7; cursor: pointer; font: inherit; font-size: 14px; color: var(--ink); }
 .decor-tile img { width: 64px; height: 64px; object-fit: contain; }
+.decor-tile .decor-emoji { font-size: 40px; line-height: 64px; height: 64px; }
 .decor-tile span { max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .decor-tile.on { border-color: var(--ink); background: var(--hl-yellow); }
 
@@ -625,6 +626,7 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 .decor-list .decor-tile { width: 100%; min-height: 0; padding: 3px; }
 .decor-list .decor-tile img { width: 100%; max-width: 52px; height: auto; aspect-ratio: 1; object-fit: contain; }
 .decor-list .decor-tile span { max-width: 100%; font-size: 12px; }
+.decor-list .decor-tile .decor-emoji { font-size: 32px; line-height: 52px; height: 52px; }
 .decor-modes { gap: 4px; flex-wrap: wrap; }
 .decor-side input[type=range] { width: 100%; }
 .painter-side .terrain-row { flex-wrap: wrap; }

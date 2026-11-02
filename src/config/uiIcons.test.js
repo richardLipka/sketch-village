@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { UI_ICONS, uiIconsOf, uiIconId } from './uiIcons.js';
+import { UI_ICONS, uiIconsOf, uiIconId, abilityIcon } from './uiIcons.js';
+import { ABILITY_IDS, ABILITIES } from './abilities.js';
 import { DEFAULT_COMPONENTS, projectilesOf, soldierChoicesOf } from './components.js';
 import { getCategory } from '../assets/categories.js';
 
@@ -10,6 +11,12 @@ describe('GUI icons', () => {
       expect(c).toMatchObject({ category: 'icon', stats: { icon: i.key, emoji: i.emoji } });
     }
     expect(getCategory('icon').fixed).toBe(true);
+  });
+  it('every hero ability has an icon to draw, its emoji until then', () => {
+    for (const id of ABILITY_IDS) {
+      expect(UI_ICONS.find((i) => i.key === abilityIcon(id))).toMatchObject({ emoji: ABILITIES[id].icon });
+    }
+    expect(new Set(UI_ICONS.map((i) => i.key)).size).toBe(UI_ICONS.length);
   });
   it('only drawn icons replace the emoji', () => {
     const heart = { ...DEFAULT_COMPONENTS.find((x) => x.id === 'ui-heart'), images: ['data:image/png;base64,h'] };

@@ -300,7 +300,8 @@ export class World {
   startWave() {
     this.phase = 'wave';
     this.waveTime = 0;
-    this.queue = expandRound(this.waves.rounds[this.round], this.caveIds);
+    // the round's monsters, each group as strong as the wave editor says (own % + the plan's growth)
+    this.queue = expandRound(this.waves.rounds[this.round], this.caveIds, { index: this.round, growth: this.waves.growth });
     this.emit('waveStart', { round: this.round + 1 });
   }
 

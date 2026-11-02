@@ -24,20 +24,20 @@ export function onDecor(d, p, pad = 0) {
 
 /**
  * What a rubber of radius `r` at `p` touches: decorations whose frame it
- * reaches, building spots and caves (markers of radius `marker`), the Town
+ * reaches, caves (their frame, at least a marker), building spots (markers of radius `marker`), the Town
  * Hall only with `centre` (a sweep must not take it by accident – a click on it
  * does). Returns { decorations: [i…], spots: [i…], caves: [i…], centre }.
  */
 export function touchedBy(map, p, r, { marker = 28, centre = false } = {}) {
   const near = (q, reach) => Math.hypot(q.x - p.x, q.y - p.y) <= reach;
-  const decorations = [];
-  map.decorations.forEach((d, i) => {
+  const framed = (list) => list.flatMap((d, i) => {
     const { w, h } = decorSize(d);
     const dx = Math.max(Math.abs(p.x - d.x) - w / 2, 0), dy = Math.max(Math.abs(p.y - d.y) - h / 2, 0);
-    if (Math.hypot(dx, dy) <= r) decorations.push(i);
+    return Math.hypot(dx, dy) <= r ? [i] : [];
   });
   const idx = (list) => list.flatMap((q, i) => (near(q, r + marker) ? [i] : []));
-  return { decorations, spots: idx(map.spots), caves: idx(map.caves), centre: !!(centre && map.centre && near(map.centre, r + 40)) };
+  const caves = [...new Set([...idx(map.caves), ...framed(map.caves)])].sort((a, b) => a - b);
+  return { decorations: framed(map.decorations), spots: idx(map.spots), caves, centre: !!(centre && map.centre && near(map.centre, r + 40)) };
 }
 
 /** The map without what the rubber touched (the same map when it touched nothing). */

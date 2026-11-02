@@ -42,8 +42,13 @@ describe('the shipped class pack: the class’s drawings', () => {
       const diff = diffRecords(comparable({ ...c, images: [], author: '' }), comparable({ ...a, images: [], author: '' }));
       expect(diff.filter((d) => !d.path.endsWith('soldierKind')), c.id).toEqual([]);
     }
-    expect(pack.assets.filter((a) => a.category === 'hero').map((a) => a.name)).toEqual(['Lara', 'Robin', 'Goblinobijec', 'Čarodějka']);
-    expect(pack.assets.some((a) => a.category === 'icon')).toBe(false);
+    expect(pack.assets.filter((a) => a.category === 'hero').map((a) => a.name)).toEqual(['Lara', 'Robin', 'Goblinobijec', 'Čarodějka', 'Ostrovid', 'Vznešený rytíř', 'Alakazar']);
+    // every hero has its own ability; drawn GUI icons are only the game's own ones
+    for (const h of pack.assets.filter((a) => a.category === 'hero')) expect(h.ability?.id, h.name).toBeTruthy();
+    for (const i of pack.assets.filter((a) => a.category === 'icon')) expect(DEFAULT_COMPONENTS.some((c) => c.id === i.id), i.id).toBe(true);
+    // its maps can be played (one is still being drawn), and nothing personal (the tutorial, met monsters…) comes with it
+    expect(pack.maps.filter((m) => m.valid).length).toBeGreaterThanOrEqual(10);
+    expect(Object.keys(shipped.settings)).toEqual(['dataVersion']);
   });
 
   it('refers only to things it holds or the game has', () => {

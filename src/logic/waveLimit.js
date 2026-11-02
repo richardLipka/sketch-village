@@ -71,7 +71,7 @@ export function findWaveLimits(setup0, { seeds = LIMIT_SEEDS, rounds, balance = 
   const out = [];
   indexes.forEach((r, n) => {
     const original = waves.rounds[r];
-    const dsp = roundDsp(original, r, table, balance);
+    const dsp = roundDsp(original, r, table, balance, waves.growth);
     const snaps = games.map((g) => g.snaps[r]).filter(Boolean);
     if (!snaps.length) { out.push({ round: r + 1, dsp, limit: null, holds: null, limitDsp: null, status: 'not_reached', games: 0 }); onProgress?.(n + 1, indexes.length); return; }
     const tried = new Map(); // factor → fell consistently?

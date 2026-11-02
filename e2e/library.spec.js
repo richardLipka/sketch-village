@@ -53,7 +53,8 @@ test('a file from another site is asked about first; a broken link says so', asy
   await page.route('https://example.org/**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: valley, headers: { 'access-control-allow-origin': '*' } }));
   await page.goto('/?data=https://example.org/maps/valley.json');
   await expect(page.getByText(/example\.org/).first()).toBeVisible();
-  expect((await readDb(page))?.maps?.some((m) => m.id === 'lib-green-valley') ?? false).toBe(false); // nothing loaded yet
+  // nothing loaded yet (a fresh game has the class pack's copy of the valley, only that one)
+  expect(((await readDb(page))?.maps ?? []).filter((m) => m.name === 'Zelené údolí').length).toBeLessThanOrEqual(1);
   await page.locator('.modal-foot').getByRole('button', { name: /Nahrát/ }).click();
   await expect(page.locator('.screen-head')).toContainText('Zelené údolí');
 

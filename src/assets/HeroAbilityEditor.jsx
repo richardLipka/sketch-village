@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import NumField from './NumField.jsx';
 import { ABILITIES, ABILITY_IDS, ABILITY_PARAMS, PARAM_LIMITS, abilityOf, abilityAt, abilityNumbers } from '../config/abilities.js';
 import { HERO_UPGRADE_COSTS } from '../config/buildings.js';
+import { abilityIcon } from '../config/uiIcons.js';
+import UiIcon from '../ui/UiIcon.jsx';
 
 // The hero's special ability (SPEC §6.4): one of eight, with its numbers. A
 // hero without a choice shows (and plays with) the one picked for it by its id.
@@ -17,12 +19,12 @@ export default function HeroAbilityEditor({ hero, onChange }) {
 
   return (
     <div className="sketch-card hero-ability" style={{ padding: 10, marginTop: 12 }}>
-      <h3 style={{ margin: '0 0 6px' }}>{d.icon} {t('ability.title')}</h3>
+      <h3 style={{ margin: '0 0 6px' }}><UiIcon name={abilityIcon(a.id)} /> {t('ability.title')}</h3>
       <p className="small muted" style={{ margin: '0 0 6px' }}>{t('ability.hint')}</p>
       <div className="ability-pick" role="radiogroup" aria-label={t('ability.title')}>
         {ABILITY_IDS.map((id) => (
           <button key={id} type="button" role="radio" aria-checked={id === a.id} className={`btn chip ${id === a.id ? 'active' : ''}`} onClick={() => pick(id)} title={t(`ability.${id}_hint`)}>
-            {ABILITIES[id].icon} {t(`ability.${id}`)}
+            <UiIcon name={abilityIcon(id)} /> {t(`ability.${id}`)}
           </button>
         ))}
       </div>

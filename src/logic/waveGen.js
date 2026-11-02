@@ -8,7 +8,7 @@
 //                                        or removed, each group keeping its timing span
 //   fitGroups(groups, target, table)     the groups changed to be worth `target` DSP
 
-import { dspTable, groupsDsp } from './dsp.js';
+import { dspTable, groupsDsp, unitDsp } from './dsp.js';
 import { hpScale } from './waves.js';
 import { BALANCE } from '../config/balance.js';
 
@@ -39,7 +39,7 @@ function recount(g, count) {
  * the same and a big monster comes or goes only as a whole one. At least one monster stays.
  */
 export function fitGroups(groups = [], target, table) {
-  const dsp = (g) => table[g.enemy] ?? 0;
+  const dsp = (g) => unitDsp(g, table); // a group made stronger is worth more per monster
   const now = groupsDsp(groups, table);
   if (!(now > 0) || !(target >= 0)) return groups;
   const k = target / now;
@@ -129,6 +129,7 @@ export function generateWaves({ enemies = [], rounds = GEN_DEFAULTS.rounds, firs
     startCoins: base.startCoins ?? balance.startCoins,
     firstPrep: base.firstPrep ?? balance.firstPrep,
     prep: base.prep ?? balance.prep,
+    ...(base.growth ? { growth: base.growth } : {}), // the plan's own growth per round stays (wave editor)
     rounds: out,
   };
 }

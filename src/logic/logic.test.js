@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildGrid, nearestWalkable, hexToRgb, DEFAULT_PALETTE } from './pathGrid.js';
 import { findPath, smoothPath, flowField } from './pathfinding.js';
-import { emptyMap, validateMap, placeCave } from './mapModel.js';
+import { emptyMap, validateMap, placeCave, caveSize, CAVE_SIZE } from './mapModel.js';
 
 // Grid from ASCII art: '#' walkable, '.' blocked.
 function gridFrom(rows) {
@@ -153,6 +153,27 @@ describe('validateMap', () => {
     const m = good();
     m.caves = [{ id: 'a', ...above }, { id: 'b', ...below }, { id: 'c', ...onRoad, x: 200 }];
     expect(validateMap(m, grid).ok).toBe(true);
+  });
+
+  it('a bigger cave stands further out with its edge at the road; one pulled away from the road is reported', () => {
+    expect(caveSize({})).toEqual({ w: CAVE_SIZE, h: CAVE_SIZE });
+    const big = { w: 200, h: 160 };
+    const at = placeCave(grid, { x: 300, y: 250 }, undefined, big);
+    expect(at.y + big.h / 2).toBeGreaterThan(336 - 16); // its lower edge reaches the road (rows 21–23 → y 336..384)…
+    expect(at.y + big.h / 2).toBeLessThan(336 + 16);
+    expect(at.y).toBeLessThan(336 - 40); // …its middle is out on the grass
+    expect(placeCave(grid, { x: 300, y: 180 }, undefined, big)).not.toBeNull(); // a click further out still finds the road
+    const m = good();
+    m.caves = [{ id: 'a', ...at, ...big }, { id: 'b', x: 1270, y: 360 }];
+    expect(validateMap(m, grid).ok).toBe(true);
+    // the same cave made small again is far from the road
+    m.caves[0] = { id: 'a', ...at, w: 40, h: 40 };
+    expect(validateMap(m, grid).problems).toContainEqual({ key: 'cave_off_path', params: { n: 1 } });
+    // a big one counts by its edge: its corner at the road is enough, a gap of a road's width is not
+    m.caves[0] = { id: 'a', x: 200, y: 336 - 100 - 10, w: 300, h: 200 };
+    expect(validateMap(m, grid).ok).toBe(true);
+    m.caves[0] = { id: 'a', x: 200, y: 336 - 100 - 40, w: 300, h: 200 };
+    expect(validateMap(m, grid).problems).toContainEqual({ key: 'cave_off_path', params: { n: 1 } });
   });
 
   it('detects a cave not connected to the centre', () => {

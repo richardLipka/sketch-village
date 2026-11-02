@@ -17,6 +17,7 @@ async function addDecorations(page) {
   }));
   const file = await readDb(page);
   file.assets = file.assets.filter((a) => a.category !== 'decoration');
+  file.maps = file.maps.map((m) => ({ ...m, decorations: [] })); // the class pack's maps have their own
   file.assets.push({ id: 'tree1', category: 'decoration', name: 'Strom', description: 'zelený listnatý', images: [green] });
   file.assets.push({ id: 'rock1', category: 'decoration', name: 'Kámen', images: [grey] });
   await writeDb(page, file);
@@ -117,7 +118,7 @@ test('decorations: list on the left, one click = one, frame, resize, stretch, De
   await page.getByRole('button', { name: /Rozmístit/ }).click();
   await page.getByRole('button', { name: /🌳 Ozdoba/ }).click();
   await side.getByRole('radio', { name: /Vyplnit oblast/ }).click();
-  await side.locator('.decor-tile', { hasText: 'Kámen' }).click();
+  await side.getByRole('button', { name: 'Kámen', exact: true }).click();
   for (const [dx, dy] of [[-100, -100], [300, -100], [300, 100], [-100, 100]]) {
     const q = at(grass.x + dx, grass.y + dy);
     await page.mouse.click(q.x, q.y);

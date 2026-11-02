@@ -2,6 +2,7 @@ import Phaser from './phaser.js';
 import { buildingScale } from '../config/features.js';
 import { frameAt } from '../assets/animation.js';
 import { decorSize } from '../maps/decorEdit.js';
+import { caveSize } from '../logic/mapModel.js';
 import { INK, TOWN_HALL_SIZE, dashedRect } from './scene/draw.js';
 import { Textures } from './scene/Textures.js';
 import { Input, MIN_ZOOM } from './scene/Input.js';
@@ -9,6 +10,7 @@ import { Effects } from './scene/Effects.js';
 import { mapBorder, startScroll } from './viewport.js';
 import { Entities, ABILITY_COLORS } from './scene/Entities.js';
 import { ABILITIES } from '../config/abilities.js';
+import { oneDecimal } from '../logic/waves.js';
 
 // Draws the World simulation (src/logic/world.js) and forwards clicks to it.
 // Camera: zoom (wheel, pinch, buttons) and drag-pan, clamped to the map and
@@ -135,7 +137,11 @@ export default class GameScene extends Phaser.Scene {
       this.add.text(s.x, s.y, String(i + 1), { fontFamily: 'Patrick Hand', fontSize: '18px', color: '#1e3a8a' }).setOrigin(0.5).setAlpha(0.45).setDepth(-500);
     }
 
-    for (const c of map.caves) this.add.image(c.x, c.y, 'cave').setDisplaySize(64, 64).setDepth(c.y);
+    // every cave its own shape and size (map editor), else the first cave drawing
+    for (const c of map.caves) {
+      const { w, h } = caveSize(c);
+      this.add.image(c.x, c.y, c.asset && this.textures.exists(c.asset) ? c.asset : 'cave').setDisplaySize(w, h).setDepth(c.y);
+    }
 
     const th = this.world.townHall;
     this.townHall = this.add.image(th.x, th.y, this.buildingKey(th.type, this.townHallVariant, 1)).setDisplaySize(TOWN_HALL_SIZE * buildingScale(1), TOWN_HALL_SIZE * buildingScale(1)).setDepth(th.y);
@@ -194,7 +200,7 @@ export default class GameScene extends Phaser.Scene {
 
   onEvent(e) {
     this.cfg.onAnyEvent?.(e); // sounds + tutorial
-    if (e.type === 'hit' && e.amount) this.floatText(e.x, e.y - 24, `-${e.amount}`, e.kind === 'enemy' ? '#1e3a8a' : '#b91c1c');
+    if (e.type === 'hit' && e.amount) this.floatText(e.x, e.y - 24, `-${oneDecimal(e.amount)}`, e.kind === 'enemy' ? '#1e3a8a' : '#b91c1c');
     if (e.type === 'enemyDied') this.puff(e.x, e.y);
     if (e.type === 'coinPicked') this.floatText(e.x, e.y - 16, `+${e.value ?? 1}`, '#a16207');
     if (e.type === 'cantHit') this.cfg.onEvent?.(e);

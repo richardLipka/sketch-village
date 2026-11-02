@@ -13,7 +13,9 @@
 //     lifetime = PATH ÷ speed (10–45 s), shorter for a fragile one (× √(toughness ÷ 4)
 //     below 100 health – it is shot before it calls many); calls = count × lifetime ÷ every
 //     (at most MINION_CAP × the most alive at once) + those it lets out when it dies
-//   wave DSP  = Σ count × DSP × the round's health growth (balance.hpScalePerRound)
+//   wave DSP  = Σ count × DSP × boost × the round's health growth (balance.hpScalePerRound)
+//     boost   = hp^TOUGH_EXP × ((1 − W) + W × attack): a group made stronger in the wave
+//               editor (its own % + the plan's growth per round, logic/waves.js groupBoost)
 //
 // The constants were measured with the balance robot (npm run calibrate-dsp): how
 // many of each built-in monster – and of a goblin made ranged, flying,
@@ -21,7 +23,7 @@
 // the robot's defence at rounds 6 and 12, fitted so DSP ÷ 10 = what one is worth
 // in goblins.
 
-import { hpScale } from './waves.js';
+import { hpScale, groupBoost } from './waves.js';
 import { BALANCE } from '../config/balance.js';
 
 export const DSP_REF = { hp: 25, speed: 45, dps: 4, points: 10 }; // a goblin
@@ -85,14 +87,20 @@ export function dspTable(types = [], k = DSP_K) {
   return Object.fromEntries(types.map((t) => [t.id, monsterDsp(t, types, k).dsp]));
 }
 
-/** A round's DSP without the round's health growth: Σ count × DSP (unknown monsters count 0). */
-export function groupsDsp(groups = [], table) {
-  return groups.reduce((a, g) => a + Math.max(0, num(g.count)) * (table[g.enemy] ?? 0), 0);
+/** How much more a monster made stronger ({ hp, attack } multipliers) is worth. */
+export const boostDsp = ({ hp = 1, attack = 1 } = {}, k = DSP_K) => Math.pow(hp, k.TOUGH_EXP) * ((1 - k.ATTACK) + k.ATTACK * attack);
+
+/** What one monster of the group is worth: its DSP × its group's own strength (round `ri` of a plan growing `growth` %). */
+export const unitDsp = (g, table, ri = 0, growth = 0) => (table[g.enemy] ?? 0) * boostDsp(groupBoost(g, ri, growth));
+
+/** A round's DSP without the round's health growth: Σ count × DSP × the group's strength (unknown monsters count 0). */
+export function groupsDsp(groups = [], table, ri = 0, growth = 0) {
+  return groups.reduce((a, g) => a + Math.max(0, num(g.count)) * unitDsp(g, table, ri, growth), 0);
 }
 
-/** A round's DSP: its monsters, with the health they have in that round (0-based index). */
-export function roundDsp(round, roundIndex, table, balance = BALANCE) {
-  return groupsDsp(round?.groups, table) * hpScale(balance, roundIndex);
+/** A round's DSP: its monsters, with the health they have in that round (0-based index) and the plan's growth (%). */
+export function roundDsp(round, roundIndex, table, balance = BALANCE, growth = 0) {
+  return groupsDsp(round?.groups, table, roundIndex, growth) * hpScale(balance, roundIndex);
 }
 
 /**
@@ -102,7 +110,7 @@ export function roundDsp(round, roundIndex, table, balance = BALANCE) {
 export function wavesDsp(waves, table, balance = BALANCE) {
   let prev = null;
   return (waves?.rounds ?? []).map((r, i) => {
-    const dsp = roundDsp(r, i, table, balance);
+    const dsp = roundDsp(r, i, table, balance, waves.growth);
     const change = prev ? dsp / prev - 1 : null;
     prev = dsp || prev;
     return { round: i + 1, dsp, change };

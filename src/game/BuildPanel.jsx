@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 import WeaponIcon from './WeaponIcon.jsx';
 import { itemLine } from './GameOverlay.jsx';
 import { FEATURES } from '../config/features.js';
-import { ABILITIES, abilityNumbers } from '../config/abilities.js';
+import { abilityNumbers } from '../config/abilities.js';
+import { abilityIcon } from '../config/uiIcons.js';
+import UiIcon from '../ui/UiIcon.jsx';
 
 // Panel for the selected building spot or the Town Hall (SPEC §7). The Town
 // Hall's shop (hero upgrades + items) opens as an overlay over the map with
@@ -89,7 +91,7 @@ export default function BuildPanel({ info, types = [], weapons = [], assets = []
             const u = info.ability;
             return (
               <div className="eq-item shop-tile" data-testid="shop-ability">
-                <span className="shop-icon">{ABILITIES[u.id]?.icon}</span>
+                <span className="shop-icon"><UiIcon name={abilityIcon(u.id)} /></span>
                 <span className="small eq-name">{t(`ability.${u.id}`)}</span>
                 <span className="small">{'●'.repeat(u.level)}{'○'.repeat(u.maxLevel - u.level)}</span>
                 {u.next && <span className="small muted">{abilityLine(u.next, t)}</span>}

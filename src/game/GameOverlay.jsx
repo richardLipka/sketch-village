@@ -7,6 +7,7 @@ import { WEAPON_CLASSES, isWeapon } from '../config/weapons.js';
 import WeaponIcon, { CLASS_ICON, SLOT_ICON } from './WeaponIcon.jsx';
 import FullscreenButton from '../ui/FullscreenButton.jsx';
 import UiIcon from '../ui/UiIcon.jsx';
+import { abilityIcon } from '../config/uiIcons.js';
 
 // The game's on-screen controls, laid over the map in its corners:
 //   top left: coins, workers, Town Hall · top centre: hero lives · top right: wave
@@ -105,7 +106,7 @@ export const AttackBar = memo(function AttackBar({ mode, hasMelee, hasRanged, ha
           aria-pressed={ABILITIES[ability.id]?.aimed ? !!aiming : undefined} title={label} aria-label={label}
           onPointerEnter={preview(true)} onPointerLeave={preview(false)} onFocus={preview(true)} onBlur={preview(false)}
           style={{ '--cd': `${Math.round((left / Math.max(1, ability.cooldown)) * 360)}deg` }}>
-          <span aria-hidden="true">{ABILITIES[ability.id]?.icon}</span>
+          <UiIcon name={abilityIcon(ability.id)} />
           {waiting && <span className="ability-left" aria-hidden="true">{left}</span>}
         </button>
       )}

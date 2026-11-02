@@ -40,7 +40,7 @@ export const sameComponent = (a, b) => canon(norm(a)) === canon(norm(b));
 
 /** Where component `id` is used: map names (decorations, textures) and component ids (minions, projectiles, soldiers…). */
 export function usesOf(id, assets, maps = []) {
-  const maps_ = maps.filter((m) => (m.decorations ?? []).some((d) => d.asset === id) || Object.values(m.textures ?? {}).includes(id)).map((m) => m.name || m.id);
+  const maps_ = maps.filter((m) => [...(m.decorations ?? []), ...(m.caves ?? [])].some((d) => d.asset === id) || Object.values(m.textures ?? {}).includes(id)).map((m) => m.name || m.id);
   const quoted = JSON.stringify(id);
   const parts = assets.filter((a) => a.id !== id && JSON.stringify(a.stats ?? {}).includes(quoted)).map((a) => a.id);
   return { maps: maps_, components: parts };

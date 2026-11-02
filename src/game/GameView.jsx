@@ -232,9 +232,10 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
       }
       load('chest', firstImage('chest'));
       for (const et of enemyTypes) load(`enemy:${et.id}`, et.image || firstFrame(et.anims));
-      for (const d of map.decorations) {
-        const a = assets.find((x) => x.id === d.asset);
-        if (a) load(a.id, a.images[0]);
+      // decorations, and caves with a shape of their own (a cave drawing or a decoration)
+      for (const d of [...map.decorations, ...map.caves]) {
+        const a = d.asset && assets.find((x) => x.id === d.asset);
+        if (a) load(a.id, a.images.find(Boolean));
       }
       // animations: every frame (moved by its alignment offset) is a texture
       // `${base}|${kind}|${i}`; the scene plays them (still picture without them)
