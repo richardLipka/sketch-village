@@ -314,6 +314,50 @@ label { display: inline-flex; gap: 8px; align-items: center; }
 .game-screen .build-option .btn { font-size: 1em; }
 .game-screen .game-over .btn { font-size: 1.1em; }
 
+/* ---- the end of a game (game/EndScreen.jsx; SPEC §11) ---- */
+.game-over.end-won, .game-over.end-lost { z-index: 10; } /* over the game controls: the game is over */
+.end-card { position: relative; text-align: center; max-width: min(640px, calc(100vw - 32px)); max-height: calc(100% - 16px); overflow: auto; }
+.end-title { font-size: clamp(30px, 6vw, 56px); line-height: 1.1; margin: 6px 0 4px; white-space: normal; }
+.end-letter { display: inline-block; }
+.end-fireworks { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
+.end-won .end-card { z-index: 1; background: #fffdf3; }
+/* a victory: the letters dance in a wave, a letter that fires a rocket hops */
+.end-won .end-letter { color: var(--ink); animation: end-wave 1.6s ease-in-out infinite; animation-delay: calc(var(--i) * 0.08s); }
+.end-won .end-letter.fire { animation: end-fire 0.45s ease-out; }
+@keyframes end-wave { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-8px) rotate(-3deg); } }
+@keyframes end-fire { 0% { transform: translateY(0) scale(1); color: #d97706; } 40% { transform: translateY(-14px) scale(1.25); color: #d97706; } 100% { transform: translateY(0) scale(1); } }
+.end-heroes { display: flex; justify-content: center; align-items: flex-end; gap: clamp(6px, 3vw, 28px); height: clamp(90px, 22vh, 150px); margin: 4px 0 8px; }
+.end-hero { width: clamp(56px, 13vh, 96px); height: clamp(56px, 13vh, 96px); object-fit: contain; display: inline-grid; place-items: center; font-size: 48px; }
+.end-won .end-hero { animation: end-jump 0.9s cubic-bezier(.3, .0, .4, 1) infinite; animation-delay: calc(var(--i) * 0.18s); transform-origin: 50% 100%; }
+.end-won .end-hero.played { width: clamp(70px, 17vh, 124px); height: clamp(70px, 17vh, 124px); filter: drop-shadow(0 0 6px #fbbf24); }
+@keyframes end-jump {
+  0%, 100% { transform: translateY(0) scale(1.08, 0.9); }
+  15% { transform: translateY(0) scale(0.95, 1.06); }
+  50% { transform: translateY(-46%) scale(1, 1) rotate(-6deg); }
+  85% { transform: translateY(0) scale(1, 1); }
+}
+/* a defeat: grey drooping letters under a little rain cloud, the hero sits sadly */
+.end-lost .end-card { background: #f3f4f6; }
+.end-title.sad { color: #6b7280; padding-bottom: 28px; }
+.end-title.sad .end-letter { animation: end-droop 3.2s ease-in-out infinite; animation-delay: calc(var(--i) * 0.12s); transform-origin: 50% 0; }
+/* every letter hangs a little lower than the one before and tips over, then sighs down and up */
+@keyframes end-droop {
+  0%, 100% { transform: translateY(calc(var(--i) * 2.5px)) rotate(calc(var(--i) * 2deg + 4deg)); }
+  50% { transform: translateY(calc(var(--i) * 3.5px + 8px)) rotate(calc(var(--i) * 2.6deg + 8deg)); }
+}
+.end-reason { font-size: 1.2em; color: #4b5563; margin: 0 0 6px; }
+.end-cloud { position: relative; height: 54px; font-size: 40px; line-height: 1; filter: grayscale(1); }
+.end-cloud .cloud { display: inline-block; animation: end-float 4s ease-in-out infinite; }
+.end-cloud .drop { position: absolute; top: 38px; left: calc(50% - 22px + var(--i) * 10px); width: 3px; height: 9px; border-radius: 2px; background: #60a5fa; animation: end-rain 0.9s linear infinite; animation-delay: calc(var(--i) * 0.17s); opacity: 0; }
+@keyframes end-float { 0%, 100% { transform: translateX(-6px); } 50% { transform: translateX(6px); } }
+@keyframes end-rain { 0% { transform: translateY(0); opacity: 0.9; } 100% { transform: translateY(26px); opacity: 0; } }
+.end-sad-hero { position: relative; display: inline-block; margin: 2px 0 6px; }
+.end-hero.sad { filter: grayscale(1) opacity(0.75); transform: rotate(-12deg) translateY(6px); animation: end-sigh 3s ease-in-out infinite; }
+@keyframes end-sigh { 0%, 100% { transform: rotate(-12deg) translateY(6px) scaleY(1); } 50% { transform: rotate(-14deg) translateY(9px) scaleY(0.95); } }
+.end-sad-hero .tear { position: absolute; top: 40%; left: 58%; width: 7px; height: 10px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; background: #60a5fa; animation: end-tear 2.2s ease-in infinite; opacity: 0; }
+@keyframes end-tear { 0%, 30% { transform: translateY(0); opacity: 0; } 40% { opacity: 1; } 100% { transform: translateY(30px); opacity: 0; } }
+@media (max-height: 520px) { .end-heroes { height: 84px; margin: 0; } .end-hero, .end-won .end-hero.played { width: 56px; height: 56px; } .end-cloud { height: 40px; font-size: 30px; } .end-title { font-size: 30px; } }
+
 /* narrow / portrait screens (tablets held upright, phones): the map leaves empty
    bands above and below, so the controls stack there instead of overlapping */
 @media (max-width: 900px) {

@@ -8,6 +8,7 @@ import { fitsTheme } from '../config/themes.js';
 import { loadImage } from '../assets/imageEncoding.js';
 import { composeFrame, firstFrame, DEFAULT_FPS } from '../assets/animation.js';
 import SelectionPanel from './SelectionPanel.jsx';
+import EndScreen from './EndScreen.jsx';
 import Chronicle, { monstersOfWaves } from './Chronicle.jsx';
 import Modal from '../ui/Modal.jsx';
 import { useDevice } from '../ui/device.js';
@@ -595,17 +596,16 @@ export default function GameView({ map, hero, assets, enemyTypes, buildings, wea
         )}
         {paused && playing && !quitting && <div className="game-over"><div className="sketch-card"><h2>{t('game.paused')}</h2><button className="btn primary" onClick={togglePause}>▶ {t('game.resume')}</button></div></div>}
         {hud && !playing && (
-          <div className="game-over">
-            <div className="sketch-card" style={{ textAlign: 'center' }}>
-              <h1>{hud.phase === 'won' ? `🏆 ${t('game.won')}` : `💥 ${t(hud.lostBy === 'hero' ? 'game.lost_hero' : 'game.lost')}`}</h1>
-              <p>{t('game.reached', { n: hud.round, total: hud.totalRounds })}</p>
-              <p className="small">{difficultyOf(difficulty).icon} {t('difficulty.label')}: {t(`difficulty.${difficulty ?? 'normal'}`)}</p>
-              <div className="row" style={{ justifyContent: 'center' }}>
-                <button className="btn primary" onClick={() => { setPaused(false); setSpeed(1); resumeRef.current = null; setRestart((n) => n + 1); }}>↺ {t('game.again')}</button>
-                <button className="btn" onClick={exit}>{t('game.exit')}</button>
-              </div>
+          <EndScreen won={hud.phase === 'won'} hero={hero} assets={assets}
+            title={hud.phase === 'won' ? t('game.won') : t('game.over')}
+            reason={t(hud.lostBy === 'hero' ? 'game.lost_hero' : 'game.lost')}>
+            <p>{t('game.reached', { n: hud.round, total: hud.totalRounds })}</p>
+            <p className="small">{difficultyOf(difficulty).icon} {t('difficulty.label')}: {t(`difficulty.${difficulty ?? 'normal'}`)}</p>
+            <div className="row" style={{ justifyContent: 'center' }}>
+              <button className="btn primary" onClick={() => { setPaused(false); setSpeed(1); resumeRef.current = null; setRestart((n) => n + 1); }}>↺ {t('game.again')}</button>
+              <button className="btn" onClick={exit}>{t('game.exit')}</button>
             </div>
-          </div>
+          </EndScreen>
         )}
       </div>
     </section>

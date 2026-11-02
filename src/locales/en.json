@@ -411,6 +411,7 @@
     "won": "Village saved!",
     "lost": "The town hall fell!",
     "lost_hero": "The hero has no lives left!",
+    "over": "Game over",
     "reached": "Round {{n}} of {{total}}",
     "again": "Play again",
     "round": "Round {{n}}/{{total}}",

@@ -415,6 +415,7 @@
     "won": "Vesnice ubráněna!",
     "lost": "Radnice padla!",
     "lost_hero": "Hrdinovi došly životy!",
+    "over": "Konec hry",
     "reached": "Kolo {{n}} z {{total}}",
     "again": "Hrát znovu",
     "round": "Kolo {{n}}/{{total}}",
